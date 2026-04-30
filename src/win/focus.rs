@@ -2,8 +2,8 @@ use windows::Win32::Foundation::{BOOL, HWND};
 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, GetWindowThreadProcessId, IsIconic, SetForegroundWindow, ShowWindow,
-    SW_RESTORE,
+    BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic,
+    SetForegroundWindow, ShowWindow, SW_RESTORE,
 };
 
 /// Bring the Win32 window owning `hwnd_raw` to the foreground.
@@ -31,12 +31,36 @@ pub fn focus_window(hwnd_raw: isize) {
         }
         let self_tid = GetCurrentThreadId();
 
-        let attached = AttachThreadInput(self_tid, target_tid, BOOL(1)).as_bool();
+        // Attach the calling thread to BOTH the current foreground window's
+        // thread AND the target thread. Sharing the input state with the
+        // current foreground bypasses the SetForegroundWindow lock-out
+        // (which otherwise blocks any process that didn't recently receive
+        // user input), and attaching to the target lets SetFocus / cursor
+        // ride along.
+        let fg = GetForegroundWindow();
+        let fg_tid = if fg.0.is_null() {
+            0
+        } else {
+            GetWindowThreadProcessId(fg, None)
+        };
+        let attach_fg = fg_tid != 0 && fg_tid != self_tid && fg_tid != target_tid;
+        if attach_fg {
+            let _ = AttachThreadInput(self_tid, fg_tid, BOOL(1));
+        }
+        let attach_target = target_tid != self_tid;
+        if attach_target {
+            let _ = AttachThreadInput(self_tid, target_tid, BOOL(1));
+        }
+
         let _ = BringWindowToTop(hwnd);
         let _ = SetForegroundWindow(hwnd);
         let _ = SetFocus(hwnd);
-        if attached {
+
+        if attach_target {
             let _ = AttachThreadInput(self_tid, target_tid, BOOL(0));
+        }
+        if attach_fg {
+            let _ = AttachThreadInput(self_tid, fg_tid, BOOL(0));
         }
     }
 }

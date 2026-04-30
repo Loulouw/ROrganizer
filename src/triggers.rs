@@ -1,5 +1,15 @@
 use eframe::egui;
 
+pub type SlotKey = String;
+
+/// What the user is binding a Trigger to.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum BindingTarget {
+    Account(SlotKey),
+    CycleNext,
+    CyclePrev,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Trigger {
     /// Win32 Virtual-Key code (VK_F1 = 0x70, VK_A = 0x41, …).

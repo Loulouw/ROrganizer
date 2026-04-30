@@ -23,5 +23,10 @@
     "cancel_hint": "Esc para cancelar",
     "modal_title": "Definir un atajo",
     "for_account": "para %{name}"
+  },
+  "cycle": {
+    "section": "Ciclo",
+    "next": "Siguiente",
+    "prev": "Anterior"
   }
 }

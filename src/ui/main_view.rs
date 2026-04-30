@@ -4,16 +4,25 @@ use rust_i18n::t;
 
 use crate::app::App;
 use crate::theme::{self, Theme};
-use crate::triggers::Trigger;
+use crate::triggers::{BindingTarget, SlotKey, Trigger};
 use crate::win::{self, DetectedWindow};
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
     let snapshot = app.windows_snapshot();
-    let windows: Vec<DetectedWindow> = {
+    let snap_windows: Vec<DetectedWindow> = {
         let guard = snapshot.lock().expect("snapshot mutex poisoned");
         guard.clone()
     };
+
+    // Project cycle_order × snapshot into the visible ordered list.
+    // `cycle_order` is the source of truth for ordering — App keeps it in
+    // sync with newly detected slots in `ensure_cycle_order_covers_snapshot`.
+    let mut ordered: Vec<DetectedWindow> = app
+        .cycle_order()
+        .iter()
+        .filter_map(|slot| snap_windows.iter().find(|w| &w.slot_key == slot).cloned())
+        .collect();
 
     egui::CentralPanel::default()
         .frame(
@@ -22,27 +31,17 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                 .inner_margin(Margin::symmetric(12.0, 12.0)),
         )
         .show(ctx, |ui| {
-            draw_summary(ui, theme, windows.len(), || app.request_refresh());
+            draw_summary(ui, theme, ordered.len(), || app.request_refresh());
             ui.add_space(10.0);
 
-            if windows.is_empty() {
+            if ordered.is_empty() {
                 draw_empty_state(ui, theme);
             } else {
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, true])
-                    .show(ui, |ui| {
-                        for w in &windows {
-                            let binding = app.binding_for(&w.slot_key);
-                            let r = draw_row(ui, theme, w, binding);
-                            if r.pill_clicked {
-                                app.bind_for(w.slot_key.clone());
-                            } else if r.row_clicked {
-                                win::focus_window(w.hwnd);
-                            }
-                            ui.add_space(6.0);
-                        }
-                    });
+                draw_account_list(ui, theme, app, &mut ordered);
             }
+
+            ui.add_space(8.0);
+            draw_cycle_section(ui, theme, app);
         });
 }
 
@@ -75,7 +74,7 @@ fn refresh_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     ui.painter().text(
         rect.center(),
         egui::Align2::CENTER_CENTER,
-        "\u{27F3}", // ⟳
+        "\u{27F3}",
         egui::FontId::proportional(14.0),
         theme::text_secondary(theme),
     );
@@ -83,7 +82,7 @@ fn refresh_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
 }
 
 fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
-    ui.add_space(40.0);
+    ui.add_space(20.0);
     ui.vertical_centered(|ui| {
         ui.label(
             egui::RichText::new(t!("main.empty_title").to_string())
@@ -99,17 +98,56 @@ fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
     });
 }
 
-struct RowInteraction {
-    row_clicked: bool,
-    pill_clicked: bool,
-}
-
-fn draw_row(
+fn draw_account_list(
     ui: &mut egui::Ui,
     theme: Theme,
+    app: &mut App,
+    ordered: &mut Vec<DetectedWindow>,
+) {
+    let pre_order: Vec<SlotKey> = ordered.iter().map(|w| w.slot_key.clone()).collect();
+    let mut row_action: Option<RowAction> = None;
+
+    egui_dnd::dnd(ui, "accounts_dnd").show_vec(
+        ordered,
+        |ui, w, handle, _state| {
+            let action = draw_account_row(ui, theme, app, w, handle);
+            if action.is_some() {
+                row_action = action;
+            }
+        },
+    );
+
+    // egui_dnd reorders `ordered` in place during the drag — push to App
+    // whenever it differs from what we projected at the start of the frame.
+    let new_order: Vec<SlotKey> = ordered.iter().map(|w| w.slot_key.clone()).collect();
+    if new_order != pre_order {
+        app.apply_drag_drop(new_order);
+    }
+
+    if let Some(action) = row_action {
+        match action {
+            RowAction::PillClicked(slot) => app.bind_target(BindingTarget::Account(slot)),
+            RowAction::RowClicked { slot, hwnd } => {
+                win::focus_window(hwnd);
+                app.set_cycle_current(slot);
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum RowAction {
+    PillClicked(SlotKey),
+    RowClicked { slot: SlotKey, hwnd: isize },
+}
+
+fn draw_account_row(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    app: &App,
     w: &DetectedWindow,
-    binding: Option<Trigger>,
-) -> RowInteraction {
+    handle: egui_dnd::Handle<'_>,
+) -> Option<RowAction> {
     let id = ui.make_persistent_id(("row", &w.slot_key));
     let prior_hovered = ui
         .ctx()
@@ -117,20 +155,8 @@ fn draw_row(
         .map(|r| r.hovered())
         .unwrap_or(false);
 
-    let (bg_normal, bg_hover, border) = match theme {
-        Theme::Dark => (
-            theme::BG_ROW_DARK,
-            mix(theme::BG_ROW_DARK, Color32::WHITE, 0.08),
-            theme::BORDER_SUBTLE_DARK,
-        ),
-        Theme::Light => (
-            theme::BG_ROW_LIGHT,
-            mix(theme::BG_ROW_LIGHT, Color32::BLACK, 0.05),
-            theme::BORDER_SUBTLE_LIGHT,
-        ),
-    };
+    let (bg_normal, bg_hover, border) = row_palette(theme);
     let bg = if prior_hovered { bg_hover } else { bg_normal };
-
     let avail_width = ui.available_width();
     let mut pill_rect: Option<egui::Rect> = None;
 
@@ -140,8 +166,12 @@ fn draw_row(
         .stroke(Stroke::new(1.0, border))
         .inner_margin(Margin::symmetric(12.0, 11.0))
         .show(ui, |ui| {
-            ui.set_min_width(avail_width - 24.0); // - inner_margin*2
+            ui.set_min_width(avail_width - 24.0);
             ui.horizontal(|ui| {
+                handle.ui(ui, |ui| {
+                    draw_drag_handle(ui, theme);
+                });
+                ui.add_space(4.0);
                 ui.label(
                     egui::RichText::new(&w.slot_key)
                         .size(13.0)
@@ -159,48 +189,155 @@ fn draw_row(
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
-                        let r = binding_pill(ui, theme, &w.slot_key, binding);
+                        let r = binding_pill(
+                            ui,
+                            theme,
+                            app.binding_for_account(&w.slot_key),
+                        );
                         pill_rect = Some(r.rect);
                     },
                 );
             });
         });
 
-    // Single interact for the whole row. We then manually check the click
-    // position to decide whether it landed on the pastille (capture) or
-    // anywhere else in the row (focus). This avoids egui's overlap-priority
-    // resolution which previously gave the click to the row even when the
-    // pastille was the visual target.
     let row_resp = ui.interact(frame_resp.response.rect, id, Sense::click());
     if row_resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
 
-    let mut pill_clicked = false;
-    let mut row_clicked = false;
-    if row_resp.clicked() {
-        let on_pill = row_resp
-            .interact_pointer_pos()
-            .zip(pill_rect)
-            .map(|(p, r)| r.contains(p))
-            .unwrap_or(false);
-        if on_pill {
-            pill_clicked = true;
-        } else {
-            row_clicked = true;
-        }
+    if !row_resp.clicked() {
+        return None;
     }
+    let on_pill = row_resp
+        .interact_pointer_pos()
+        .zip(pill_rect)
+        .map(|(p, r)| r.contains(p))
+        .unwrap_or(false);
+    if on_pill {
+        Some(RowAction::PillClicked(w.slot_key.clone()))
+    } else {
+        Some(RowAction::RowClicked {
+            slot: w.slot_key.clone(),
+            hwnd: w.hwnd,
+        })
+    }
+}
 
-    RowInteraction {
-        row_clicked,
-        pill_clicked,
+fn draw_cycle_section(ui: &mut egui::Ui, theme: Theme, app: &mut App) {
+    ui.add_space(4.0);
+    ui.label(
+        egui::RichText::new(t!("cycle.section").to_uppercase())
+            .size(11.0)
+            .color(theme::text_tertiary(theme)),
+    );
+    ui.add_space(6.0);
+
+    if draw_cycle_row(
+        ui,
+        theme,
+        &t!("cycle.next"),
+        app.binding_for(&BindingTarget::CycleNext),
+    ) {
+        app.bind_target(BindingTarget::CycleNext);
+    }
+    ui.add_space(6.0);
+    if draw_cycle_row(
+        ui,
+        theme,
+        &t!("cycle.prev"),
+        app.binding_for(&BindingTarget::CyclePrev),
+    ) {
+        app.bind_target(BindingTarget::CyclePrev);
+    }
+}
+
+/// Returns true if the user clicked the pill — caller opens the capture modal.
+fn draw_cycle_row(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    label: &str,
+    binding: Option<Trigger>,
+) -> bool {
+    let (bg_normal, bg_hover, border) = row_palette(theme);
+    let id = ui.make_persistent_id(("cycle_row", label));
+    let prior_hovered = ui
+        .ctx()
+        .read_response(id)
+        .map(|r| r.hovered())
+        .unwrap_or(false);
+    let bg = if prior_hovered { bg_hover } else { bg_normal };
+    let avail_width = ui.available_width();
+    let mut pill_rect: Option<egui::Rect> = None;
+
+    let frame_resp = Frame::none()
+        .fill(bg)
+        .rounding(Rounding::same(8.0))
+        .stroke(Stroke::new(1.0, border))
+        .inner_margin(Margin::symmetric(12.0, 11.0))
+        .show(ui, |ui| {
+            ui.set_min_width(avail_width - 24.0);
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(label)
+                        .size(13.0)
+                        .strong()
+                        .color(theme::text_primary(theme)),
+                );
+                ui.with_layout(
+                    egui::Layout::right_to_left(egui::Align::Center),
+                    |ui| {
+                        let r = binding_pill(ui, theme, binding);
+                        pill_rect = Some(r.rect);
+                    },
+                );
+            });
+        });
+
+    let row_resp = ui.interact(frame_resp.response.rect, id, Sense::click());
+    if !row_resp.clicked() {
+        return false;
+    }
+    row_resp
+        .interact_pointer_pos()
+        .zip(pill_rect)
+        .map(|(p, r)| r.contains(p))
+        .unwrap_or(false)
+}
+
+fn draw_drag_handle(ui: &mut egui::Ui, theme: Theme) {
+    // 2 columns × 3 rows of small dots — reliable across fonts.
+    let size = Vec2::new(10.0, 16.0);
+    let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
+    let color = theme::text_tertiary(theme);
+    let cx0 = rect.left() + 2.5;
+    let cx1 = rect.left() + 7.5;
+    let cys = [rect.top() + 3.0, rect.center().y, rect.bottom() - 3.0];
+    let r = 1.4;
+    let painter = ui.painter();
+    for cy in cys {
+        painter.circle_filled(egui::pos2(cx0, cy), r, color);
+        painter.circle_filled(egui::pos2(cx1, cy), r, color);
+    }
+}
+
+fn row_palette(theme: Theme) -> (Color32, Color32, Color32) {
+    match theme {
+        Theme::Dark => (
+            theme::BG_ROW_DARK,
+            mix(theme::BG_ROW_DARK, Color32::WHITE, 0.08),
+            theme::BORDER_SUBTLE_DARK,
+        ),
+        Theme::Light => (
+            theme::BG_ROW_LIGHT,
+            mix(theme::BG_ROW_LIGHT, Color32::BLACK, 0.05),
+            theme::BORDER_SUBTLE_LIGHT,
+        ),
     }
 }
 
 fn binding_pill(
     ui: &mut egui::Ui,
     theme: Theme,
-    _slot_key: &str,
     binding: Option<Trigger>,
 ) -> egui::Response {
     let label = match binding {
@@ -210,7 +347,10 @@ fn binding_pill(
     let has_binding = binding.is_some();
 
     let font = egui::FontId::monospace(11.0);
-    let inner = ui.fonts(|f| f.layout_no_wrap(label.clone(), font.clone(), Color32::WHITE).size());
+    let inner = ui.fonts(|f| {
+        f.layout_no_wrap(label.clone(), font.clone(), Color32::WHITE)
+            .size()
+    });
     let pad = Vec2::new(8.0, 4.0);
     let pill_size = Vec2::new(inner.x + pad.x * 2.0, inner.y + pad.y * 2.0)
         .max(Vec2::new(44.0, 20.0));

@@ -4,6 +4,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
 
+use super::keyboard::resolve_action;
 use super::state::HOOK_STATE;
 use crate::triggers::{MouseBtn, Trigger, WheelDir};
 
@@ -15,8 +16,6 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
     let info = &*(lparam.0 as *const MSLLHOOKSTRUCT);
     let msg = wparam.0 as u32;
 
-    // Resolve to a Trigger for "down"-style events. Up events are ignored
-    // for matching (we fire on down to mirror keyboard behavior).
     let trigger: Option<Trigger> = match msg {
         WM_MBUTTONDOWN => Some(Trigger::Mouse(MouseBtn::Middle)),
         WM_XBUTTONDOWN => {
@@ -42,8 +41,7 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
 
     let mut focus_target: Option<isize> = None;
     if let Some(state_mut) = HOOK_STATE.get() {
-        if let Ok(state) = state_mut.lock() {
-            // Light log of meaningful events
+        if let Ok(mut state) = state_mut.lock() {
             let line = match msg {
                 WM_LBUTTONDOWN => Some("mouse left  down".to_string()),
                 WM_LBUTTONUP => Some("mouse left  up  ".to_string()),
@@ -70,9 +68,7 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
             }
 
             if let Some(t) = trigger {
-                if let Some((_, hwnd)) = state.bindings.iter().find(|(b, _)| *b == t) {
-                    focus_target = Some(*hwnd);
-                }
+                focus_target = resolve_action(&mut state, t);
             }
         }
     }

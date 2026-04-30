@@ -11,7 +11,7 @@ use super::process::{self, ExeCache};
 pub const DEFAULT_TITLE_REGEX: &str =
     r"^(?P<name>.+?)\s+-\s+(?P<class>.+?)\s+-\s+[\d.]+\s+-\s+Release\s*$";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct DetectedWindow {
     pub hwnd: isize,
     /// Kept for diagnostics / future cycler logic.

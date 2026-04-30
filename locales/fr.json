@@ -23,5 +23,10 @@
     "cancel_hint": "Échap pour annuler",
     "modal_title": "Définir un raccourci",
     "for_account": "pour %{name}"
+  },
+  "cycle": {
+    "section": "Cycle",
+    "next": "Suivant",
+    "prev": "Précédent"
   }
 }
