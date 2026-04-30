@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -158,6 +158,20 @@ impl App {
             .copied()
     }
 
+    /// Set of triggers assigned to ≥ 2 BindingTargets. Used by the UI to
+    /// highlight conflicting rows + render the banner.
+    pub fn conflicting_triggers(&self) -> HashSet<Trigger> {
+        let mut counts: HashMap<Trigger, u32> = HashMap::new();
+        for t in self.bindings.values() {
+            *counts.entry(*t).or_insert(0) += 1;
+        }
+        counts
+            .into_iter()
+            .filter(|(_, c)| *c > 1)
+            .map(|(t, _)| t)
+            .collect()
+    }
+
     pub fn capture_state(&self) -> Option<&BindingTarget> {
         self.capture_state.as_ref()
     }
@@ -298,23 +312,27 @@ impl App {
 
         let mut bindings: Vec<(Trigger, BindingAction)> =
             Vec::with_capacity(self.bindings.len());
-        for (target, trig) in &self.bindings {
-            let action = match target {
-                BindingTarget::Account(slot) => accounts
+
+        // 1. Account bindings ordered by cycle_order — the topmost slot wins
+        //    on a conflict, and the user controls that order via drag&drop.
+        for slot in &self.cycle_order {
+            if let Some(trig) = self.bindings.get(&BindingTarget::Account(slot.clone())) {
+                if let Some(hwnd) = accounts
                     .iter()
                     .find(|(s, _)| s == slot)
-                    .map(|(_, h)| BindingAction::Focus(*h)),
-                BindingTarget::CycleNext => Some(BindingAction::CycleNext),
-                BindingTarget::CyclePrev => Some(BindingAction::CyclePrev),
-            };
-            if let Some(a) = action {
-                bindings.push((*trig, a));
+                    .map(|(_, h)| *h)
+                {
+                    bindings.push((*trig, BindingAction::Focus(hwnd)));
+                }
             }
         }
-        // Account focus actions take precedence over cycle actions on conflict.
-        bindings.sort_by_key(|(_, a)| {
-            matches!(a, BindingAction::CycleNext | BindingAction::CyclePrev)
-        });
+        // 2. Cycle bindings come after — Account always wins on conflict.
+        if let Some(trig) = self.bindings.get(&BindingTarget::CycleNext) {
+            bindings.push((*trig, BindingAction::CycleNext));
+        }
+        if let Some(trig) = self.bindings.get(&BindingTarget::CyclePrev) {
+            bindings.push((*trig, BindingAction::CyclePrev));
+        }
 
         crate::hooks::set_bindings_and_cycle(bindings, cycle_hwnds);
     }
@@ -331,14 +349,24 @@ impl App {
         const CYCLE_BLOCK: f32 = 2.0 * ROW + 4.0; // 2 rows + small slack
         const SUMMARY_GAP: f32 = 10.0;
         const TAIL_PAD: f32 = 4.0;
+        // Banner: 6 leading space + 16 frame inner_margin + 14 per line.
+        const BANNER_BASE: f32 = 22.0;
+        const BANNER_PER_LINE: f32 = 14.0;
 
         let n_accounts = self.windows.lock().map(|w| w.len()).unwrap_or(0) as f32;
         let n_for_height = n_accounts.max(1.0); // reserve ~1 row even when empty
+        let n_conflicts = self.conflicting_triggers().len() as f32;
+        let banner_h = if n_conflicts > 0.0 {
+            BANNER_BASE + n_conflicts * BANNER_PER_LINE
+        } else {
+            0.0
+        };
         let desired = (TITLE_BAR
             + PANEL_PAD
             + SUMMARY
             + SUMMARY_GAP
             + n_for_height * ROW
+            + banner_h
             + CYCLE_HEAD
             + CYCLE_BLOCK
             + TAIL_PAD)

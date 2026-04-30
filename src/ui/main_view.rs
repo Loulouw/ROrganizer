@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use eframe::egui;
 use egui::{Color32, Frame, Margin, Rounding, Sense, Stroke, Vec2};
 use rust_i18n::t;
@@ -24,6 +26,8 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         .filter_map(|slot| snap_windows.iter().find(|w| &w.slot_key == slot).cloned())
         .collect();
 
+    let conflicts = app.conflicting_triggers();
+
     egui::CentralPanel::default()
         .frame(
             Frame::none()
@@ -37,11 +41,13 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
             if ordered.is_empty() {
                 draw_empty_state(ui, theme);
             } else {
-                draw_account_list(ui, theme, app, &mut ordered);
+                draw_account_list(ui, theme, app, &mut ordered, &conflicts);
             }
 
+            draw_conflict_banner(ui, theme, &conflicts);
+
             ui.add_space(8.0);
-            draw_cycle_section(ui, theme, app);
+            draw_cycle_section(ui, theme, app, &conflicts);
         });
 }
 
@@ -103,6 +109,7 @@ fn draw_account_list(
     theme: Theme,
     app: &mut App,
     ordered: &mut Vec<DetectedWindow>,
+    conflicts: &HashSet<Trigger>,
 ) {
     let pre_order: Vec<SlotKey> = ordered.iter().map(|w| w.slot_key.clone()).collect();
     let mut row_action: Option<RowAction> = None;
@@ -110,7 +117,11 @@ fn draw_account_list(
     egui_dnd::dnd(ui, "accounts_dnd").show_vec(
         ordered,
         |ui, w, handle, _state| {
-            let action = draw_account_row(ui, theme, app, w, handle);
+            let in_conflict = app
+                .binding_for_account(&w.slot_key)
+                .map(|t| conflicts.contains(&t))
+                .unwrap_or(false);
+            let action = draw_account_row(ui, theme, app, w, handle, in_conflict);
             if action.is_some() {
                 row_action = action;
             }
@@ -147,6 +158,7 @@ fn draw_account_row(
     app: &App,
     w: &DetectedWindow,
     handle: egui_dnd::Handle<'_>,
+    in_conflict: bool,
 ) -> Option<RowAction> {
     let id = ui.make_persistent_id(("row", &w.slot_key));
     let prior_hovered = ui
@@ -155,7 +167,12 @@ fn draw_account_row(
         .map(|r| r.hovered())
         .unwrap_or(false);
 
-    let (bg_normal, bg_hover, border) = row_palette(theme);
+    let (bg_normal, bg_hover, border) = if in_conflict {
+        let (bg, b, _, _) = theme::conflict_palette(theme);
+        (bg, mix(bg, Color32::WHITE, 0.06), b)
+    } else {
+        row_palette(theme)
+    };
     let bg = if prior_hovered { bg_hover } else { bg_normal };
     let avail_width = ui.available_width();
     let mut pill_rect: Option<egui::Rect> = None;
@@ -193,6 +210,7 @@ fn draw_account_row(
                             ui,
                             theme,
                             app.binding_for_account(&w.slot_key),
+                            in_conflict,
                         );
                         pill_rect = Some(r.rect);
                     },
@@ -223,7 +241,7 @@ fn draw_account_row(
     }
 }
 
-fn draw_cycle_section(ui: &mut egui::Ui, theme: Theme, app: &mut App) {
+fn draw_cycle_section(ui: &mut egui::Ui, theme: Theme, app: &mut App, conflicts: &HashSet<Trigger>) {
     ui.add_space(4.0);
     ui.label(
         egui::RichText::new(t!("cycle.section").to_uppercase())
@@ -232,21 +250,15 @@ fn draw_cycle_section(ui: &mut egui::Ui, theme: Theme, app: &mut App) {
     );
     ui.add_space(6.0);
 
-    if draw_cycle_row(
-        ui,
-        theme,
-        &t!("cycle.next"),
-        app.binding_for(&BindingTarget::CycleNext),
-    ) {
+    let next_binding = app.binding_for(&BindingTarget::CycleNext);
+    let next_conflict = next_binding.map(|t| conflicts.contains(&t)).unwrap_or(false);
+    if draw_cycle_row(ui, theme, &t!("cycle.next"), next_binding, next_conflict) {
         app.bind_target(BindingTarget::CycleNext);
     }
     ui.add_space(6.0);
-    if draw_cycle_row(
-        ui,
-        theme,
-        &t!("cycle.prev"),
-        app.binding_for(&BindingTarget::CyclePrev),
-    ) {
+    let prev_binding = app.binding_for(&BindingTarget::CyclePrev);
+    let prev_conflict = prev_binding.map(|t| conflicts.contains(&t)).unwrap_or(false);
+    if draw_cycle_row(ui, theme, &t!("cycle.prev"), prev_binding, prev_conflict) {
         app.bind_target(BindingTarget::CyclePrev);
     }
 }
@@ -257,8 +269,14 @@ fn draw_cycle_row(
     theme: Theme,
     label: &str,
     binding: Option<Trigger>,
+    in_conflict: bool,
 ) -> bool {
-    let (bg_normal, bg_hover, border) = row_palette(theme);
+    let (bg_normal, bg_hover, border) = if in_conflict {
+        let (bg, b, _, _) = theme::conflict_palette(theme);
+        (bg, mix(bg, Color32::WHITE, 0.06), b)
+    } else {
+        row_palette(theme)
+    };
     let id = ui.make_persistent_id(("cycle_row", label));
     let prior_hovered = ui
         .ctx()
@@ -286,7 +304,7 @@ fn draw_cycle_row(
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
-                        let r = binding_pill(ui, theme, binding);
+                        let r = binding_pill(ui, theme, binding, in_conflict);
                         pill_rect = Some(r.rect);
                     },
                 );
@@ -339,6 +357,7 @@ fn binding_pill(
     ui: &mut egui::Ui,
     theme: Theme,
     binding: Option<Trigger>,
+    in_conflict: bool,
 ) -> egui::Response {
     let label = match binding {
         Some(t) => t.display_label(),
@@ -357,7 +376,17 @@ fn binding_pill(
 
     let (rect, response) = ui.allocate_exact_size(pill_size, Sense::click());
 
-    let (bg, border, txt) = pill_colors(theme, has_binding, response.hovered());
+    let (bg, border, txt) = if in_conflict {
+        let (_row_bg, b, pill_bg, pill_text) = theme::conflict_palette(theme);
+        let bg = if response.hovered() {
+            mix(pill_bg, Color32::WHITE, 0.08)
+        } else {
+            pill_bg
+        };
+        (bg, b, pill_text)
+    } else {
+        pill_colors(theme, has_binding, response.hovered())
+    };
     ui.painter().rect_filled(rect, 4.0, bg);
     ui.painter().rect_stroke(rect, 4.0, Stroke::new(1.0, border));
     ui.painter()
@@ -367,6 +396,35 @@ fn binding_pill(
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
     response
+}
+
+fn draw_conflict_banner(ui: &mut egui::Ui, theme: Theme, conflicts: &HashSet<Trigger>) {
+    if conflicts.is_empty() {
+        return;
+    }
+    let (_row_bg, border, pill_bg, pill_text) = theme::conflict_palette(theme);
+    ui.add_space(6.0);
+    Frame::none()
+        .fill(pill_bg)
+        .rounding(Rounding::same(6.0))
+        .stroke(Stroke::new(1.0, border))
+        .inner_margin(Margin::symmetric(10.0, 8.0))
+        .show(ui, |ui| {
+            ui.set_min_width(ui.available_width() - 20.0);
+            // Stable order across frames for readability.
+            let mut sorted: Vec<&Trigger> = conflicts.iter().collect();
+            sorted.sort_by_key(|t| t.display_label());
+            for trig in sorted {
+                ui.label(
+                    egui::RichText::new(t!(
+                        "binding.conflict",
+                        trigger = trig.display_label()
+                    ))
+                    .size(11.0)
+                    .color(pill_text),
+                );
+            }
+        });
 }
 
 fn pill_colors(theme: Theme, has_binding: bool, hovered: bool) -> (Color32, Color32, Color32) {

@@ -22,7 +22,8 @@
     "prompt": "Presiona una tecla o botón del ratón",
     "cancel_hint": "Esc para cancelar",
     "modal_title": "Definir un atajo",
-    "for_account": "para %{name}"
+    "for_account": "para %{name}",
+    "conflict": "%{trigger} está asignado a varios atajos"
   },
   "cycle": {
     "section": "Ciclo",

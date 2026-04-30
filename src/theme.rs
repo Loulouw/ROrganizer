@@ -28,6 +28,12 @@ pub const TEXT_SECONDARY_DARK: Color32 = Color32::from_rgb(0xB4, 0xB2, 0xA9);
 pub const TEXT_TERTIARY_DARK: Color32 = Color32::from_rgb(0x88, 0x87, 0x80);
 pub const ACTIVE_DARK: Color32 = Color32::from_rgb(0x97, 0xC4, 0x59);
 
+// Conflict palette (dark)
+pub const CONFLICT_ROW_BG_DARK: Color32 = Color32::from_rgb(0x2A, 0x18, 0x18);
+pub const CONFLICT_BORDER_DARK: Color32 = Color32::from_rgba_premultiplied(0xE2, 0x4B, 0x4A, 0x60);
+pub const CONFLICT_PILL_BG_DARK: Color32 = Color32::from_rgb(0x50, 0x13, 0x13);
+pub const CONFLICT_PILL_TEXT_DARK: Color32 = Color32::from_rgb(0xF0, 0x95, 0x95);
+
 // Light palette — same logic.
 pub const BG_WINDOW_LIGHT: Color32 = Color32::from_rgb(0xFA, 0xFA, 0xF7);
 pub const BG_ROW_LIGHT: Color32 = Color32::from_rgb(0xFF, 0xFF, 0xFF);
@@ -37,6 +43,12 @@ pub const TEXT_PRIMARY_LIGHT: Color32 = Color32::from_rgb(0x2C, 0x2C, 0x2A);
 pub const TEXT_SECONDARY_LIGHT: Color32 = Color32::from_rgb(0x5F, 0x5E, 0x5A);
 pub const TEXT_TERTIARY_LIGHT: Color32 = Color32::from_rgb(0x88, 0x87, 0x80);
 pub const ACTIVE_LIGHT: Color32 = Color32::from_rgb(0x63, 0x99, 0x22);
+
+// Conflict palette (light)
+pub const CONFLICT_ROW_BG_LIGHT: Color32 = Color32::from_rgb(0xFC, 0xEB, 0xEB);
+pub const CONFLICT_BORDER_LIGHT: Color32 = Color32::from_rgba_premultiplied(0xE2, 0x4B, 0x4A, 0x99);
+pub const CONFLICT_PILL_BG_LIGHT: Color32 = Color32::from_rgba_premultiplied(0xF0, 0x95, 0x95, 0x66);
+pub const CONFLICT_PILL_TEXT_LIGHT: Color32 = Color32::from_rgb(0x99, 0x3C, 0x1D);
 
 pub fn apply(ctx: &egui::Context, theme: Theme) {
     let mut visuals = match theme {
@@ -108,5 +120,23 @@ pub fn hover_bg(theme: Theme) -> Color32 {
     match theme {
         Theme::Dark => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
         Theme::Light => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
+    }
+}
+
+/// Returns `(row_bg, border, pill_bg, pill_text)` for the conflict palette.
+pub fn conflict_palette(theme: Theme) -> (Color32, Color32, Color32, Color32) {
+    match theme {
+        Theme::Dark => (
+            CONFLICT_ROW_BG_DARK,
+            CONFLICT_BORDER_DARK,
+            CONFLICT_PILL_BG_DARK,
+            CONFLICT_PILL_TEXT_DARK,
+        ),
+        Theme::Light => (
+            CONFLICT_ROW_BG_LIGHT,
+            CONFLICT_BORDER_LIGHT,
+            CONFLICT_PILL_BG_LIGHT,
+            CONFLICT_PILL_TEXT_LIGHT,
+        ),
     }
 }

@@ -22,7 +22,8 @@
     "prompt": "Appuyez sur une touche ou un bouton de souris",
     "cancel_hint": "Échap pour annuler",
     "modal_title": "Définir un raccourci",
-    "for_account": "pour %{name}"
+    "for_account": "pour %{name}",
+    "conflict": "%{trigger} est assigné à plusieurs raccourcis"
   },
   "cycle": {
     "section": "Cycle",

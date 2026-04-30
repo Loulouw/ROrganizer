@@ -22,7 +22,8 @@
     "prompt": "Press a key or mouse button",
     "cancel_hint": "Esc to cancel",
     "modal_title": "Set a shortcut",
-    "for_account": "for %{name}"
+    "for_account": "for %{name}",
+    "conflict": "%{trigger} is assigned to multiple shortcuts"
   },
   "cycle": {
     "section": "Cycle",
