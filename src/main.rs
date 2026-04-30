@@ -7,6 +7,7 @@ mod hooks;
 mod i18n;
 mod theme;
 mod tray;
+mod triggers;
 mod ui;
 mod win;
 

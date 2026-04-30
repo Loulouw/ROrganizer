@@ -16,5 +16,12 @@
   "tray": {
     "show": "Mostrar",
     "quit": "Salir"
+  },
+  "binding": {
+    "set": "definir",
+    "prompt": "Presiona una tecla o botón del ratón",
+    "cancel_hint": "Esc para cancelar",
+    "modal_title": "Definir un atajo",
+    "for_account": "para %{name}"
   }
 }

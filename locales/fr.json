@@ -16,5 +16,12 @@
   "tray": {
     "show": "Afficher",
     "quit": "Quitter"
+  },
+  "binding": {
+    "set": "définir",
+    "prompt": "Appuyez sur une touche ou un bouton de souris",
+    "cancel_hint": "Échap pour annuler",
+    "modal_title": "Définir un raccourci",
+    "for_account": "pour %{name}"
   }
 }

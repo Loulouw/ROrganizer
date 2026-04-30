@@ -16,5 +16,12 @@
   "tray": {
     "show": "Show",
     "quit": "Quit"
+  },
+  "binding": {
+    "set": "set",
+    "prompt": "Press a key or mouse button",
+    "cancel_hint": "Esc to cancel",
+    "modal_title": "Set a shortcut",
+    "for_account": "for %{name}"
   }
 }

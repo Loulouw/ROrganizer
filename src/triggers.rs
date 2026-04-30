@@ -1,0 +1,178 @@
+use eframe::egui;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Trigger {
+    /// Win32 Virtual-Key code (VK_F1 = 0x70, VK_A = 0x41, …).
+    Key(u32),
+    Mouse(MouseBtn),
+    Wheel(WheelDir),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MouseBtn {
+    Middle,
+    /// XBUTTON1 — "mb4" / side back.
+    X1,
+    /// XBUTTON2 — "mb5" / side forward.
+    X2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WheelDir {
+    Up,
+    Down,
+}
+
+impl Trigger {
+    pub fn display_label(&self) -> String {
+        match self {
+            Trigger::Key(vk) => vk_to_label(*vk),
+            Trigger::Mouse(MouseBtn::Middle) => "MWheel".into(),
+            Trigger::Mouse(MouseBtn::X1) => "Mb4".into(),
+            Trigger::Mouse(MouseBtn::X2) => "Mb5".into(),
+            Trigger::Wheel(WheelDir::Up) => "MWh\u{2191}".into(),
+            Trigger::Wheel(WheelDir::Down) => "MWh\u{2193}".into(),
+        }
+    }
+}
+
+pub fn key_to_vk(key: egui::Key) -> Option<u32> {
+    use egui::Key;
+    Some(match key {
+        Key::F1 => 0x70,
+        Key::F2 => 0x71,
+        Key::F3 => 0x72,
+        Key::F4 => 0x73,
+        Key::F5 => 0x74,
+        Key::F6 => 0x75,
+        Key::F7 => 0x76,
+        Key::F8 => 0x77,
+        Key::F9 => 0x78,
+        Key::F10 => 0x79,
+        Key::F11 => 0x7A,
+        Key::F12 => 0x7B,
+        Key::F13 => 0x7C,
+        Key::F14 => 0x7D,
+        Key::F15 => 0x7E,
+        Key::F16 => 0x7F,
+        Key::F17 => 0x80,
+        Key::F18 => 0x81,
+        Key::F19 => 0x82,
+        Key::F20 => 0x83,
+        Key::A => 0x41,
+        Key::B => 0x42,
+        Key::C => 0x43,
+        Key::D => 0x44,
+        Key::E => 0x45,
+        Key::F => 0x46,
+        Key::G => 0x47,
+        Key::H => 0x48,
+        Key::I => 0x49,
+        Key::J => 0x4A,
+        Key::K => 0x4B,
+        Key::L => 0x4C,
+        Key::M => 0x4D,
+        Key::N => 0x4E,
+        Key::O => 0x4F,
+        Key::P => 0x50,
+        Key::Q => 0x51,
+        Key::R => 0x52,
+        Key::S => 0x53,
+        Key::T => 0x54,
+        Key::U => 0x55,
+        Key::V => 0x56,
+        Key::W => 0x57,
+        Key::X => 0x58,
+        Key::Y => 0x59,
+        Key::Z => 0x5A,
+        Key::Num0 => 0x30,
+        Key::Num1 => 0x31,
+        Key::Num2 => 0x32,
+        Key::Num3 => 0x33,
+        Key::Num4 => 0x34,
+        Key::Num5 => 0x35,
+        Key::Num6 => 0x36,
+        Key::Num7 => 0x37,
+        Key::Num8 => 0x38,
+        Key::Num9 => 0x39,
+        Key::Space => 0x20,
+        Key::Backspace => 0x08,
+        Key::Tab => 0x09,
+        Key::Enter => 0x0D,
+        Key::Insert => 0x2D,
+        Key::Delete => 0x2E,
+        Key::Home => 0x24,
+        Key::End => 0x23,
+        Key::PageUp => 0x21,
+        Key::PageDown => 0x22,
+        Key::ArrowLeft => 0x25,
+        Key::ArrowUp => 0x26,
+        Key::ArrowRight => 0x27,
+        Key::ArrowDown => 0x28,
+        Key::Minus => 0xBD,
+        Key::Equals => 0xBB,
+        Key::OpenBracket => 0xDB,
+        Key::CloseBracket => 0xDD,
+        Key::Backslash => 0xDC,
+        Key::Semicolon => 0xBA,
+        Key::Quote => 0xDE,
+        Key::Comma => 0xBC,
+        Key::Period => 0xBE,
+        Key::Slash => 0xBF,
+        Key::Backtick => 0xC0,
+        _ => return None,
+    })
+}
+
+pub fn vk_to_label(vk: u32) -> String {
+    match vk {
+        0x70 => "F1".into(),
+        0x71 => "F2".into(),
+        0x72 => "F3".into(),
+        0x73 => "F4".into(),
+        0x74 => "F5".into(),
+        0x75 => "F6".into(),
+        0x76 => "F7".into(),
+        0x77 => "F8".into(),
+        0x78 => "F9".into(),
+        0x79 => "F10".into(),
+        0x7A => "F11".into(),
+        0x7B => "F12".into(),
+        0x7C => "F13".into(),
+        0x7D => "F14".into(),
+        0x7E => "F15".into(),
+        0x7F => "F16".into(),
+        0x80 => "F17".into(),
+        0x81 => "F18".into(),
+        0x82 => "F19".into(),
+        0x83 => "F20".into(),
+        0x41..=0x5A => ((vk as u8) as char).to_string(),
+        0x30..=0x39 => ((vk as u8) as char).to_string(),
+        0x20 => "Space".into(),
+        0x08 => "Backspace".into(),
+        0x09 => "Tab".into(),
+        0x0D => "Enter".into(),
+        0x2D => "Ins".into(),
+        0x2E => "Del".into(),
+        0x24 => "Home".into(),
+        0x23 => "End".into(),
+        0x21 => "PgUp".into(),
+        0x22 => "PgDn".into(),
+        0x25 => "\u{2190}".into(),
+        0x26 => "\u{2191}".into(),
+        0x27 => "\u{2192}".into(),
+        0x28 => "\u{2193}".into(),
+        0xBD => "-".into(),
+        0xBB => "=".into(),
+        0xDB => "[".into(),
+        0xDD => "]".into(),
+        0xDC => "\\".into(),
+        0xBA => ";".into(),
+        0xDE => "'".into(),
+        0xBC => ",".into(),
+        0xBE => ".".into(),
+        0xBF => "/".into(),
+        0xC0 => "`".into(),
+        _ => format!("VK_0x{vk:02X}"),
+    }
+}

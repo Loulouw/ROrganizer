@@ -4,6 +4,7 @@ use rust_i18n::t;
 
 use crate::app::App;
 use crate::theme::{self, Theme};
+use crate::triggers::Trigger;
 use crate::win::{self, DetectedWindow};
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
@@ -31,8 +32,11 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                     .auto_shrink([false, true])
                     .show(ui, |ui| {
                         for w in &windows {
-                            let resp = draw_row(ui, theme, w);
-                            if resp.clicked() {
+                            let binding = app.binding_for(&w.slot_key);
+                            let r = draw_row(ui, theme, w, binding);
+                            if r.pill_clicked {
+                                app.bind_for(w.slot_key.clone());
+                            } else if r.row_clicked {
                                 win::focus_window(w.hwnd);
                             }
                             ui.add_space(6.0);
@@ -95,7 +99,17 @@ fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
     });
 }
 
-fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) -> egui::Response {
+struct RowInteraction {
+    row_clicked: bool,
+    pill_clicked: bool,
+}
+
+fn draw_row(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    w: &DetectedWindow,
+    binding: Option<Trigger>,
+) -> RowInteraction {
     let id = ui.make_persistent_id(("row", &w.slot_key));
     let prior_hovered = ui
         .ctx()
@@ -118,6 +132,8 @@ fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) -> egui::Respon
     let bg = if prior_hovered { bg_hover } else { bg_normal };
 
     let avail_width = ui.available_width();
+    let mut pill_rect: Option<egui::Rect> = None;
+
     let frame_resp = Frame::none()
         .fill(bg)
         .rounding(Rounding::same(8.0))
@@ -140,14 +156,109 @@ fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) -> egui::Respon
                             .color(theme::text_tertiary(theme)),
                     );
                 }
+                ui.with_layout(
+                    egui::Layout::right_to_left(egui::Align::Center),
+                    |ui| {
+                        let r = binding_pill(ui, theme, &w.slot_key, binding);
+                        pill_rect = Some(r.rect);
+                    },
+                );
             });
         });
 
-    let click = ui.interact(frame_resp.response.rect, id, Sense::click());
-    if click.hovered() {
+    // Single interact for the whole row. We then manually check the click
+    // position to decide whether it landed on the pastille (capture) or
+    // anywhere else in the row (focus). This avoids egui's overlap-priority
+    // resolution which previously gave the click to the row even when the
+    // pastille was the visual target.
+    let row_resp = ui.interact(frame_resp.response.rect, id, Sense::click());
+    if row_resp.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-    click
+
+    let mut pill_clicked = false;
+    let mut row_clicked = false;
+    if row_resp.clicked() {
+        let on_pill = row_resp
+            .interact_pointer_pos()
+            .zip(pill_rect)
+            .map(|(p, r)| r.contains(p))
+            .unwrap_or(false);
+        if on_pill {
+            pill_clicked = true;
+        } else {
+            row_clicked = true;
+        }
+    }
+
+    RowInteraction {
+        row_clicked,
+        pill_clicked,
+    }
+}
+
+fn binding_pill(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    _slot_key: &str,
+    binding: Option<Trigger>,
+) -> egui::Response {
+    let label = match binding {
+        Some(t) => t.display_label(),
+        None => t!("binding.set").to_string(),
+    };
+    let has_binding = binding.is_some();
+
+    let font = egui::FontId::monospace(11.0);
+    let inner = ui.fonts(|f| f.layout_no_wrap(label.clone(), font.clone(), Color32::WHITE).size());
+    let pad = Vec2::new(8.0, 4.0);
+    let pill_size = Vec2::new(inner.x + pad.x * 2.0, inner.y + pad.y * 2.0)
+        .max(Vec2::new(44.0, 20.0));
+
+    let (rect, response) = ui.allocate_exact_size(pill_size, Sense::click());
+
+    let (bg, border, txt) = pill_colors(theme, has_binding, response.hovered());
+    ui.painter().rect_filled(rect, 4.0, bg);
+    ui.painter().rect_stroke(rect, 4.0, Stroke::new(1.0, border));
+    ui.painter()
+        .text(rect.center(), egui::Align2::CENTER_CENTER, &label, font, txt);
+
+    if response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    response
+}
+
+fn pill_colors(theme: Theme, has_binding: bool, hovered: bool) -> (Color32, Color32, Color32) {
+    let (bg_set, bg_unset, border_set, border_unset, txt_set, txt_unset) = match theme {
+        Theme::Dark => (
+            Color32::from_rgb(0x2C, 0x2C, 0x2A),
+            Color32::TRANSPARENT,
+            Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0x14),
+            Color32::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0x22),
+            Color32::from_rgb(0xD3, 0xD1, 0xC7),
+            theme::TEXT_TERTIARY_DARK,
+        ),
+        Theme::Light => (
+            Color32::from_rgb(0xF1, 0xEF, 0xE8),
+            Color32::TRANSPARENT,
+            Color32::from_rgba_unmultiplied(0x00, 0x00, 0x00, 0x10),
+            Color32::from_rgba_unmultiplied(0x00, 0x00, 0x00, 0x22),
+            Color32::from_rgb(0x44, 0x44, 0x41),
+            theme::TEXT_TERTIARY_LIGHT,
+        ),
+    };
+    let (bg, border, txt) = if has_binding {
+        (bg_set, border_set, txt_set)
+    } else {
+        (bg_unset, border_unset, txt_unset)
+    };
+    if hovered {
+        let bg_h = mix(bg, Color32::WHITE, 0.06);
+        (bg_h, border, txt)
+    } else {
+        (bg, border, txt)
+    }
 }
 
 fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
