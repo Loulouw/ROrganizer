@@ -47,6 +47,8 @@ impl App {
         let (refresh_tx, refresh_rx) = channel();
         win::spawn_watcher(windows.clone(), cc.egui_ctx.clone(), regex_src, refresh_rx);
 
+        crate::hooks::install(windows.clone());
+
         Self {
             theme: Theme::Dark,
             lang,

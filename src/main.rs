@@ -3,6 +3,7 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
 mod app;
+mod hooks;
 mod i18n;
 mod theme;
 mod tray;
