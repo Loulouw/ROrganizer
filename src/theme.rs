@@ -1,7 +1,8 @@
 use eframe::egui;
 use egui::Color32;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Theme {
     Light,
     Dark,

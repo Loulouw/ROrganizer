@@ -1,11 +1,14 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use eframe::egui;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use tray_icon::TrayIcon;
 
+use crate::config::{self, StoredConfig};
 use crate::hooks::BindingAction;
 use crate::i18n::{self, Lang};
 use crate::theme::{self, Theme};
@@ -13,6 +16,8 @@ use crate::tray::{self, TrayEvent};
 use crate::triggers::{BindingTarget, SlotKey, Trigger};
 use crate::ui;
 use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
+
+const SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
 pub struct App {
     theme: Theme,
@@ -30,6 +35,8 @@ pub struct App {
     cycle_current: Option<SlotKey>,
     last_synced_state: SyncSnapshot,
     last_synced_height: f32,
+    config_path: Option<PathBuf>,
+    last_dirty_at: Option<Instant>,
 }
 
 #[derive(Default, PartialEq, Eq)]
@@ -48,7 +55,24 @@ impl App {
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
 
-        let lang = i18n::detect_system_lang();
+        // Load persisted config if any (silently falls back to defaults).
+        let config_path = config::default_path();
+        let stored = config_path.as_ref().and_then(|p| config::load(p));
+
+        let (theme, lang, bindings, cycle_order) = match stored {
+            Some(cfg) => (
+                cfg.theme,
+                cfg.lang,
+                cfg.bindings.into_iter().collect::<HashMap<_, _>>(),
+                cfg.cycle_order,
+            ),
+            None => (
+                Theme::Dark,
+                i18n::detect_system_lang(),
+                HashMap::new(),
+                Vec::new(),
+            ),
+        };
         i18n::set_lang(lang);
 
         let (tray_tx, tray_rx) = channel();
@@ -64,19 +88,21 @@ impl App {
         crate::hooks::install(windows.clone());
 
         Self {
-            theme: Theme::Dark,
+            theme,
             lang,
             tray_rx,
             _tray_icon: tray_icon,
             visuals_applied: false,
             windows,
             refresh_tx,
-            bindings: HashMap::new(),
+            bindings,
             capture_state: None,
-            cycle_order: Vec::new(),
+            cycle_order,
             cycle_current: None,
             last_synced_state: SyncSnapshot::default(),
             last_synced_height: 0.0,
+            config_path,
+            last_dirty_at: None,
         }
     }
 
@@ -92,12 +118,14 @@ impl App {
         if self.lang != l {
             self.lang = l;
             i18n::set_lang(l);
+            self.mark_dirty();
         }
     }
 
     pub fn toggle_theme(&mut self) {
         self.theme = self.theme.toggled();
         self.visuals_applied = false;
+        self.mark_dirty();
     }
 
     pub fn windows_snapshot(&self) -> WindowsSnapshot {
@@ -146,11 +174,13 @@ impl App {
         self.bindings.insert(target, trigger);
         self.capture_state = None;
         self.sync_state_to_hooks(true);
+        self.mark_dirty();
     }
 
     pub fn clear_binding(&mut self, target: &BindingTarget) {
         if self.bindings.remove(target).is_some() {
             self.sync_state_to_hooks(true);
+            self.mark_dirty();
         }
     }
 
@@ -168,6 +198,7 @@ impl App {
     pub fn apply_drag_drop(&mut self, new_order: Vec<SlotKey>) {
         self.cycle_order = new_order;
         self.sync_state_to_hooks(true);
+        self.mark_dirty();
     }
 
     fn push_cycle_index_to_hooks(&self) {
@@ -204,7 +235,37 @@ impl App {
         }
         if changed {
             self.sync_state_to_hooks(true);
+            self.mark_dirty();
         }
+    }
+
+    fn mark_dirty(&mut self) {
+        self.last_dirty_at = Some(Instant::now());
+    }
+
+    fn flush_if_due(&mut self) {
+        let Some(when) = self.last_dirty_at else { return };
+        if when.elapsed() < SAVE_DEBOUNCE {
+            return;
+        }
+        self.persist_config();
+        self.last_dirty_at = None;
+    }
+
+    fn persist_config(&self) {
+        let Some(path) = &self.config_path else { return };
+        let cfg = StoredConfig {
+            version: config::current_version(),
+            bindings: self
+                .bindings
+                .iter()
+                .map(|(k, v)| (k.clone(), *v))
+                .collect(),
+            cycle_order: self.cycle_order.clone(),
+            lang: self.lang,
+            theme: self.theme,
+        };
+        let _ = config::save_atomic(path, &cfg);
     }
 
     /// Resolves bindings + cycle order against the current window snapshot
@@ -316,5 +377,14 @@ impl eframe::App for App {
         ui::header::draw(ctx, self);
         ui::main_view::draw(ctx, self);
         ui::capture::draw(ctx, self);
+
+        self.flush_if_due();
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if self.last_dirty_at.is_some() {
+            self.persist_config();
+            self.last_dirty_at = None;
+        }
     }
 }

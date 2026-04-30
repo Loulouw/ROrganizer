@@ -1,16 +1,17 @@
 use eframe::egui;
+use serde::{Deserialize, Serialize};
 
 pub type SlotKey = String;
 
 /// What the user is binding a Trigger to.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BindingTarget {
     Account(SlotKey),
     CycleNext,
     CyclePrev,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Trigger {
     /// Win32 Virtual-Key code (VK_F1 = 0x70, VK_A = 0x41, …).
     Key(u32),
@@ -18,7 +19,7 @@ pub enum Trigger {
     Wheel(WheelDir),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MouseBtn {
     Middle,
     /// XBUTTON1 — "mb4" / side back.
@@ -27,7 +28,7 @@ pub enum MouseBtn {
     X2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WheelDir {
     Up,
     Down,
