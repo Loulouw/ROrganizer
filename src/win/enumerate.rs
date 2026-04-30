@@ -13,8 +13,6 @@ pub const DEFAULT_TITLE_REGEX: &str =
 
 #[derive(Debug, Clone)]
 pub struct DetectedWindow {
-    /// Wired up in phase 3 (focus on click).
-    #[allow(dead_code)]
     pub hwnd: isize,
     /// Kept for diagnostics / future cycler logic.
     #[allow(dead_code)]

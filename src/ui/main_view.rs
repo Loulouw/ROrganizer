@@ -3,7 +3,7 @@ use egui::{Color32, Frame, Margin, Rounding, Sense, Stroke, Vec2};
 
 use crate::app::App;
 use crate::theme::{self, Theme};
-use crate::win::DetectedWindow;
+use crate::win::{self, DetectedWindow};
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
@@ -14,7 +14,11 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     };
 
     egui::CentralPanel::default()
-        .frame(Frame::none().fill(theme::window_bg(theme)).inner_margin(Margin::symmetric(12.0, 12.0)))
+        .frame(
+            Frame::none()
+                .fill(theme::window_bg(theme))
+                .inner_margin(Margin::symmetric(12.0, 12.0)),
+        )
         .show(ctx, |ui| {
             draw_summary(ui, theme, windows.len(), || app.request_refresh());
             ui.add_space(10.0);
@@ -26,7 +30,10 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                     .auto_shrink([false, true])
                     .show(ui, |ui| {
                         for w in &windows {
-                            draw_row(ui, theme, w);
+                            let resp = draw_row(ui, theme, w);
+                            if resp.clicked() {
+                                win::focus_window(w.hwnd);
+                            }
                             ui.add_space(6.0);
                         }
                     });
@@ -87,17 +94,36 @@ fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
     });
 }
 
-fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) {
-    let (bg, border) = match theme {
-        Theme::Dark => (theme::BG_ROW_DARK, theme::BORDER_SUBTLE_DARK),
-        Theme::Light => (theme::BG_ROW_LIGHT, theme::BORDER_SUBTLE_LIGHT),
+fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) -> egui::Response {
+    let id = ui.make_persistent_id(("row", &w.slot_key));
+    let prior_hovered = ui
+        .ctx()
+        .read_response(id)
+        .map(|r| r.hovered())
+        .unwrap_or(false);
+
+    let (bg_normal, bg_hover, border) = match theme {
+        Theme::Dark => (
+            theme::BG_ROW_DARK,
+            mix(theme::BG_ROW_DARK, Color32::WHITE, 0.08),
+            theme::BORDER_SUBTLE_DARK,
+        ),
+        Theme::Light => (
+            theme::BG_ROW_LIGHT,
+            mix(theme::BG_ROW_LIGHT, Color32::BLACK, 0.05),
+            theme::BORDER_SUBTLE_LIGHT,
+        ),
     };
-    Frame::none()
+    let bg = if prior_hovered { bg_hover } else { bg_normal };
+
+    let avail_width = ui.available_width();
+    let frame_resp = Frame::none()
         .fill(bg)
         .rounding(Rounding::same(8.0))
         .stroke(Stroke::new(1.0, border))
         .inner_margin(Margin::symmetric(12.0, 11.0))
         .show(ui, |ui| {
+            ui.set_min_width(avail_width - 24.0); // - inner_margin*2
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new(&w.slot_key)
@@ -113,8 +139,23 @@ fn draw_row(ui: &mut egui::Ui, theme: Theme, w: &DetectedWindow) {
                             .color(theme::text_tertiary(theme)),
                     );
                 }
-                ui.add_space(0.0); // keep horizontal layout filling line
-                let _ = Color32::TRANSPARENT;
             });
         });
+
+    let click = ui.interact(frame_resp.response.rect, id, Sense::click());
+    if click.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    click
+}
+
+fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
+    let t = t.clamp(0.0, 1.0);
+    let inv = 1.0 - t;
+    Color32::from_rgba_unmultiplied(
+        (a.r() as f32 * inv + b.r() as f32 * t).round() as u8,
+        (a.g() as f32 * inv + b.g() as f32 * t).round() as u8,
+        (a.b() as f32 * inv + b.b() as f32 * t).round() as u8,
+        (a.a() as f32 * inv + b.a() as f32 * t).round() as u8,
+    )
 }
