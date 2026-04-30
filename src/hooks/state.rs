@@ -29,6 +29,9 @@ pub struct HookState {
     /// so we can re-locate it inside `cycle_hwnds` after a reorder, keeping
     /// the user "on the same account" across drags.
     pub cycle_current_hwnd: Option<isize>,
+    /// Master switch — when false, the callback returns CallNextHookEx
+    /// without ever matching, so triggers don't fire and keys pass through.
+    pub enabled: bool,
 }
 
 pub static HOOK_STATE: OnceLock<Mutex<HookState>> = OnceLock::new();

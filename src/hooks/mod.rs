@@ -24,6 +24,7 @@ pub fn install(windows: WindowsSnapshot) {
         cycle_hwnds: Vec::new(),
         cycle_index: 0,
         cycle_current_hwnd: None,
+        enabled: false, // App flips this true via set_enabled when user clicks Activer
     };
     state::HOOK_STATE
         .set(Mutex::new(st))
@@ -58,6 +59,16 @@ pub fn set_bindings_and_cycle(
             } else if state.cycle_index >= new_len {
                 state.cycle_index = new_len - 1;
             }
+        }
+    }
+}
+
+/// Master switch on the hook callbacks. When `false`, the callbacks return
+/// `CallNextHookEx` immediately without matching any trigger.
+pub fn set_enabled(enabled: bool) {
+    if let Some(state_mut) = state::HOOK_STATE.get() {
+        if let Ok(mut state) = state_mut.lock() {
+            state.enabled = enabled;
         }
     }
 }

@@ -48,7 +48,64 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
 
             ui.add_space(8.0);
             draw_cycle_section(ui, theme, app, &conflicts);
+            draw_active_toggle(ui, ctx, theme, app);
         });
+}
+
+fn draw_active_toggle(ui: &mut egui::Ui, ctx: &egui::Context, theme: Theme, app: &mut App) {
+    ui.add_space(10.0);
+    let active = app.is_active();
+    let label = if active {
+        t!("main.deactivate").to_string()
+    } else {
+        t!("main.activate").to_string()
+    };
+    let (bg, txt) = if active {
+        theme::button_danger(theme)
+    } else {
+        theme::button_primary(theme)
+    };
+
+    let height = 36.0;
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), height),
+        Sense::click(),
+    );
+    let bg = if response.hovered() {
+        mix(bg, Color32::WHITE, 0.06)
+    } else {
+        bg
+    };
+    if response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    ui.painter().rect_filled(rect, 8.0, bg);
+    ui.painter().text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        &label,
+        egui::FontId::proportional(13.0),
+        txt,
+    );
+
+    if !active {
+        ui.add_space(4.0);
+        ui.vertical_centered(|ui| {
+            ui.label(
+                egui::RichText::new(t!("main.activate_hint").to_string())
+                    .size(11.0)
+                    .color(theme::text_tertiary(theme)),
+            );
+        });
+    }
+
+    if response.clicked() {
+        if active {
+            app.request_deactivate();
+        } else {
+            app.request_activate(ctx);
+        }
+    }
 }
 
 fn draw_summary<F: FnOnce()>(ui: &mut egui::Ui, theme: Theme, count: usize, on_refresh: F) {

@@ -4,7 +4,10 @@
     "accounts_one": "1 account running",
     "accounts_many": "%{count} accounts running",
     "empty_title": "No account detected",
-    "empty_hint": "Launch Dofus to see your characters here."
+    "empty_hint": "Launch Dofus to see your characters here.",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activate_hint": "minimizes to the system tray"
   },
   "header": {
     "tooltip_minimize": "Minimize to system tray",
@@ -15,7 +18,11 @@
   },
   "tray": {
     "show": "Show",
-    "quit": "Quit"
+    "quit": "Quit",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "status_active": "Active · %{count} accounts",
+    "status_inactive": "Inactive"
   },
   "binding": {
     "set": "set",

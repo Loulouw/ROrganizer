@@ -67,8 +67,10 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
                 let _ = state.log_tx.send(l);
             }
 
-            if let Some(t) = trigger {
-                focus_target = resolve_action(&mut state, t);
+            if state.enabled {
+                if let Some(t) = trigger {
+                    focus_target = resolve_action(&mut state, t);
+                }
             }
         }
     }

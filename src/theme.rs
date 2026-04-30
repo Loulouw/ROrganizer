@@ -50,6 +50,14 @@ pub const CONFLICT_BORDER_LIGHT: Color32 = Color32::from_rgba_premultiplied(0xE2
 pub const CONFLICT_PILL_BG_LIGHT: Color32 = Color32::from_rgba_premultiplied(0xF0, 0x95, 0x95, 0x66);
 pub const CONFLICT_PILL_TEXT_LIGHT: Color32 = Color32::from_rgb(0x99, 0x3C, 0x1D);
 
+// Activate / deactivate full-width button.
+pub const BUTTON_PRIMARY_BG_DARK: Color32 = Color32::from_rgb(0xE8, 0xE6, 0xDF);
+pub const BUTTON_PRIMARY_TEXT_DARK: Color32 = Color32::from_rgb(0x1C, 0x1C, 0x1A);
+pub const BUTTON_PRIMARY_BG_LIGHT: Color32 = Color32::from_rgb(0x2C, 0x2C, 0x2A);
+pub const BUTTON_PRIMARY_TEXT_LIGHT: Color32 = Color32::from_rgb(0xFA, 0xFA, 0xF7);
+pub const BUTTON_DANGER_BG: Color32 = Color32::from_rgb(0x99, 0x3C, 0x1D);
+pub const BUTTON_DANGER_TEXT: Color32 = Color32::from_rgb(0xFC, 0xEB, 0xEB);
+
 pub fn apply(ctx: &egui::Context, theme: Theme) {
     let mut visuals = match theme {
         Theme::Dark => egui::Visuals::dark(),
@@ -121,6 +129,19 @@ pub fn hover_bg(theme: Theme) -> Color32 {
         Theme::Dark => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
         Theme::Light => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
     }
+}
+
+/// `(bg, text)` for the primary full-width Activer button.
+pub fn button_primary(theme: Theme) -> (Color32, Color32) {
+    match theme {
+        Theme::Dark => (BUTTON_PRIMARY_BG_DARK, BUTTON_PRIMARY_TEXT_DARK),
+        Theme::Light => (BUTTON_PRIMARY_BG_LIGHT, BUTTON_PRIMARY_TEXT_LIGHT),
+    }
+}
+
+/// `(bg, text)` for the danger full-width Désactiver button.
+pub fn button_danger(_theme: Theme) -> (Color32, Color32) {
+    (BUTTON_DANGER_BG, BUTTON_DANGER_TEXT)
 }
 
 /// Returns `(row_bg, border, pill_bg, pill_text)` for the conflict palette.

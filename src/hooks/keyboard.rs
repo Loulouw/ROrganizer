@@ -20,11 +20,12 @@ pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM)
     if let Some(state_mut) = HOOK_STATE.get() {
         if let Ok(mut state) = state_mut.lock() {
             let _ = state.log_tx.send(format!(
-                "kb {} vk=0x{:02X}",
+                "kb {} vk=0x{:02X}{}",
                 if is_down { "down" } else { "up  " },
-                vk
+                vk,
+                if state.enabled { "" } else { " [disabled]" }
             ));
-            if is_down {
+            if state.enabled && is_down {
                 let trigger = Trigger::Key(vk);
                 focus_target = resolve_action(&mut state, trigger);
             }

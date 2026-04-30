@@ -6,13 +6,12 @@ use std::time::{Duration, Instant};
 
 use eframe::egui;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use tray_icon::TrayIcon;
 
 use crate::config::{self, StoredConfig};
 use crate::hooks::BindingAction;
 use crate::i18n::{self, Lang};
 use crate::theme::{self, Theme};
-use crate::tray::{self, TrayEvent};
+use crate::tray::{self, TrayController, TrayEvent};
 use crate::triggers::{BindingTarget, SlotKey, Trigger};
 use crate::ui;
 use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
@@ -23,7 +22,7 @@ pub struct App {
     theme: Theme,
     lang: Lang,
     tray_rx: Receiver<TrayEvent>,
-    _tray_icon: TrayIcon,
+    tray: TrayController,
     visuals_applied: bool,
     windows: WindowsSnapshot,
     refresh_tx: Sender<()>,
@@ -37,6 +36,8 @@ pub struct App {
     last_synced_height: f32,
     config_path: Option<PathBuf>,
     last_dirty_at: Option<Instant>,
+    is_active: bool,
+    last_status_count: usize,
 }
 
 #[derive(Default, PartialEq, Eq)]
@@ -76,7 +77,7 @@ impl App {
         i18n::set_lang(lang);
 
         let (tray_tx, tray_rx) = channel();
-        let tray_icon = tray::install(cc.egui_ctx.clone(), tray_tx)
+        let tray = tray::install(cc.egui_ctx.clone(), tray_tx)
             .expect("failed to install tray icon");
 
         let windows: WindowsSnapshot = Arc::new(Mutex::new(Vec::new()));
@@ -91,7 +92,7 @@ impl App {
             theme,
             lang,
             tray_rx,
-            _tray_icon: tray_icon,
+            tray,
             visuals_applied: false,
             windows,
             refresh_tx,
@@ -103,11 +104,45 @@ impl App {
             last_synced_height: 0.0,
             config_path,
             last_dirty_at: None,
+            is_active: false,
+            last_status_count: usize::MAX, // forces an initial set_status push
         }
     }
 
     pub fn theme(&self) -> Theme {
         self.theme
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.is_active
+    }
+
+    pub fn request_activate(&mut self, ctx: &egui::Context) {
+        self.set_active(true);
+        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+    }
+
+    pub fn request_deactivate(&mut self) {
+        self.set_active(false);
+    }
+
+    fn set_active(&mut self, active: bool) {
+        if self.is_active == active {
+            return;
+        }
+        self.is_active = active;
+        crate::hooks::set_enabled(active);
+        self.tray.set_active(active);
+        self.update_tray_status(true);
+    }
+
+    fn update_tray_status(&mut self, force: bool) {
+        let count = self.windows.lock().map(|w| w.len()).unwrap_or(0);
+        if !force && count == self.last_status_count {
+            return;
+        }
+        self.last_status_count = count;
+        self.tray.set_status(self.is_active, count);
     }
 
     pub fn lang(&self) -> Lang {
@@ -352,6 +387,9 @@ impl App {
         // Banner: 6 leading space + 16 frame inner_margin + 14 per line.
         const BANNER_BASE: f32 = 22.0;
         const BANNER_PER_LINE: f32 = 14.0;
+        // Activate/deactivate full-width button + hint when inactive.
+        const TOGGLE_BUTTON: f32 = 46.0;
+        const TOGGLE_HINT: f32 = 22.0;
 
         let n_accounts = self.windows.lock().map(|w| w.len()).unwrap_or(0) as f32;
         let n_for_height = n_accounts.max(1.0); // reserve ~1 row even when empty
@@ -361,6 +399,7 @@ impl App {
         } else {
             0.0
         };
+        let toggle_h = TOGGLE_BUTTON + if self.is_active { 0.0 } else { TOGGLE_HINT };
         let desired = (TITLE_BAR
             + PANEL_PAD
             + SUMMARY
@@ -369,6 +408,7 @@ impl App {
             + banner_h
             + CYCLE_HEAD
             + CYCLE_BLOCK
+            + toggle_h
             + TAIL_PAD)
             .clamp(280.0, 600.0);
 
@@ -390,6 +430,22 @@ impl eframe::App for App {
                 TrayEvent::QuitRequested => {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
+                TrayEvent::ToggleRequested => {
+                    let new_active = !self.is_active;
+                    self.set_active(new_active);
+                    if new_active {
+                        // Tray Activer: hide window (the tray handler already
+                        // showed it to wake the loop ; we hide it back).
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                    } else {
+                        // Tray Désactiver: window was shown via Win32 from the
+                        // tray callback. Send Visible(true) so eframe's tracked
+                        // viewport state matches reality — otherwise a later
+                        // Visible(false) gets deduplicated to a no-op.
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                    }
+                }
             }
         }
 
@@ -400,6 +456,7 @@ impl eframe::App for App {
 
         self.ensure_cycle_order_covers_snapshot();
         self.sync_state_to_hooks(false);
+        self.update_tray_status(false);
         self.apply_dynamic_height(ctx);
 
         ui::header::draw(ctx, self);

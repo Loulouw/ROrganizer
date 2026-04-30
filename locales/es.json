@@ -4,7 +4,10 @@
     "accounts_one": "1 cuenta abierta",
     "accounts_many": "%{count} cuentas abiertas",
     "empty_title": "Ninguna cuenta detectada",
-    "empty_hint": "Inicia Dofus para ver tus personajes aquí."
+    "empty_hint": "Inicia Dofus para ver tus personajes aquí.",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "activate_hint": "se minimiza a la bandeja del sistema"
   },
   "header": {
     "tooltip_minimize": "Minimizar a la bandeja",
@@ -15,7 +18,11 @@
   },
   "tray": {
     "show": "Mostrar",
-    "quit": "Salir"
+    "quit": "Salir",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
+    "status_active": "Activo · %{count} cuentas",
+    "status_inactive": "Inactivo"
   },
   "binding": {
     "set": "definir",

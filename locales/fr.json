@@ -4,7 +4,10 @@
     "accounts_one": "1 compte lancé",
     "accounts_many": "%{count} comptes lancés",
     "empty_title": "Aucun compte détecté",
-    "empty_hint": "Lance Dofus pour voir tes personnages ici."
+    "empty_hint": "Lance Dofus pour voir tes personnages ici.",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "activate_hint": "se réduit dans la barre système"
   },
   "header": {
     "tooltip_minimize": "Réduire dans la barre système",
@@ -15,7 +18,11 @@
   },
   "tray": {
     "show": "Afficher",
-    "quit": "Quitter"
+    "quit": "Quitter",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "status_active": "Actif · %{count} comptes",
+    "status_inactive": "Inactif"
   },
   "binding": {
     "set": "définir",
