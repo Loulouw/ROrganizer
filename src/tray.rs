@@ -72,8 +72,8 @@ pub fn install(
     tx: Sender<TrayEvent>,
 ) -> Result<TrayIcon, Box<dyn std::error::Error>> {
     let menu = Menu::new();
-    let show_item = MenuItem::new("Afficher", true, None);
-    let quit_item = MenuItem::new("Quitter", true, None);
+    let show_item = MenuItem::new(rust_i18n::t!("tray.show").as_ref(), true, None);
+    let quit_item = MenuItem::new(rust_i18n::t!("tray.quit").as_ref(), true, None);
     menu.append(&show_item)?;
     menu.append(&PredefinedMenuItem::separator())?;
     menu.append(&quit_item)?;

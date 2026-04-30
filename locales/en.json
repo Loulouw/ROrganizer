@@ -1,0 +1,20 @@
+{
+  "main": {
+    "accounts_zero": "No account running",
+    "accounts_one": "1 account running",
+    "accounts_many": "%{count} accounts running",
+    "empty_title": "No account detected",
+    "empty_hint": "Launch Dofus to see your characters here."
+  },
+  "header": {
+    "tooltip_minimize": "Minimize to system tray",
+    "tooltip_close": "Close",
+    "tooltip_theme": "Toggle theme",
+    "tooltip_lang": "Language",
+    "tooltip_refresh": "Refresh"
+  },
+  "tray": {
+    "show": "Show",
+    "quit": "Quit"
+  }
+}

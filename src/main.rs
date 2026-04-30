@@ -1,6 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod app;
+mod i18n;
 mod theme;
 mod tray;
 mod ui;

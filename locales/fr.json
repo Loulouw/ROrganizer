@@ -1,0 +1,20 @@
+{
+  "main": {
+    "accounts_zero": "0 compte lancé",
+    "accounts_one": "1 compte lancé",
+    "accounts_many": "%{count} comptes lancés",
+    "empty_title": "Aucun compte détecté",
+    "empty_hint": "Lance Dofus pour voir tes personnages ici."
+  },
+  "header": {
+    "tooltip_minimize": "Réduire dans la barre système",
+    "tooltip_close": "Fermer",
+    "tooltip_theme": "Changer de thème",
+    "tooltip_lang": "Langue",
+    "tooltip_refresh": "Rafraîchir"
+  },
+  "tray": {
+    "show": "Afficher",
+    "quit": "Quitter"
+  }
+}

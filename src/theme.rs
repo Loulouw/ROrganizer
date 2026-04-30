@@ -3,9 +3,17 @@ use egui::Color32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Theme {
-    #[allow(dead_code)] // wired up in phase 4 (theme toggle)
     Light,
     Dark,
+}
+
+impl Theme {
+    pub fn toggled(self) -> Self {
+        match self {
+            Theme::Dark => Theme::Light,
+            Theme::Light => Theme::Dark,
+        }
+    }
 }
 
 // Dark palette — only the roles used in phase 1 are wired into Visuals,

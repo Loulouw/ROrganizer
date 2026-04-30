@@ -1,0 +1,20 @@
+{
+  "main": {
+    "accounts_zero": "Ninguna cuenta abierta",
+    "accounts_one": "1 cuenta abierta",
+    "accounts_many": "%{count} cuentas abiertas",
+    "empty_title": "Ninguna cuenta detectada",
+    "empty_hint": "Inicia Dofus para ver tus personajes aquí."
+  },
+  "header": {
+    "tooltip_minimize": "Minimizar a la bandeja",
+    "tooltip_close": "Cerrar",
+    "tooltip_theme": "Cambiar tema",
+    "tooltip_lang": "Idioma",
+    "tooltip_refresh": "Actualizar"
+  },
+  "tray": {
+    "show": "Mostrar",
+    "quit": "Salir"
+  }
+}

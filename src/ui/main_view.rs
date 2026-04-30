@@ -1,5 +1,6 @@
 use eframe::egui;
 use egui::{Color32, Frame, Margin, Rounding, Sense, Stroke, Vec2};
+use rust_i18n::t;
 
 use crate::app::App;
 use crate::theme::{self, Theme};
@@ -44,9 +45,9 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
 fn draw_summary<F: FnOnce()>(ui: &mut egui::Ui, theme: Theme, count: usize, on_refresh: F) {
     ui.horizontal(|ui| {
         let label = match count {
-            0 => "0 compte lancé".to_string(),
-            1 => "1 compte lancé".to_string(),
-            n => format!("{n} comptes lancés"),
+            0 => t!("main.accounts_zero").to_string(),
+            1 => t!("main.accounts_one").to_string(),
+            n => t!("main.accounts_many", count = n.to_string()).to_string(),
         };
         ui.label(
             egui::RichText::new(label)
@@ -74,20 +75,20 @@ fn refresh_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
         egui::FontId::proportional(14.0),
         theme::text_secondary(theme),
     );
-    response.on_hover_text("Rafraîchir")
+    response.on_hover_text(t!("header.tooltip_refresh").to_string())
 }
 
 fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
     ui.add_space(40.0);
     ui.vertical_centered(|ui| {
         ui.label(
-            egui::RichText::new("Aucun compte détecté")
+            egui::RichText::new(t!("main.empty_title").to_string())
                 .size(13.0)
                 .color(theme::text_tertiary(theme)),
         );
         ui.add_space(6.0);
         ui.label(
-            egui::RichText::new("Lance Dofus pour voir tes personnages ici.")
+            egui::RichText::new(t!("main.empty_hint").to_string())
                 .size(11.0)
                 .color(theme::text_tertiary(theme)),
         );

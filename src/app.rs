@@ -5,6 +5,7 @@ use eframe::egui;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use tray_icon::TrayIcon;
 
+use crate::i18n::{self, Lang};
 use crate::theme::{self, Theme};
 use crate::tray::{self, TrayEvent};
 use crate::ui;
@@ -12,6 +13,7 @@ use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 
 pub struct App {
     theme: Theme,
+    lang: Lang,
     tray_rx: Receiver<TrayEvent>,
     _tray_icon: TrayIcon,
     visuals_applied: bool,
@@ -27,6 +29,14 @@ impl App {
             }
         }
 
+        // SVG loader for the language flag icons.
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+
+        // Locale before tray::install — tray menu strings are baked at install time
+        // and do not re-localize when the user later changes language.
+        let lang = i18n::detect_system_lang();
+        i18n::set_lang(lang);
+
         let (tray_tx, tray_rx) = channel();
         let tray_icon = tray::install(cc.egui_ctx.clone(), tray_tx)
             .expect("failed to install tray icon");
@@ -39,6 +49,7 @@ impl App {
 
         Self {
             theme: Theme::Dark,
+            lang,
             tray_rx,
             _tray_icon: tray_icon,
             visuals_applied: false,
@@ -49,6 +60,22 @@ impl App {
 
     pub fn theme(&self) -> Theme {
         self.theme
+    }
+
+    pub fn lang(&self) -> Lang {
+        self.lang
+    }
+
+    pub fn set_lang(&mut self, l: Lang) {
+        if self.lang != l {
+            self.lang = l;
+            i18n::set_lang(l);
+        }
+    }
+
+    pub fn toggle_theme(&mut self) {
+        self.theme = self.theme.toggled();
+        self.visuals_applied = false;
     }
 
     pub fn windows_snapshot(&self) -> WindowsSnapshot {
