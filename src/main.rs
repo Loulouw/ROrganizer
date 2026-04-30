@@ -4,6 +4,7 @@ mod app;
 mod theme;
 mod tray;
 mod ui;
+mod win;
 
 use eframe::egui;
 

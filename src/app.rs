@@ -1,4 +1,5 @@
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 
 use eframe::egui;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -7,12 +8,15 @@ use tray_icon::TrayIcon;
 use crate::theme::{self, Theme};
 use crate::tray::{self, TrayEvent};
 use crate::ui;
+use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 
 pub struct App {
     theme: Theme,
     tray_rx: Receiver<TrayEvent>,
     _tray_icon: TrayIcon,
     visuals_applied: bool,
+    windows: WindowsSnapshot,
+    refresh_tx: Sender<()>,
 }
 
 impl App {
@@ -23,19 +27,36 @@ impl App {
             }
         }
 
-        let (tx, rx) = channel();
-        let tray_icon = tray::install(cc.egui_ctx.clone(), tx)
+        let (tray_tx, tray_rx) = channel();
+        let tray_icon = tray::install(cc.egui_ctx.clone(), tray_tx)
             .expect("failed to install tray icon");
+
+        let windows: WindowsSnapshot = Arc::new(Mutex::new(Vec::new()));
+        let regex_src = std::env::var("RORGANIZER_TITLE_REGEX")
+            .unwrap_or_else(|_| DEFAULT_TITLE_REGEX.to_string());
+        let (refresh_tx, refresh_rx) = channel();
+        win::spawn_watcher(windows.clone(), cc.egui_ctx.clone(), regex_src, refresh_rx);
+
         Self {
             theme: Theme::Dark,
-            tray_rx: rx,
+            tray_rx,
             _tray_icon: tray_icon,
             visuals_applied: false,
+            windows,
+            refresh_tx,
         }
     }
 
     pub fn theme(&self) -> Theme {
         self.theme
+    }
+
+    pub fn windows_snapshot(&self) -> WindowsSnapshot {
+        self.windows.clone()
+    }
+
+    pub fn request_refresh(&self) {
+        let _ = self.refresh_tx.send(());
     }
 
     pub fn request_minimize(&self, ctx: &egui::Context) {
@@ -67,24 +88,6 @@ impl eframe::App for App {
         }
 
         ui::header::draw(ctx, self);
-
-        egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(theme::window_bg(self.theme)))
-            .show(ctx, |ui| {
-                ui.add_space(40.0);
-                ui.vertical_centered(|ui| {
-                    ui.label(
-                        egui::RichText::new("Phase 1 \u{2014} squelette OK")
-                            .size(13.0)
-                            .color(theme::text_secondary(self.theme)),
-                    );
-                    ui.add_space(8.0);
-                    ui.label(
-                        egui::RichText::new("D\u{00E9}tection des fen\u{00EA}tres : phase 2")
-                            .size(11.0)
-                            .color(theme::text_tertiary(self.theme)),
-                    );
-                });
-            });
+        ui::main_view::draw(ctx, self);
     }
 }
