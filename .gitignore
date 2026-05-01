@@ -18,5 +18,8 @@ target
 .vscode/
 .claude/
 
+# Claude Code per-developer notes (preferences, local paths, dev habits)
+CLAUDE.local.md
+
 # Logs
 *.log
