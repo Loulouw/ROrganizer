@@ -15,7 +15,14 @@
     "tooltip_theme": "Changer de thème",
     "tooltip_lang": "Langue",
     "tooltip_refresh": "Rafraîchir",
-    "tooltip_github": "Ouvrir le repo GitHub"
+    "tooltip_about": "À propos"
+  },
+  "about": {
+    "credit": "Développé par Loulouw avec l'aide de Claude",
+    "report_bug": "Signaler un bug",
+    "open_config_dir": "Ouvrir le dossier de config",
+    "close": "Fermer",
+    "esc_hint": "Échap pour fermer"
   },
   "tray": {
     "show": "Afficher",

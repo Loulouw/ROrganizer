@@ -7,7 +7,6 @@ use crate::i18n::Lang;
 use crate::theme::{self, Theme};
 
 const HEIGHT: f32 = 36.0;
-const GITHUB_URL: &str = "https://github.com/Loulouw/ROrganizer";
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
@@ -33,10 +32,10 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
             ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(8.0);
-                    let github_resp = github_button(ui, theme)
-                        .on_hover_text(t!("header.tooltip_github").to_string());
-                    if github_resp.clicked() {
-                        open_url(GITHUB_URL);
+                    let about_resp = settings_button(ui, theme)
+                        .on_hover_text(t!("header.tooltip_about").to_string());
+                    if about_resp.clicked() {
+                        app.open_about();
                     }
                     ui.add_space(6.0);
                     ui.label(
@@ -90,29 +89,40 @@ fn titlebar_button(ui: &mut egui::Ui, glyph: &str, theme: Theme) -> egui::Respon
     response
 }
 
-fn github_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
+/// Procedurally drawn gear (settings icon). Drawn rather than embedded
+/// as SVG so the look stays consistent with the sun/moon theme button
+/// and we don't ship an extra asset.
+fn settings_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     let size = egui::vec2(30.0, 24.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
     if response.hovered() {
         ui.painter().rect_filled(rect, 4.0, theme::hover_bg(theme));
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-    let icon_size = egui::vec2(20.0, 20.0);
-    let icon_rect = egui::Rect::from_center_size(rect.center(), icon_size);
+    let center = rect.center();
     let tint = if response.hovered() {
         theme::text_primary(theme)
     } else {
         theme::text_secondary(theme)
     };
-    egui::Image::from_bytes("bytes://github.svg", crate::assets::GITHUB_SVG)
-        .fit_to_exact_size(icon_size)
-        .tint(tint)
-        .paint_at(ui, icon_rect);
-    response
-}
+    let stroke = Stroke::new(1.4, tint);
 
-fn open_url(url: &str) {
-    let _ = webbrowser::open(url);
+    // 8 short teeth radiating from a ring. Offset by half a step so the
+    // teeth sit in between the cardinal axes — visually closer to a real
+    // gear than aligned spokes.
+    let teeth_stroke = Stroke::new(2.2, tint);
+    for i in 0..8 {
+        let a = i as f32 * std::f32::consts::TAU / 8.0 + std::f32::consts::FRAC_PI_8;
+        let dir = egui::vec2(a.cos(), a.sin());
+        let p1 = center + dir * 5.5;
+        let p2 = center + dir * 8.0;
+        ui.painter().line_segment([p1, p2], teeth_stroke);
+    }
+    // Outer ring + inner hole — gives the gear its hollow centre.
+    ui.painter().circle_stroke(center, 5.5, stroke);
+    ui.painter().circle_stroke(center, 2.2, stroke);
+
+    response
 }
 
 /// Procedurally drawn sun (light theme active) or moon (dark theme active),

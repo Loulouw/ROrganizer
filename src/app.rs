@@ -54,6 +54,19 @@ pub(crate) fn validate_title_regex(opt: Option<String>) -> Option<String> {
     regex::Regex::new(&s).ok().map(|_| s)
 }
 
+/// Decode `assets::ICON_PNG` into a Context-owned texture for the About
+/// modal. 128×128 is large enough to stay crisp on HiDPI when the modal
+/// renders it at 56×56 logical pixels. Returns None if decoding fails —
+/// the modal then just skips the icon row.
+fn decode_about_icon(ctx: &egui::Context) -> Option<egui::TextureHandle> {
+    let img = image::load_from_memory(crate::assets::ICON_PNG).ok()?;
+    let resized = img.resize_exact(128, 128, image::imageops::FilterType::Lanczos3);
+    let rgba = resized.to_rgba8();
+    let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+    let color_image = egui::ColorImage::from_rgba_unmultiplied([w, h], rgba.as_raw());
+    Some(ctx.load_texture("about-icon", color_image, egui::TextureOptions::LINEAR))
+}
+
 pub struct App {
     theme: Theme,
     lang: Lang,
@@ -81,6 +94,16 @@ pub struct App {
     /// User-overridden title regex from config, or `None` to use the
     /// built-in default. We persist whatever we loaded (round-trip stable).
     title_regex: Option<String>,
+    /// Whether the "About" modal is currently displayed. Owned by App so
+    /// the dynamic height logic can reserve space for the overlay card.
+    show_about: bool,
+    /// Decoded once at boot so the About modal can render the app icon as
+    /// a `TextureHandle`. The PNG loader of `egui_extras` is **not**
+    /// compiled in (only `svg` feature is enabled), so an
+    /// `Image::from_bytes("bytes://*.png", ...)` would fall back to the
+    /// red error placeholder. Kept as Option so a (highly improbable)
+    /// decode failure doesn't bring the whole window down.
+    about_icon: Option<egui::TextureHandle>,
 }
 
 #[derive(Default, PartialEq, Eq)]
@@ -101,6 +124,7 @@ impl App {
         }
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
+        let about_icon = decode_about_icon(&cc.egui_ctx);
 
         // Load persisted config if any (silently falls back to defaults).
         let config_path = config::default_path();
@@ -172,6 +196,8 @@ impl App {
             hooks,
             conflicts_cache: None,
             title_regex,
+            show_about: false,
+            about_icon,
         }
     }
 
@@ -181,6 +207,29 @@ impl App {
 
     pub fn is_active(&self) -> bool {
         self.is_active
+    }
+
+    pub fn is_about_open(&self) -> bool {
+        self.show_about
+    }
+
+    pub fn open_about(&mut self) {
+        self.show_about = true;
+    }
+
+    pub fn close_about(&mut self) {
+        self.show_about = false;
+    }
+
+    /// Parent of the persisted config file, used by the About modal to
+    /// open the directory in Explorer. None when no usable config dir
+    /// could be detected (extremely rare on Windows).
+    pub fn config_dir(&self) -> Option<&std::path::Path> {
+        self.config_path.as_ref().and_then(|p| p.parent())
+    }
+
+    pub fn about_icon(&self) -> Option<&egui::TextureHandle> {
+        self.about_icon.as_ref()
     }
 
     pub fn request_activate(&mut self, ctx: &egui::Context) {
@@ -490,7 +539,7 @@ impl App {
             0.0
         };
         let toggle_h = TOGGLE_BUTTON + if self.is_active { 0.0 } else { TOGGLE_HINT };
-        let desired = (TITLE_BAR
+        let desired_content = TITLE_BAR
             + PANEL_PAD
             + SUMMARY
             + SUMMARY_GAP
@@ -499,8 +548,17 @@ impl App {
             + CYCLE_HEAD
             + CYCLE_BLOCK
             + toggle_h
-            + TAIL_PAD)
-            .clamp(280.0, 600.0);
+            + TAIL_PAD;
+        // The About modal card is 380 px tall + 20 px padding. When it's
+        // open we force the viewport at least that tall so the card
+        // doesn't get clipped at the bottom — a clipped close button
+        // would visually look like the modal is broken.
+        const ABOUT_MIN: f32 = 420.0;
+        let mut desired = desired_content;
+        if self.show_about {
+            desired = desired.max(ABOUT_MIN);
+        }
+        let desired = desired.clamp(280.0, 600.0);
 
         if (desired - self.last_synced_height).abs() > 0.5 {
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(340.0, desired)));
@@ -552,6 +610,7 @@ impl eframe::App for App {
         ui::header::draw(ctx, self);
         ui::main_view::draw(ctx, self);
         ui::capture::draw(ctx, self);
+        ui::about::draw(ctx, self);
 
         self.flush_if_due();
     }
