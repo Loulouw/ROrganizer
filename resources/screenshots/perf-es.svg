@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" width="720" height="200" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <style>
+      .card { fill: #26261F; stroke: #3A3A33; stroke-width: 1; }
+      .num { fill: #97C459; font-size: 38px; font-weight: 700; }
+      .unit { fill: #B4B2A9; font-size: 14px; }
+      .label { fill: #B4B2A9; font-size: 12px; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="720" height="200" fill="#1C1C1A" rx="12"/>
+
+  <!-- Card 1: binary size -->
+  <rect class="card" x="20" y="24" width="160" height="152" rx="10"/>
+  <text class="num" x="100" y="92" text-anchor="middle">~6</text>
+  <text class="unit" x="100" y="118" text-anchor="middle">MB</text>
+  <text class="label" x="100" y="148" text-anchor="middle">el ejecutable</text>
+
+  <!-- Card 2: RAM -->
+  <rect class="card" x="200" y="24" width="160" height="152" rx="10"/>
+  <text class="num" x="280" y="92" text-anchor="middle">~58</text>
+  <text class="unit" x="280" y="118" text-anchor="middle">MB</text>
+  <text class="label" x="280" y="148" text-anchor="middle">de RAM usada</text>
+
+  <!-- Card 3: CPU -->
+  <rect class="card" x="380" y="24" width="160" height="152" rx="10"/>
+  <text class="num" x="460" y="92" text-anchor="middle">0%</text>
+  <text class="unit" x="460" y="118" text-anchor="middle">de CPU</text>
+  <text class="label" x="460" y="148" text-anchor="middle">mientras juegas</text>
+
+  <!-- Card 4: detection latency -->
+  <rect class="card" x="560" y="24" width="140" height="152" rx="10"/>
+  <text class="num" x="630" y="92" text-anchor="middle">&lt;¼s</text>
+  <text class="unit" x="630" y="118" text-anchor="middle">detección</text>
+  <text class="label" x="630" y="148" text-anchor="middle">de una nueva cuenta</text>
+</svg>
