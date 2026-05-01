@@ -1,5 +1,5 @@
 use eframe::egui;
-use egui::{Color32, Frame, Margin, Rounding, Stroke};
+use egui::{Color32, CornerRadius, Frame, Margin, Stroke};
 use rust_i18n::t;
 
 use crate::app::App;
@@ -27,7 +27,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     }
 
     // Render the modal overlay (semi-transparent backdrop + centered card).
-    let screen_rect = ctx.screen_rect();
+    let screen_rect = ctx.content_rect();
     let backdrop = match theme {
         Theme::Dark => Color32::from_rgba_unmultiplied(0x10, 0x10, 0x0E, 0xCC),
         Theme::Light => Color32::from_rgba_unmultiplied(0xFA, 0xFA, 0xF7, 0xCC),
@@ -54,16 +54,16 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         .fixed_pos(screen_rect.left_top())
         .show(ctx, |ui| {
             ui.painter()
-                .rect_filled(screen_rect, Rounding::ZERO, backdrop);
+                .rect_filled(screen_rect, CornerRadius::ZERO, backdrop);
 
             let card_size = egui::vec2(280.0, 140.0);
             let card_rect = egui::Rect::from_center_size(screen_rect.center(), card_size);
-            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(card_rect), |ui| {
-                Frame::none()
+            ui.scope_builder(egui::UiBuilder::new().max_rect(card_rect), |ui| {
+                Frame::new()
                     .fill(card_bg)
-                    .rounding(Rounding::same(10.0))
+                    .corner_radius(CornerRadius::same(10))
                     .stroke(Stroke::new(1.0, card_border))
-                    .inner_margin(Margin::symmetric(18.0, 16.0))
+                    .inner_margin(Margin::symmetric(18, 16))
                     .show(ui, |ui| {
                         ui.set_min_size(card_size - egui::vec2(36.0, 32.0));
                         ui.vertical_centered(|ui| {

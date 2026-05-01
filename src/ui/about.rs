@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use eframe::egui;
-use egui::{Color32, Frame, Margin, Rounding, Sense, Stroke, Vec2};
+use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2};
 use rust_i18n::t;
 
 use crate::app::App;
@@ -29,7 +29,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         return;
     }
 
-    let screen_rect = ctx.screen_rect();
+    let screen_rect = ctx.content_rect();
     let backdrop = match theme {
         Theme::Dark => Color32::from_rgba_unmultiplied(0x10, 0x10, 0x0E, 0xCC),
         Theme::Light => Color32::from_rgba_unmultiplied(0xFA, 0xFA, 0xF7, 0xCC),
@@ -66,7 +66,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                 Sense::click(),
             );
             ui.painter()
-                .rect_filled(screen_rect, Rounding::ZERO, backdrop);
+                .rect_filled(screen_rect, CornerRadius::ZERO, backdrop);
             if backdrop_resp.clicked()
                 && backdrop_resp
                     .interact_pointer_pos()
@@ -76,12 +76,12 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                 close_clicked.set(true);
             }
 
-            ui.allocate_new_ui(egui::UiBuilder::new().max_rect(card_rect), |ui| {
-                Frame::none()
+            ui.scope_builder(egui::UiBuilder::new().max_rect(card_rect), |ui| {
+                Frame::new()
                     .fill(card_bg)
-                    .rounding(Rounding::same(10.0))
+                    .corner_radius(CornerRadius::same(10))
                     .stroke(Stroke::new(1.0, card_border))
-                    .inner_margin(Margin::symmetric(18.0, 16.0))
+                    .inner_margin(Margin::symmetric(18, 16))
                     .show(ui, |ui| {
                         ui.set_min_size(card_size - egui::vec2(36.0, 32.0));
                         ui.vertical_centered(|ui| {
@@ -196,7 +196,7 @@ fn github_link(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     let (bg, border) = row_palette(theme, response.hovered());
     ui.painter().rect_filled(rect, 8.0, bg);
     ui.painter()
-        .rect_stroke(rect, 8.0, Stroke::new(1.0, border));
+        .rect_stroke(rect, 8.0, Stroke::new(1.0, border), StrokeKind::Inside);
 
     // Layout: [12 px pad] [logo 18×18] [8 px gap] [label] [auto] [→ 12 px pad]
     let logo_size = egui::vec2(18.0, 18.0);
@@ -239,7 +239,7 @@ fn action_row(ui: &mut egui::Ui, theme: Theme, label: &str, glyph: &str) -> egui
     let (bg, border) = row_palette(theme, response.hovered());
     ui.painter().rect_filled(rect, 8.0, bg);
     ui.painter()
-        .rect_stroke(rect, 8.0, Stroke::new(1.0, border));
+        .rect_stroke(rect, 8.0, Stroke::new(1.0, border), StrokeKind::Inside);
 
     ui.painter().text(
         egui::pos2(rect.left() + 16.0, rect.center().y),

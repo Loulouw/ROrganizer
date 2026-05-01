@@ -1,4 +1,4 @@
-use windows::Win32::Foundation::{BOOL, HWND};
+use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -45,22 +45,22 @@ pub fn focus_window(hwnd_raw: isize) {
         };
         let attach_fg = fg_tid != 0 && fg_tid != self_tid && fg_tid != target_tid;
         if attach_fg {
-            let _ = AttachThreadInput(self_tid, fg_tid, BOOL(1));
+            let _ = AttachThreadInput(self_tid, fg_tid, true);
         }
         let attach_target = target_tid != self_tid;
         if attach_target {
-            let _ = AttachThreadInput(self_tid, target_tid, BOOL(1));
+            let _ = AttachThreadInput(self_tid, target_tid, true);
         }
 
         let _ = BringWindowToTop(hwnd);
         let _ = SetForegroundWindow(hwnd);
-        let _ = SetFocus(hwnd);
+        let _ = SetFocus(Some(hwnd));
 
         if attach_target {
-            let _ = AttachThreadInput(self_tid, target_tid, BOOL(0));
+            let _ = AttachThreadInput(self_tid, target_tid, false);
         }
         if attach_fg {
-            let _ = AttachThreadInput(self_tid, fg_tid, BOOL(0));
+            let _ = AttachThreadInput(self_tid, fg_tid, false);
         }
     }
 }

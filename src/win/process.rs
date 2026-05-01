@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use windows::Win32::Foundation::{CloseHandle, FALSE};
+use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::System::Threading::{
     OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
 };
@@ -24,7 +24,7 @@ pub fn exe_filename_cached<'a>(pid: u32, cache: &'a mut ExeCache) -> Option<&'a 
 
 fn exe_filename_uncached(pid: u32) -> Option<String> {
     unsafe {
-        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid).ok()?;
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
         let mut buf = [0u16; 1024];
         let mut size = buf.len() as u32;
         let result = QueryFullProcessImageNameW(

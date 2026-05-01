@@ -111,6 +111,16 @@ they work no matter which window is in front (Dofus, your browser,
 another app…). One caveat: if Dofus runs as **administrator**, run
 ROrganizer as administrator too.
 
+**Windows shows a blue warning at first launch, is this normal?**
+Yes. ROrganizer isn't signed with a **code-signing certificate**
+(which costs around €300/year and isn't justifiable for a free
+open-source project). Windows SmartScreen therefore warns about any
+executable it doesn't recognize yet. Click **"More info"** then
+**"Run anyway"**. To make sure you have the right binary, compare
+its **SHA256** with the one posted in the
+[release](https://github.com/Loulouw/ROrganizer/releases) notes —
+any difference would mean the exe has been tampered with.
+
 **How do I uninstall it?**
 Just delete the `.exe`. Your preferences are stored in
 `%APPDATA%\rorganizer\` — delete that folder for a full clean-up.

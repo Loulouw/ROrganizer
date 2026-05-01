@@ -9,7 +9,7 @@ use super::keyboard::resolve_action;
 use super::state::{HOOK_ENABLED, HOOK_STATE};
 use crate::triggers::{MouseBtn, Trigger, WheelDir};
 
-pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT { unsafe {
     if code < 0 {
         return CallNextHookEx(None, code, wparam, lparam);
     }
@@ -59,4 +59,4 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
     }
 
     CallNextHookEx(None, code, wparam, lparam)
-}
+}}

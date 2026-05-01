@@ -1,7 +1,7 @@
 [package]
 name = "rorganizer"
 version = "1.0.0"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Loulouw"]
 description = "Window manager for multiple Dofus Unity accounts"
@@ -12,23 +12,23 @@ keywords = ["dofus", "multibox", "window-manager", "tray", "windows"]
 categories = ["gui"]
 
 [dependencies]
-eframe = { version = "0.29", default-features = false, features = ["glow", "default_fonts"] }
-egui = "0.29"
-egui_extras = { version = "0.29", default-features = false, features = ["svg"] }
-egui_dnd = "0.10"
-tray-icon = "0.19"
+eframe = { version = "0.34", default-features = false, features = ["glow", "default_fonts"] }
+egui = "0.34"
+egui_extras = { version = "0.34", default-features = false, features = ["svg"] }
+egui_dnd = "0.15"
+tray-icon = "0.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-directories = "5"
+directories = "6"
 raw-window-handle = "0.6"
 regex = "1"
-rust-i18n = "3"
+rust-i18n = "4"
 image = { version = "0.25", default-features = false, features = ["png"] }
 webbrowser = "1"
 arc-swap = "1"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Input_KeyboardAndMouse",
@@ -40,9 +40,9 @@ windows = { version = "0.58", features = [
 ] }
 
 [build-dependencies]
-embed-resource = "2"
+embed-resource = "3"
 image = { version = "0.25", default-features = false, features = ["png"] }
-ico = "0.3"
+ico = "0.5"
 
 [dev-dependencies]
 tempfile = "3"

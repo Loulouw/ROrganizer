@@ -45,7 +45,7 @@ fn close_main_window() {
         let hwnd = HWND(raw as *mut _);
         unsafe {
             let _ = ShowWindow(hwnd, SW_SHOW);
-            let _ = PostMessageW(hwnd, WM_CLOSE, WPARAM(0), LPARAM(0));
+            let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
         }
     }
 }

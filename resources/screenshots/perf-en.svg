@@ -11,13 +11,13 @@
 
   <!-- Card 1: binary size -->
   <rect class="card" x="20" y="24" width="160" height="152" rx="10"/>
-  <text class="num" x="100" y="92" text-anchor="middle">~6</text>
+  <text class="num" x="100" y="92" text-anchor="middle">~7</text>
   <text class="unit" x="100" y="118" text-anchor="middle">MB</text>
   <text class="label" x="100" y="148" text-anchor="middle">the executable</text>
 
   <!-- Card 2: RAM -->
   <rect class="card" x="200" y="24" width="160" height="152" rx="10"/>
-  <text class="num" x="280" y="92" text-anchor="middle">~58</text>
+  <text class="num" x="280" y="92" text-anchor="middle">~65</text>
   <text class="unit" x="280" y="118" text-anchor="middle">MB</text>
   <text class="label" x="280" y="148" text-anchor="middle">of RAM used</text>
 

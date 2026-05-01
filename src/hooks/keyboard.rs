@@ -8,7 +8,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use super::state::{BindingAction, HOOK_ENABLED, HOOK_STATE};
 use crate::triggers::Trigger;
 
-pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT { unsafe {
     if code < 0 {
         return CallNextHookEx(None, code, wparam, lparam);
     }
@@ -37,7 +37,7 @@ pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM)
     }
 
     CallNextHookEx(None, code, wparam, lparam)
-}
+}}
 
 /// Looks up the trigger against the binding table and returns the HWND to
 /// focus, advancing the cycler cursor as needed. Caller still holds the lock.

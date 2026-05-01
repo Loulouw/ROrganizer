@@ -227,9 +227,10 @@ lock-free côté UI / hook callback. Le watcher publie via
 
 | Métrique | Valeur stable |
 |---|---|
-| Binary release | ~6 Mo |
-| RAM working set idle | ~58-60 Mo |
-| CPU idle | ≤ 0,1 % |
+| Binary release | ~6.8 Mo |
+| RAM working set idle | ~65-67 Mo |
+| RAM private idle | ~50-53 Mo |
+| CPU idle | 0 % (mesuré sur 45 s) |
 | Latence détection nouvelle fenêtre Dofus | ~150-200 ms |
 
 La cible originale `< 30 Mo RAM` est **inatteignable** avec

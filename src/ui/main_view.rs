@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use eframe::egui;
-use egui::{Color32, Frame, Margin, Rounding, Sense, Stroke, Vec2};
+use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2};
 use rust_i18n::t;
 
 use crate::app::App;
@@ -9,8 +9,10 @@ use crate::theme::{self, Theme};
 use crate::triggers::{BindingTarget, SlotKey, Trigger};
 use crate::win::{self, DetectedWindow};
 
-pub fn draw(ctx: &egui::Context, app: &mut App) {
+pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     let theme = app.theme();
+    let ctx = ui.ctx().clone();
+    let ctx = &ctx;
     let snapshot = app.windows_snapshot();
     let snap_windows: Vec<DetectedWindow> = snapshot.load_full().as_ref().clone();
 
@@ -27,11 +29,11 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
 
     egui::CentralPanel::default()
         .frame(
-            Frame::none()
+            Frame::new()
                 .fill(theme::window_bg(theme))
-                .inner_margin(Margin::symmetric(12.0, 12.0)),
+                .inner_margin(Margin::symmetric(12, 12)),
         )
-        .show(ctx, |ui| {
+        .show_inside(ui, |ui| {
             draw_summary(ui, theme, ordered.len(), || app.request_refresh());
             ui.add_space(10.0);
 
@@ -231,11 +233,11 @@ fn draw_account_row(
     let avail_width = ui.available_width();
     let mut pill_rect: Option<egui::Rect> = None;
 
-    let frame_resp = Frame::none()
+    let frame_resp = Frame::new()
         .fill(bg)
-        .rounding(Rounding::same(8.0))
+        .corner_radius(CornerRadius::same(8))
         .stroke(Stroke::new(1.0, border))
-        .inner_margin(Margin::symmetric(12.0, 11.0))
+        .inner_margin(Margin::symmetric(12, 11))
         .show(ui, |ui| {
             ui.set_min_width(avail_width - 24.0);
             ui.horizontal(|ui| {
@@ -341,11 +343,11 @@ fn draw_cycle_row(
     let avail_width = ui.available_width();
     let mut pill_rect: Option<egui::Rect> = None;
 
-    let frame_resp = Frame::none()
+    let frame_resp = Frame::new()
         .fill(bg)
-        .rounding(Rounding::same(8.0))
+        .corner_radius(CornerRadius::same(8))
         .stroke(Stroke::new(1.0, border))
-        .inner_margin(Margin::symmetric(12.0, 11.0))
+        .inner_margin(Margin::symmetric(12, 11))
         .show(ui, |ui| {
             ui.set_min_width(avail_width - 24.0);
             ui.horizontal(|ui| {
@@ -420,7 +422,8 @@ fn binding_pill(
     let has_binding = binding.is_some();
 
     let font = egui::FontId::monospace(11.0);
-    let inner = ui.fonts(|f| {
+    // egui 0.34: layout_no_wrap takes &mut self, so we go through fonts_mut.
+    let inner = ui.ctx().fonts_mut(|f| {
         f.layout_no_wrap(label.clone(), font.clone(), Color32::WHITE)
             .size()
     });
@@ -442,7 +445,8 @@ fn binding_pill(
         pill_colors(theme, has_binding, response.hovered())
     };
     ui.painter().rect_filled(rect, 4.0, bg);
-    ui.painter().rect_stroke(rect, 4.0, Stroke::new(1.0, border));
+    ui.painter()
+        .rect_stroke(rect, 4.0, Stroke::new(1.0, border), StrokeKind::Inside);
     ui.painter()
         .text(rect.center(), egui::Align2::CENTER_CENTER, &label, font, txt);
 
@@ -458,11 +462,11 @@ fn draw_conflict_banner(ui: &mut egui::Ui, theme: Theme, conflicts: &HashSet<Tri
     }
     let (_row_bg, border, pill_bg, pill_text) = theme::conflict_palette(theme);
     ui.add_space(6.0);
-    Frame::none()
+    Frame::new()
         .fill(pill_bg)
-        .rounding(Rounding::same(6.0))
+        .corner_radius(CornerRadius::same(6))
         .stroke(Stroke::new(1.0, border))
-        .inner_margin(Margin::symmetric(10.0, 8.0))
+        .inner_margin(Margin::symmetric(10, 8))
         .show(ui, |ui| {
             ui.set_min_width(ui.available_width() - 20.0);
             // Stable order across frames for readability.

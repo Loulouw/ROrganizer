@@ -568,7 +568,12 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // egui 0.34: `App::update` is deprecated — `ui` is now required.
+        // We keep the existing flow that drives sub-modules via the
+        // shared `Context`, so we just borrow it from the passed `Ui`.
+        let ctx = ui.ctx().clone();
+        let ctx = &ctx;
         while let Ok(ev) = self.tray_rx.try_recv() {
             match ev {
                 TrayEvent::ShowRequested => {
@@ -607,8 +612,8 @@ impl eframe::App for App {
         self.update_tray_status(false);
         self.apply_dynamic_height(ctx);
 
-        ui::header::draw(ctx, self);
-        ui::main_view::draw(ctx, self);
+        ui::header::draw(ui, self);
+        ui::main_view::draw(ui, self);
         ui::capture::draw(ctx, self);
         ui::about::draw(ctx, self);
 

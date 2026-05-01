@@ -32,7 +32,13 @@ fn main() {
         );
         fs::write(&rc_path, rc_contents).expect("write app.rc");
 
-        embed_resource::compile(&rc_path, embed_resource::NONE);
+        // embed-resource 3.x returns a CompilationResult that must be
+        // consumed. The shipped exe relies on the embedded icon resource
+        // (see CLAUDE.md: Explorer picks the lowest numeric ICON ID), so
+        // an unattempted or failed compile must abort the build.
+        embed_resource::compile(&rc_path, embed_resource::NONE)
+            .manifest_required()
+            .expect("embed-resource: failed to compile app.rc");
     }
 }
 

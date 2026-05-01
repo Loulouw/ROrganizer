@@ -8,17 +8,19 @@ use crate::theme::{self, Theme};
 
 const HEIGHT: f32 = 36.0;
 
-pub fn draw(ctx: &egui::Context, app: &mut App) {
+pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     let theme = app.theme();
-    egui::TopBottomPanel::top("title_bar")
-        .exact_height(HEIGHT)
+    let ctx = ui.ctx().clone();
+    let ctx = &ctx;
+    egui::Panel::top("title_bar")
+        .exact_size(HEIGHT)
         .frame(
-            egui::Frame::none()
+            egui::Frame::new()
                 .fill(theme::window_bg(theme))
-                .inner_margin(egui::Margin::symmetric(0.0, 0.0)),
+                .inner_margin(egui::Margin::symmetric(0, 0)),
         )
         .show_separator_line(false)
-        .show(ctx, |ui| {
+        .show_inside(ui, |ui| {
             let rect = ui.max_rect();
             let drag_response = ui.interact(
                 rect,
@@ -168,9 +170,10 @@ fn draw_lang_dropdown(ui: &mut egui::Ui, app: &mut App, theme: Theme) {
 
     let popup_id = ui.make_persistent_id("lang_popup");
     if resp.clicked() {
-        ui.memory_mut(|m| m.toggle_popup(popup_id));
+        egui::Popup::toggle_id(ui.ctx(), popup_id);
     }
-    egui::popup::popup_below_widget(
+    #[allow(deprecated)]
+    egui::popup_below_widget(
         ui,
         popup_id,
         &resp,

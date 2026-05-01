@@ -117,13 +117,13 @@ pub fn acquire_or_signal_existing() -> AcquireResult {
     }
 }
 
-unsafe fn signal_existing() {
+unsafe fn signal_existing() { unsafe {
     let event_name = HSTRING::from(EVENT_NAME);
     if let Ok(event) = OpenEventW(EVENT_MODIFY_STATE, false, &event_name) {
         let _ = SetEvent(event);
         let _ = CloseHandle(event);
     }
-}
+}}
 
 /// Spawns a thread that waits on the guard's event and invokes `on_signal`
 /// each time it fires. The handle is owned by the guard — this thread only

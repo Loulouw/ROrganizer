@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use regex::Regex;
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
+use windows::core::BOOL;
+use windows::Win32::Foundation::{HWND, LPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
 };
@@ -47,7 +48,7 @@ pub fn enumerate_dofus_windows(
     }
 }
 
-unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL { unsafe {
     let ctx = &mut *(lparam.0 as *mut EnumCtx<'_>);
 
     if !IsWindowVisible(hwnd).as_bool() {
@@ -97,4 +98,4 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         class,
     });
     BOOL(1)
-}
+}}
