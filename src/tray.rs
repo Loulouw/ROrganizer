@@ -63,10 +63,16 @@ fn show_main_window() {}
 #[cfg(not(windows))]
 fn close_main_window() {}
 
+/// Public entry point used by `single_instance` to wake the existing
+/// instance when a second launch is detected.
+pub fn show_main_window_external() {
+    show_main_window();
+}
+
 /// Holds the live tray icon plus mutable handles on items whose label
 /// changes during the session (Activer/Désactiver toggle + status line).
 pub struct TrayController {
-    _icon: TrayIcon,
+    icon: TrayIcon,
     toggle_item: MenuItem,
     status_item: MenuItem,
 }
@@ -79,6 +85,9 @@ impl TrayController {
             rust_i18n::t!("tray.activate")
         };
         self.toggle_item.set_text(label.as_ref());
+        if let Ok(icon) = build_icon(active) {
+            let _ = self.icon.set_icon(Some(icon));
+        }
     }
 
     pub fn set_status(&mut self, active: bool, count: usize) {
@@ -159,7 +168,7 @@ pub fn install(
         }
     }));
 
-    let icon = build_icon()?;
+    let icon = build_icon(false)?;
     let tray = TrayIconBuilder::new()
         .with_icon(icon)
         .with_menu(Box::new(menu))
@@ -167,25 +176,41 @@ pub fn install(
         .build()?;
 
     Ok(TrayController {
-        _icon: tray,
+        icon: tray,
         toggle_item,
         status_item,
     })
 }
 
-fn build_icon() -> Result<Icon, tray_icon::BadIcon> {
-    const SIZE: u32 = 32;
-    let mut rgba = Vec::with_capacity((SIZE * SIZE * 4) as usize);
-    for y in 0..SIZE {
-        for x in 0..SIZE {
-            let edge = x < 2 || x >= SIZE - 2 || y < 2 || y >= SIZE - 2;
-            let (r, g, b) = if edge {
-                (0x97u8, 0xC4u8, 0x59u8)
-            } else {
-                (0x26u8, 0x26u8, 0x1Fu8)
-            };
-            rgba.extend_from_slice(&[r, g, b, 0xFFu8]);
+const ICON_PNG: &[u8] = include_bytes!("../resources/icons/icon.png");
+const ICON_SIZE: u32 = 32;
+
+static ACTIVE_RGBA: OnceLock<Vec<u8>> = OnceLock::new();
+static INACTIVE_RGBA: OnceLock<Vec<u8>> = OnceLock::new();
+
+fn ensure_icons() -> (&'static [u8], &'static [u8]) {
+    let active = ACTIVE_RGBA.get_or_init(|| {
+        let img = image::load_from_memory(ICON_PNG).expect("decode icon.png");
+        let resized =
+            img.resize_exact(ICON_SIZE, ICON_SIZE, image::imageops::FilterType::Lanczos3);
+        resized.to_rgba8().into_raw()
+    });
+    let inactive = INACTIVE_RGBA.get_or_init(|| {
+        let mut bytes = active.clone();
+        // Rec.709 luma; alpha unchanged so the inactive icon stays visible.
+        for px in bytes.chunks_exact_mut(4) {
+            let l = (px[0] as f32 * 0.2126 + px[1] as f32 * 0.7152 + px[2] as f32 * 0.0722) as u8;
+            px[0] = l;
+            px[1] = l;
+            px[2] = l;
         }
-    }
-    Icon::from_rgba(rgba, SIZE, SIZE)
+        bytes
+    });
+    (active.as_slice(), inactive.as_slice())
+}
+
+fn build_icon(active: bool) -> Result<Icon, tray_icon::BadIcon> {
+    let (a, i) = ensure_icons();
+    let bytes = if active { a } else { i };
+    Icon::from_rgba(bytes.to_vec(), ICON_SIZE, ICON_SIZE)
 }

@@ -14,7 +14,8 @@
     "tooltip_close": "Fermer",
     "tooltip_theme": "Changer de thème",
     "tooltip_lang": "Langue",
-    "tooltip_refresh": "Rafraîchir"
+    "tooltip_refresh": "Rafraîchir",
+    "tooltip_github": "Ouvrir le repo GitHub"
   },
   "tray": {
     "show": "Afficher",

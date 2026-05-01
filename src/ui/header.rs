@@ -7,6 +7,8 @@ use crate::i18n::Lang;
 use crate::theme::{self, Theme};
 
 const HEIGHT: f32 = 36.0;
+const GITHUB_URL: &str = "https://github.com/Loulouw/ROrganizer";
+const GITHUB_SVG: &[u8] = include_bytes!("../../resources/icons/github.svg");
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
@@ -31,9 +33,13 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
 
             ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.add_space(12.0);
-                    draw_status_dot(ui, theme);
                     ui.add_space(8.0);
+                    let github_resp = github_button(ui, theme)
+                        .on_hover_text(t!("header.tooltip_github").to_string());
+                    if github_resp.clicked() {
+                        open_url(GITHUB_URL);
+                    }
+                    ui.add_space(6.0);
                     ui.label(
                         egui::RichText::new("ROrganizer")
                             .size(13.0)
@@ -69,12 +75,6 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         });
 }
 
-fn draw_status_dot(ui: &mut egui::Ui, theme: Theme) {
-    let (rect, _) = ui.allocate_exact_size(egui::vec2(8.0, 8.0), Sense::hover());
-    ui.painter()
-        .circle_filled(rect.center(), 4.0, theme::text_tertiary(theme));
-}
-
 fn titlebar_button(ui: &mut egui::Ui, glyph: &str, theme: Theme) -> egui::Response {
     let size = egui::vec2(28.0, 24.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
@@ -89,6 +89,52 @@ fn titlebar_button(ui: &mut egui::Ui, glyph: &str, theme: Theme) -> egui::Respon
         theme::text_primary(theme),
     );
     response
+}
+
+fn github_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
+    let size = egui::vec2(30.0, 24.0);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    if response.hovered() {
+        ui.painter().rect_filled(rect, 4.0, theme::hover_bg(theme));
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    let icon_size = egui::vec2(20.0, 20.0);
+    let icon_rect = egui::Rect::from_center_size(rect.center(), icon_size);
+    let tint = if response.hovered() {
+        theme::text_primary(theme)
+    } else {
+        theme::text_secondary(theme)
+    };
+    egui::Image::from_bytes("bytes://github.svg", GITHUB_SVG)
+        .fit_to_exact_size(icon_size)
+        .tint(tint)
+        .paint_at(ui, icon_rect);
+    response
+}
+
+#[cfg(windows)]
+fn open_url(url: &str) {
+    use windows::core::{HSTRING, PCWSTR};
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    let url_h = HSTRING::from(url);
+    let verb_h = HSTRING::from("open");
+    unsafe {
+        // ShellExecuteW returns an HINSTANCE; values <= 32 indicate failure.
+        ShellExecuteW(
+            None,
+            PCWSTR(verb_h.as_ptr()),
+            PCWSTR(url_h.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn open_url(url: &str) {
+    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
 
 /// Procedurally drawn sun (light theme active) or moon (dark theme active),

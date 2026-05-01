@@ -77,8 +77,19 @@ impl App {
         i18n::set_lang(lang);
 
         let (tray_tx, tray_rx) = channel();
-        let tray = tray::install(cc.egui_ctx.clone(), tray_tx)
+        let tray = tray::install(cc.egui_ctx.clone(), tray_tx.clone())
             .expect("failed to install tray icon");
+
+        #[cfg(windows)]
+        {
+            let waiter_ctx = cc.egui_ctx.clone();
+            let waiter_tx = tray_tx;
+            crate::single_instance::spawn_waiter(move || {
+                tray::show_main_window_external();
+                let _ = waiter_tx.send(TrayEvent::ShowRequested);
+                waiter_ctx.request_repaint();
+            });
+        }
 
         let windows: WindowsSnapshot = Arc::new(Mutex::new(Vec::new()));
         let regex_src = std::env::var("RORGANIZER_TITLE_REGEX")
@@ -383,7 +394,7 @@ impl App {
         const CYCLE_HEAD: f32 = 32.0; // separator + label + spacing
         const CYCLE_BLOCK: f32 = 2.0 * ROW + 4.0; // 2 rows + small slack
         const SUMMARY_GAP: f32 = 10.0;
-        const TAIL_PAD: f32 = 4.0;
+        const TAIL_PAD: f32 = 12.0;
         // Banner: 6 leading space + 16 frame inner_margin + 14 per line.
         const BANNER_BASE: f32 = 22.0;
         const BANNER_PER_LINE: f32 = 14.0;
