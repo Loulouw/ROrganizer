@@ -19,8 +19,11 @@ fn main() {
         fs::copy(&manifest_src, &manifest_dst).expect("copy manifest.xml to OUT_DIR");
 
         let rc_path = out_dir.join("app.rc");
+        // ID 1 (literal numeric) — Explorer / Alt+Tab pick the lowest-ID icon
+        // resource for the .exe icon. Symbolic identifiers like IDI_ICON1
+        // would be treated as string IDs and ignored by Explorer.
         let rc_contents = format!(
-            "#include <winuser.h>\r\n\r\n1 24 \"manifest.xml\"\r\nIDI_ICON1 ICON \"{}\"\r\n",
+            "#include <winuser.h>\r\n\r\n1 24 \"manifest.xml\"\r\n1 ICON \"{}\"\r\n",
             ico_path
                 .file_name()
                 .unwrap()

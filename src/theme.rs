@@ -116,14 +116,6 @@ pub fn text_tertiary(theme: Theme) -> Color32 {
     }
 }
 
-#[allow(dead_code)]
-pub fn active(theme: Theme) -> Color32 {
-    match theme {
-        Theme::Dark => ACTIVE_DARK,
-        Theme::Light => ACTIVE_LIGHT,
-    }
-}
-
 pub fn hover_bg(theme: Theme) -> Color32 {
     match theme {
         Theme::Dark => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),

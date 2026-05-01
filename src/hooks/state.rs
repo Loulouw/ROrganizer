@@ -1,8 +1,7 @@
-use std::sync::mpsc::Sender;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Mutex, OnceLock};
 
 use crate::triggers::Trigger;
-use crate::win::WindowsSnapshot;
 
 /// What the hook should do when a Trigger matches.
 #[derive(Debug, Clone, Copy)]
@@ -13,11 +12,6 @@ pub enum BindingAction {
 }
 
 pub struct HookState {
-    /// Snapshot of detected windows. Currently unused from hook callbacks (App
-    /// pushes resolved bindings instead) — kept for future hook-side logic.
-    #[allow(dead_code)]
-    pub windows: WindowsSnapshot,
-    pub log_tx: Sender<String>,
     /// Trigger → action table, sorted so Account focus actions appear before
     /// Cycle ones (priority on conflict).
     pub bindings: Vec<(Trigger, BindingAction)>,
@@ -29,9 +23,12 @@ pub struct HookState {
     /// so we can re-locate it inside `cycle_hwnds` after a reorder, keeping
     /// the user "on the same account" across drags.
     pub cycle_current_hwnd: Option<isize>,
-    /// Master switch — when false, the callback returns CallNextHookEx
-    /// without ever matching, so triggers don't fire and keys pass through.
-    pub enabled: bool,
 }
 
 pub static HOOK_STATE: OnceLock<Mutex<HookState>> = OnceLock::new();
+
+/// Master switch on the hook callbacks. Read on every keystroke / mouse
+/// event, so we keep it as an atomic to short-circuit *before* taking
+/// the `HOOK_STATE` mutex when the user has the app inactive.
+pub static HOOK_ENABLED: AtomicBool = AtomicBool::new(false);
+

@@ -8,7 +8,6 @@ use crate::theme::{self, Theme};
 
 const HEIGHT: f32 = 36.0;
 const GITHUB_URL: &str = "https://github.com/Loulouw/ROrganizer";
-const GITHUB_SVG: &[u8] = include_bytes!("../../resources/icons/github.svg");
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
@@ -105,36 +104,15 @@ fn github_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     } else {
         theme::text_secondary(theme)
     };
-    egui::Image::from_bytes("bytes://github.svg", GITHUB_SVG)
+    egui::Image::from_bytes("bytes://github.svg", crate::assets::GITHUB_SVG)
         .fit_to_exact_size(icon_size)
         .tint(tint)
         .paint_at(ui, icon_rect);
     response
 }
 
-#[cfg(windows)]
 fn open_url(url: &str) {
-    use windows::core::{HSTRING, PCWSTR};
-    use windows::Win32::UI::Shell::ShellExecuteW;
-    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
-    let url_h = HSTRING::from(url);
-    let verb_h = HSTRING::from("open");
-    unsafe {
-        // ShellExecuteW returns an HINSTANCE; values <= 32 indicate failure.
-        ShellExecuteW(
-            None,
-            PCWSTR(verb_h.as_ptr()),
-            PCWSTR(url_h.as_ptr()),
-            PCWSTR::null(),
-            PCWSTR::null(),
-            SW_SHOWNORMAL,
-        );
-    }
-}
-
-#[cfg(not(windows))]
-fn open_url(url: &str) {
-    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    let _ = webbrowser::open(url);
 }
 
 /// Procedurally drawn sun (light theme active) or moon (dark theme active),

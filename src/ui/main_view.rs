@@ -12,10 +12,7 @@ use crate::win::{self, DetectedWindow};
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let theme = app.theme();
     let snapshot = app.windows_snapshot();
-    let snap_windows: Vec<DetectedWindow> = {
-        let guard = snapshot.lock().expect("snapshot mutex poisoned");
-        guard.clone()
-    };
+    let snap_windows: Vec<DetectedWindow> = snapshot.load_full().as_ref().clone();
 
     // Project cycle_order × snapshot into the visible ordered list.
     // `cycle_order` is the source of truth for ordering — App keeps it in
@@ -516,13 +513,126 @@ fn pill_colors(theme: Theme, has_binding: bool, hovered: bool) -> (Color32, Colo
     }
 }
 
+/// Linearly blend two sRGB colors **in linear-light space**, so a 50% mix
+/// of black and white actually looks half-bright instead of washed-out.
+/// Alpha is mixed linearly (the texture path is already premultiplied
+/// in egui, alpha here is just the pixel's coverage).
 fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
     let t = t.clamp(0.0, 1.0);
     let inv = 1.0 - t;
+
+    let lr = srgb_to_linear(a.r()) * inv + srgb_to_linear(b.r()) * t;
+    let lg = srgb_to_linear(a.g()) * inv + srgb_to_linear(b.g()) * t;
+    let lb = srgb_to_linear(a.b()) * inv + srgb_to_linear(b.b()) * t;
+
     Color32::from_rgba_unmultiplied(
-        (a.r() as f32 * inv + b.r() as f32 * t).round() as u8,
-        (a.g() as f32 * inv + b.g() as f32 * t).round() as u8,
-        (a.b() as f32 * inv + b.b() as f32 * t).round() as u8,
+        linear_to_srgb(lr),
+        linear_to_srgb(lg),
+        linear_to_srgb(lb),
         (a.a() as f32 * inv + b.a() as f32 * t).round() as u8,
     )
+}
+
+fn srgb_to_linear(byte: u8) -> f32 {
+    let c = byte as f32 / 255.0;
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+fn linear_to_srgb(linear: f32) -> u8 {
+    let c = linear.clamp(0.0, 1.0);
+    let s = if c <= 0.003_130_8 {
+        c * 12.92
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    };
+    (s * 255.0).round() as u8
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mix_t_zero_returns_a() {
+        let a = Color32::from_rgb(10, 20, 30);
+        let b = Color32::from_rgb(200, 100, 50);
+        let m = mix(a, b, 0.0);
+        assert_eq!(m.r(), 10);
+        assert_eq!(m.g(), 20);
+        assert_eq!(m.b(), 30);
+    }
+
+    #[test]
+    fn mix_t_one_returns_b() {
+        let a = Color32::from_rgb(10, 20, 30);
+        let b = Color32::from_rgb(200, 100, 50);
+        let m = mix(a, b, 1.0);
+        assert_eq!(m.r(), 200);
+        assert_eq!(m.g(), 100);
+        assert_eq!(m.b(), 50);
+    }
+
+    #[test]
+    fn mix_clamps_negative_t_to_zero() {
+        let a = Color32::from_rgb(10, 20, 30);
+        let b = Color32::from_rgb(200, 100, 50);
+        let m = mix(a, b, -0.5);
+        assert_eq!(m.r(), 10);
+        assert_eq!(m.g(), 20);
+        assert_eq!(m.b(), 30);
+    }
+
+    #[test]
+    fn mix_clamps_t_above_one() {
+        let a = Color32::from_rgb(10, 20, 30);
+        let b = Color32::from_rgb(200, 100, 50);
+        let m = mix(a, b, 2.0);
+        assert_eq!(m.r(), 200);
+        assert_eq!(m.g(), 100);
+        assert_eq!(m.b(), 50);
+    }
+
+    /// Gamma-correct midpoint between black and a saturated color. The
+    /// result is brighter than a naïve sRGB linear mix (e.g. r=200 mid =
+    /// ~146, not 100) because we blend in linear-light space and re-encode.
+    /// Tolerance ±2 bytes for f32 rounding noise across rustc versions.
+    #[test]
+    fn mix_t_half_gamma_correct_midpoint() {
+        let a = Color32::from_rgb(0, 0, 0);
+        let b = Color32::from_rgb(200, 100, 50);
+        let m = mix(a, b, 0.5);
+        approx_eq(m.r(), 146);
+        approx_eq(m.g(), 71);
+        approx_eq(m.b(), 32);
+    }
+
+    #[test]
+    fn mix_t_half_black_to_white_is_perceptual_grey() {
+        // Naïve linear midpoint = 128; gamma-correct ≈ 188 (perceptual
+        // half-brightness in sRGB).
+        let m = mix(Color32::BLACK, Color32::WHITE, 0.5);
+        approx_eq(m.r(), 188);
+        approx_eq(m.g(), 188);
+        approx_eq(m.b(), 188);
+    }
+
+    fn approx_eq(actual: u8, expected: u8) {
+        let diff = (actual as i32 - expected as i32).abs();
+        assert!(
+            diff <= 2,
+            "expected ~{expected}, got {actual} (diff {diff})"
+        );
+    }
+
+    #[test]
+    fn mix_preserves_alpha_channel() {
+        let a = Color32::from_rgba_unmultiplied(0, 0, 0, 100);
+        let b = Color32::from_rgba_unmultiplied(255, 255, 255, 200);
+        let m = mix(a, b, 0.5);
+        assert_eq!(m.a(), 150);
+    }
 }

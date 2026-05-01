@@ -26,7 +26,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         return;
     }
 
-    // 3) Render the modal overlay (semi-transparent backdrop + centered card).
+    // Render the modal overlay (semi-transparent backdrop + centered card).
     let screen_rect = ctx.screen_rect();
     let backdrop = match theme {
         Theme::Dark => Color32::from_rgba_unmultiplied(0x10, 0x10, 0x0E, 0xCC),

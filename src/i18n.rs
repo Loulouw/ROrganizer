@@ -36,9 +36,9 @@ impl Lang {
 
     pub fn flag_bytes(self) -> &'static [u8] {
         match self {
-            Lang::Fr => include_bytes!("../resources/flags/fr.svg"),
-            Lang::En => include_bytes!("../resources/flags/en.svg"),
-            Lang::Es => include_bytes!("../resources/flags/es.svg"),
+            Lang::Fr => crate::assets::FLAG_FR_SVG,
+            Lang::En => crate::assets::FLAG_EN_SVG,
+            Lang::Es => crate::assets::FLAG_ES_SVG,
         }
     }
 }

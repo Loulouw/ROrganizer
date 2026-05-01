@@ -135,8 +135,95 @@ pub fn key_to_vk(key: egui::Key) -> Option<u32> {
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vk_label_function_keys() {
+        for (vk, label) in [
+            (0x70u32, "F1"),
+            (0x77, "F8"),
+            (0x7B, "F12"),
+            (0x83, "F20"),
+        ] {
+            assert_eq!(vk_to_label(vk), label);
+        }
+    }
+
+    #[test]
+    fn vk_label_letters_and_digits() {
+        assert_eq!(vk_to_label(0x41), "A");
+        assert_eq!(vk_to_label(0x5A), "Z");
+        assert_eq!(vk_to_label(0x30), "0");
+        assert_eq!(vk_to_label(0x39), "9");
+    }
+
+    #[test]
+    fn vk_label_named_keys() {
+        assert_eq!(vk_to_label(0x20), "Space");
+        assert_eq!(vk_to_label(0x0D), "Enter");
+        assert_eq!(vk_to_label(0x09), "Tab");
+        assert_eq!(vk_to_label(0x08), "Backspace");
+        assert_eq!(vk_to_label(0x2D), "Ins");
+        assert_eq!(vk_to_label(0x2E), "Del");
+        assert_eq!(vk_to_label(0x21), "PgUp");
+        assert_eq!(vk_to_label(0x22), "PgDn");
+    }
+
+    #[test]
+    fn vk_label_punctuation() {
+        assert_eq!(vk_to_label(0xBD), "-");
+        assert_eq!(vk_to_label(0xBB), "=");
+        assert_eq!(vk_to_label(0xDB), "[");
+        assert_eq!(vk_to_label(0xDD), "]");
+        assert_eq!(vk_to_label(0xC0), "`");
+    }
+
+    #[test]
+    fn vk_label_arrows_use_unicode() {
+        assert_eq!(vk_to_label(0x25), "\u{2190}");
+        assert_eq!(vk_to_label(0x26), "\u{2191}");
+        assert_eq!(vk_to_label(0x27), "\u{2192}");
+        assert_eq!(vk_to_label(0x28), "\u{2193}");
+    }
+
+    #[test]
+    fn vk_label_unknown_falls_back_to_hex() {
+        assert_eq!(vk_to_label(0xFE), "VK_0xFE");
+        assert_eq!(vk_to_label(0x00), "VK_0x00");
+    }
+
+    #[test]
+    fn trigger_display_label() {
+        assert_eq!(Trigger::Key(0x70).display_label(), "F1");
+        assert_eq!(Trigger::Key(0x41).display_label(), "A");
+        assert_eq!(Trigger::Mouse(MouseBtn::Middle).display_label(), "MWheel");
+        assert_eq!(Trigger::Mouse(MouseBtn::X1).display_label(), "Mb4");
+        assert_eq!(Trigger::Mouse(MouseBtn::X2).display_label(), "Mb5");
+        assert_eq!(Trigger::Wheel(WheelDir::Up).display_label(), "MWh\u{2191}");
+        assert_eq!(Trigger::Wheel(WheelDir::Down).display_label(), "MWh\u{2193}");
+    }
+}
+
 pub fn vk_to_label(vk: u32) -> String {
     match vk {
+        // Numpad — distinct from top-row digits and operator keys.
+        0x60 => "Num0".into(),
+        0x61 => "Num1".into(),
+        0x62 => "Num2".into(),
+        0x63 => "Num3".into(),
+        0x64 => "Num4".into(),
+        0x65 => "Num5".into(),
+        0x66 => "Num6".into(),
+        0x67 => "Num7".into(),
+        0x68 => "Num8".into(),
+        0x69 => "Num9".into(),
+        0x6A => "Num*".into(),
+        0x6B => "Num+".into(),
+        0x6D => "Num-".into(),
+        0x6E => "Num.".into(),
+        0x6F => "Num/".into(),
         0x70 => "F1".into(),
         0x71 => "F2".into(),
         0x72 => "F3".into(),

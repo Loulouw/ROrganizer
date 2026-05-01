@@ -14,14 +14,8 @@ pub const DEFAULT_TITLE_REGEX: &str =
 #[derive(Debug, Clone, Hash)]
 pub struct DetectedWindow {
     pub hwnd: isize,
-    /// Kept for diagnostics / future cycler logic.
-    #[allow(dead_code)]
-    pub pid: u32,
     pub slot_key: String,
     pub class: Option<String>,
-    /// Raw window title; useful for the temp_dir diag log when a regex doesn't match.
-    #[allow(dead_code)]
-    pub title: String,
 }
 
 struct EnumCtx<'a> {
@@ -99,10 +93,8 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
 
     ctx.out.push(DetectedWindow {
         hwnd: hwnd.0 as isize,
-        pid,
         slot_key: name,
         class,
-        title,
     });
     BOOL(1)
 }

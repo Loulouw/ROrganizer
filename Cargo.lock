@@ -2572,6 +2572,7 @@ dependencies = [
 name = "rorganizer"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "directories",
  "eframe",
  "egui",
@@ -2585,7 +2586,9 @@ dependencies = [
  "rust-i18n",
  "serde",
  "serde_json",
+ "tempfile",
  "tray-icon",
+ "webbrowser",
  "windows",
 ]
 

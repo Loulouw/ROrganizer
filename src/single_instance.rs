@@ -1,14 +1,18 @@
 //! Windows single-instance lock backed by a named mutex + named event.
 //!
 //! Pattern :
-//! - 1ère instance : `CreateMutexW` réussit avec un nouveau handle. Un thread
-//!   dédié owne `CreateEventW` et appelle `on_signal()` à chaque signal.
+//! - 1ère instance : `CreateMutexW` réussit. On crée tout de suite l'event
+//!   nommé (avant `eframe::run_native`) puis on spawn un thread dédié qui
+//!   attend dessus et appelle `on_signal()` à chaque signal.
 //! - 2ème instance : `CreateMutexW` retourne `ERROR_ALREADY_EXISTS`,
 //!   `OpenEventW` + `SetEvent` réveillent l'instance existante, puis exit(0).
+//! - `CreateMutexW` failure (rare, kernel out of resources) : `eprintln!` en
+//!   debug + `process::exit(1)`. On ne fake pas un état "First" qui
+//!   contournerait silencieusement la protection.
 //!
-//! Le mutex est volontairement *jamais* libéré pendant la vie du process —
-//! le Kernel s'en occupe à la sortie. On stocke juste son handle dans un
-//! `OnceLock` static pour empêcher le `Drop` d'arriver tôt.
+//! Le `SingleInstanceGuard` ferme proprement les deux handles à son `Drop`,
+//! mais en pratique il vit jusqu'à la fin du process et le Kernel s'en
+//! occuperait de toute façon — c'est juste plus auto-documentant.
 
 #![cfg(windows)]
 
@@ -28,16 +32,41 @@ const MUTEX_NAME: &str = "Local\\ROrganizer_v1_mutex";
 const EVENT_NAME: &str = "Local\\ROrganizer_v1_show_event";
 
 pub struct SingleInstanceGuard {
-    _mutex: HANDLE,
+    mutex: HANDLE,
+    event: HANDLE,
 }
 
-// HANDLE is just a pointer; safe to send between threads as long as we don't
-// race on it (which we don't — only stored in a static OnceLock).
+// HANDLE = *mut c_void. We never share these between threads (only stored
+// in a static OnceLock + read-only `event` copy passed to the waiter).
 unsafe impl Send for SingleInstanceGuard {}
 unsafe impl Sync for SingleInstanceGuard {}
 
+impl SingleInstanceGuard {
+    /// Returns a copy of the event handle for the waiter thread. The waiter
+    /// must NOT close it — the guard owns the lifetime.
+    pub fn event_handle(&self) -> HANDLE {
+        self.event
+    }
+}
+
+impl Drop for SingleInstanceGuard {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.event.0.is_null() {
+                let _ = CloseHandle(self.event);
+            }
+            if !self.mutex.0.is_null() {
+                let _ = CloseHandle(self.mutex);
+            }
+        }
+    }
+}
+
 pub enum AcquireResult {
+    /// We are the first instance. Hold the guard for the rest of the
+    /// process lifetime — its Drop closes the mutex + event.
     First(SingleInstanceGuard),
+    /// Another instance is already running and was successfully signaled.
     SignalledExisting,
 }
 
@@ -47,22 +76,44 @@ pub fn store_guard(g: SingleInstanceGuard) {
     let _ = GUARD.set(g);
 }
 
+/// Tries to acquire the single-instance lock. On `CreateMutexW` failure
+/// (kernel out of resources), this prints an error and exits(1) — we do
+/// NOT want to silently boot a 2nd instance bypassing the protection.
 pub fn acquire_or_signal_existing() -> AcquireResult {
     unsafe {
-        let name = HSTRING::from(MUTEX_NAME);
-        let mutex = match CreateMutexW(None, false, &name) {
+        let mutex_name = HSTRING::from(MUTEX_NAME);
+        let mutex = match CreateMutexW(None, false, &mutex_name) {
             Ok(h) => h,
-            Err(_) => return AcquireResult::First(SingleInstanceGuard { _mutex: HANDLE(std::ptr::null_mut()) }),
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("CreateMutexW failed: {e:?}");
+                let _ = e;
+                std::process::exit(1);
+            }
         };
 
         if GetLastError() == ERROR_ALREADY_EXISTS {
-            // Another instance is running. Best-effort signal it.
             let _ = CloseHandle(mutex);
             signal_existing();
             return AcquireResult::SignalledExisting;
         }
 
-        AcquireResult::First(SingleInstanceGuard { _mutex: mutex })
+        // We are first. Create the event NOW (before eframe boots) so a
+        // second-instance launch in the next 50–200 ms can wake us via
+        // OpenEventW + SetEvent. Auto-reset = each SetEvent wakes once.
+        let event_name = HSTRING::from(EVENT_NAME);
+        let event = match CreateEventW(None, false, false, &event_name) {
+            Ok(h) => h,
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("CreateEventW failed: {e:?}");
+                let _ = e;
+                let _ = CloseHandle(mutex);
+                std::process::exit(1);
+            }
+        };
+
+        AcquireResult::First(SingleInstanceGuard { mutex, event })
     }
 }
 
@@ -74,26 +125,22 @@ unsafe fn signal_existing() {
     }
 }
 
-/// Spawns a thread that owns a named manual-reset event and invokes
-/// `on_signal` each time the event fires (which happens whenever a 2nd
-/// instance launches and calls `signal_existing`).
-pub fn spawn_waiter<F: Fn() + Send + 'static>(on_signal: F) {
-    thread::spawn(move || unsafe {
-        let event_name = HSTRING::from(EVENT_NAME);
-        // Manual-reset = false (auto-reset) so each SetEvent triggers exactly one wake.
-        let event = match CreateEventW(None, false, false, &event_name) {
-            Ok(h) => h,
-            Err(_) => return,
-        };
-
-        loop {
-            let wait = WaitForSingleObject(event, INFINITE);
+/// Spawns a thread that waits on the guard's event and invokes `on_signal`
+/// each time it fires. The handle is owned by the guard — this thread only
+/// reads from it. We pass the handle as `isize` to sidestep `HANDLE: !Send`
+/// and Rust 2021's disjoint-capture inference (which would otherwise
+/// pick up just the inner `*mut c_void` field of any wrapper struct).
+pub fn spawn_waiter<F: Fn() + Send + 'static>(event: HANDLE, on_signal: F) {
+    let event_raw: isize = event.0 as isize;
+    thread::Builder::new()
+        .name("rorg-singleton-waiter".into())
+        .spawn(move || loop {
+            let h = HANDLE(event_raw as *mut _);
+            let wait = unsafe { WaitForSingleObject(h, INFINITE) };
             if wait != WAIT_OBJECT_0 {
                 break;
             }
             on_signal();
-        }
-
-        let _ = CloseHandle(event);
-    });
+        })
+        .expect("spawn singleton waiter");
 }
