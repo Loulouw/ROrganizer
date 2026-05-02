@@ -239,7 +239,7 @@ fn draw_account_row(
         .fill(bg)
         .corner_radius(CornerRadius::same(8))
         .stroke(Stroke::new(1.0, border))
-        .inner_margin(Margin::symmetric(12, 11))
+        .inner_margin(Margin::symmetric(12, 4))
         .show(ui, |ui| {
             // 24 inner_margin + 2 stroke = egui::Frame outer overhead.
             ui.set_min_width(avail_width - 26.0);
@@ -248,20 +248,22 @@ fn draw_account_row(
                     draw_drag_handle(ui, theme);
                 });
                 ui.add_space(4.0);
+                if let Some(class) = w.class.as_deref()
+                    && let Some(name) = crate::class_icon::class_filename(class)
+                    && let Some(tex) = app.class_icon(name)
+                {
+                    ui.add(
+                        egui::Image::new(tex)
+                            .fit_to_exact_size(egui::vec2(32.0, 32.0)),
+                    );
+                    ui.add_space(8.0);
+                }
                 ui.label(
                     egui::RichText::new(&w.slot_key)
                         .size(13.0)
                         .strong()
                         .color(theme::text_primary(theme)),
                 );
-                if let Some(class) = &w.class {
-                    ui.add_space(8.0);
-                    ui.label(
-                        egui::RichText::new(class)
-                            .size(11.0)
-                            .color(theme::text_tertiary(theme)),
-                    );
-                }
                 ui.with_layout(
                     egui::Layout::right_to_left(egui::Align::Center),
                     |ui| {
@@ -382,13 +384,17 @@ fn draw_cycle_row(
 }
 
 fn draw_drag_handle(ui: &mut egui::Ui, theme: Theme) {
-    // 2 columns × 3 rows of small dots — reliable across fonts.
-    let size = Vec2::new(10.0, 16.0);
+    // Allocate the full row height (matches the 32 px class icon) so the
+    // dots stay vertically centered. Without this, horizontal layout uses
+    // the first-allocated element's height as baseline and the handle
+    // ends up flush with the top of the row.
+    let size = Vec2::new(10.0, 32.0);
     let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
     let color = theme::text_tertiary(theme);
     let cx0 = rect.left() + 2.5;
     let cx1 = rect.left() + 7.5;
-    let cys = [rect.top() + 3.0, rect.center().y, rect.bottom() - 3.0];
+    let cy_mid = rect.center().y;
+    let cys = [cy_mid - 5.0, cy_mid, cy_mid + 5.0];
     let r = 1.4;
     let painter = ui.painter();
     for cy in cys {

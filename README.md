@@ -146,6 +146,11 @@ Outil tiers non affilié à Ankama Games ni au jeu Dofus. À utiliser à
 tes risques et à consulter conformément aux conditions générales
 d'utilisation de Dofus.
 
+Certaines illustrations affichées dans l'application sont la propriété
+d'Ankama Studio. **Dofus** et les visuels associés sont des marques
+d'Ankama — tous droits réservés. Elles sont utilisées ici à des fins
+purement illustratives et non commerciales.
+
 ## Licence
 
 Distribué sous double licence, au choix :

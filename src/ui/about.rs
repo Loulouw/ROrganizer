@@ -45,7 +45,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
 
     // Width fits inside the 340-wide viewport with a 10 px breathing room
     // on each side. Height is sized to comfortably hold every section.
-    let card_size = egui::vec2(320.0, 380.0);
+    let card_size = egui::vec2(320.0, 420.0);
     let card_rect = egui::Rect::from_center_size(screen_rect.center(), card_size);
 
     let close_clicked = std::cell::Cell::new(false);
@@ -115,6 +115,12 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                                 egui::RichText::new(t!("about.credit"))
                                     .size(11.0)
                                     .color(theme::text_secondary(theme)),
+                            );
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new(t!("about.ankama_credit"))
+                                    .size(10.0)
+                                    .color(theme::text_tertiary(theme)),
                             );
                         });
 

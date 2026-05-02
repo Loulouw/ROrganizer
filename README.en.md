@@ -140,6 +140,11 @@ Just delete the `.exe`. Your preferences are stored in
 Third-party tool, not affiliated with Ankama Games or the Dofus game.
 Use at your own risk and check the Dofus terms of service before use.
 
+Some illustrations displayed in the application are the property of
+Ankama Studio. **Dofus** and related artwork are trademarks of
+Ankama — all rights reserved. They are used here for illustrative,
+non-commercial purposes only.
+
 ## License
 
 Dual-licensed at your choice:

@@ -19,6 +19,7 @@
   },
   "about": {
     "credit": "Built by Loulouw with the help of Claude",
+    "ankama_credit": "Illustrations © Ankama Studio. Dofus is a trademark of Ankama — all rights reserved.",
     "report_bug": "Report a bug",
     "open_config_dir": "Open config folder",
     "close": "Close",

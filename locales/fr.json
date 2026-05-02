@@ -19,6 +19,7 @@
   },
   "about": {
     "credit": "Développé par Loulouw avec l'aide de Claude",
+    "ankama_credit": "Illustrations © Ankama Studio. Dofus est une marque d'Ankama — tous droits réservés.",
     "report_bug": "Signaler un bug",
     "open_config_dir": "Ouvrir le dossier de config",
     "close": "Fermer",

@@ -65,6 +65,32 @@ fn decode_about_icon(ctx: &egui::Context) -> Option<egui::TextureHandle> {
     Some(ctx.load_texture("about-icon", color_image, egui::TextureOptions::LINEAR))
 }
 
+/// Decode every class avatar PNG once at boot. 64×64 is enough to stay
+/// crisp on HiDPI when the row renders the icon at 20×20 logical px.
+/// Failed decodes are silently skipped — the affected row falls back to
+/// "no icon" rather than a placeholder, matching the project's fail-soft
+/// stance. Key is the canonical lowercase filename stem (cf. `assets`).
+fn decode_class_icons(
+    ctx: &egui::Context,
+) -> HashMap<&'static str, egui::TextureHandle> {
+    let mut map = HashMap::with_capacity(crate::assets::CLASS_PNGS.len());
+    for (name, bytes) in crate::assets::CLASS_PNGS {
+        let Ok(img) = image::load_from_memory(bytes) else { continue };
+        let resized = img.resize_exact(64, 64, image::imageops::FilterType::Lanczos3);
+        let rgba = resized.to_rgba8();
+        let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+        let color_image =
+            egui::ColorImage::from_rgba_unmultiplied([w, h], rgba.as_raw());
+        let handle = ctx.load_texture(
+            format!("class-{name}"),
+            color_image,
+            egui::TextureOptions::LINEAR,
+        );
+        map.insert(*name, handle);
+    }
+    map
+}
+
 pub struct App {
     theme: Theme,
     lang: Lang,
@@ -99,6 +125,10 @@ pub struct App {
     /// (only `svg`), so `Image::from_bytes("bytes://*.png", ...)` would
     /// render the red error placeholder. None on decode failure.
     about_icon: Option<egui::TextureHandle>,
+    /// One texture per Dofus class, keyed by canonical filename stem
+    /// (`"iop"`, `"feca"`, …). Decoded once at boot from `assets::CLASS_PNGS`.
+    /// Looked up via `class_icon::class_filename(raw_class)`.
+    class_icons: HashMap<&'static str, egui::TextureHandle>,
 }
 
 #[derive(Default, PartialEq, Eq)]
@@ -120,6 +150,7 @@ impl App {
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
         let about_icon = decode_about_icon(&cc.egui_ctx);
+        let class_icons = decode_class_icons(&cc.egui_ctx);
 
         // Load persisted config if any (silently falls back to defaults).
         let config_path = config::default_path();
@@ -193,7 +224,12 @@ impl App {
             title_regex,
             show_about: false,
             about_icon,
+            class_icons,
         }
+    }
+
+    pub fn class_icon(&self, name: &str) -> Option<&egui::TextureHandle> {
+        self.class_icons.get(name)
     }
 
     pub fn theme(&self) -> Theme {
@@ -512,7 +548,7 @@ impl App {
         const TITLE_BAR: f32 = 36.0;
         const PANEL_PAD: f32 = 24.0; // 12 top + 12 bottom
         const SUMMARY: f32 = 22.0; // count label + refresh button row
-        const ROW: f32 = 46.0; // frame ~40 + 6 inter-row gap
+        const ROW: f32 = 46.0; // frame ~40 (32 icon + 8 v-pad) + 6 inter-row gap
         const CYCLE_HEAD: f32 = 32.0; // separator + label + spacing
         const CYCLE_BLOCK: f32 = 2.0 * ROW + 4.0; // 2 rows + small slack
         const SUMMARY_GAP: f32 = 10.0;

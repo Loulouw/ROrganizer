@@ -4,6 +4,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 mod app;
 mod assets;
+mod class_icon;
 mod config;
 mod hooks;
 mod i18n;
