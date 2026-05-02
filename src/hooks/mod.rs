@@ -74,10 +74,10 @@ fn remap_cycle_index_after_reorder(
     new_cycle_hwnds: &[isize],
     prev_index: usize,
 ) -> usize {
-    if let Some(cur) = current_hwnd {
-        if let Some(pos) = new_cycle_hwnds.iter().position(|&h| h == cur) {
-            return pos;
-        }
+    if let Some(cur) = current_hwnd
+        && let Some(pos) = new_cycle_hwnds.iter().position(|&h| h == cur)
+    {
+        return pos;
     }
     let len = new_cycle_hwnds.len();
     if len == 0 {

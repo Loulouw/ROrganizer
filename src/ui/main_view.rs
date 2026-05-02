@@ -160,6 +160,8 @@ fn draw_empty_state(ui: &mut egui::Ui, theme: Theme) {
     });
 }
 
+// `&mut Vec` is required by egui_dnd::show_vec; `&mut [_]` would not type-check.
+#[allow(clippy::ptr_arg)]
 fn draw_account_list(
     ui: &mut egui::Ui,
     theme: Theme,
@@ -239,7 +241,8 @@ fn draw_account_row(
         .stroke(Stroke::new(1.0, border))
         .inner_margin(Margin::symmetric(12, 11))
         .show(ui, |ui| {
-            ui.set_min_width(avail_width - 24.0);
+            // 24 inner_margin + 2 stroke = egui::Frame outer overhead.
+            ui.set_min_width(avail_width - 26.0);
             ui.horizontal(|ui| {
                 handle.ui(ui, |ui| {
                     draw_drag_handle(ui, theme);
@@ -349,7 +352,7 @@ fn draw_cycle_row(
         .stroke(Stroke::new(1.0, border))
         .inner_margin(Margin::symmetric(12, 11))
         .show(ui, |ui| {
-            ui.set_min_width(avail_width - 24.0);
+            ui.set_min_width(avail_width - 26.0);
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new(label)
@@ -422,7 +425,6 @@ fn binding_pill(
     let has_binding = binding.is_some();
 
     let font = egui::FontId::monospace(11.0);
-    // egui 0.34: layout_no_wrap takes &mut self, so we go through fonts_mut.
     let inner = ui.ctx().fonts_mut(|f| {
         f.layout_no_wrap(label.clone(), font.clone(), Color32::WHITE)
             .size()
@@ -468,7 +470,8 @@ fn draw_conflict_banner(ui: &mut egui::Ui, theme: Theme, conflicts: &HashSet<Tri
         .stroke(Stroke::new(1.0, border))
         .inner_margin(Margin::symmetric(10, 8))
         .show(ui, |ui| {
-            ui.set_min_width(ui.available_width() - 20.0);
+            // -22 = -(2 * inner_margin) - (2 * stroke), see draw_account_row.
+            ui.set_min_width(ui.available_width() - 22.0);
             // Stable order across frames for readability.
             let mut sorted: Vec<&Trigger> = conflicts.iter().collect();
             sorted.sort_by_key(|t| t.display_label());

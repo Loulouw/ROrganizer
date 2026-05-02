@@ -175,10 +175,10 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     if bug_clicked {
         let _ = webbrowser::open(ISSUES_URL);
     }
-    if config_dir_clicked {
-        if let Some(dir) = app.config_dir() {
-            open_folder(dir);
-        }
+    if config_dir_clicked
+        && let Some(dir) = app.config_dir()
+    {
+        open_folder(dir);
     }
     if close_clicked.get() {
         app.close_about();

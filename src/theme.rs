@@ -17,8 +17,7 @@ impl Theme {
     }
 }
 
-// Dark palette — only the roles used in phase 1 are wired into Visuals,
-// the rest are kept as named constants for the upcoming phases.
+// Dark palette.
 pub const BG_WINDOW_DARK: Color32 = Color32::from_rgb(0x1C, 0x1C, 0x1A);
 pub const BG_ROW_DARK: Color32 = Color32::from_rgb(0x26, 0x26, 0x1F);
 pub const BORDER_SUBTLE_DARK: Color32 = Color32::from_rgba_premultiplied(0x10, 0x10, 0x10, 0x10);
@@ -34,7 +33,7 @@ pub const CONFLICT_BORDER_DARK: Color32 = Color32::from_rgba_premultiplied(0xE2,
 pub const CONFLICT_PILL_BG_DARK: Color32 = Color32::from_rgb(0x50, 0x13, 0x13);
 pub const CONFLICT_PILL_TEXT_DARK: Color32 = Color32::from_rgb(0xF0, 0x95, 0x95);
 
-// Light palette — same logic.
+// Light palette.
 pub const BG_WINDOW_LIGHT: Color32 = Color32::from_rgb(0xFA, 0xFA, 0xF7);
 pub const BG_ROW_LIGHT: Color32 = Color32::from_rgb(0xFF, 0xFF, 0xFF);
 pub const BORDER_SUBTLE_LIGHT: Color32 = Color32::from_rgba_premultiplied(0x14, 0x14, 0x14, 0x14);

@@ -15,7 +15,7 @@ pub type ExeCache = HashMap<u32, Option<String>>;
 ///
 /// First lookup hits the OS (~30-100 µs per call). Subsequent ticks read
 /// from the in-memory map. The watcher prunes stale entries after each tick.
-pub fn exe_filename_cached<'a>(pid: u32, cache: &'a mut ExeCache) -> Option<&'a str> {
+pub fn exe_filename_cached(pid: u32, cache: &mut ExeCache) -> Option<&str> {
     cache
         .entry(pid)
         .or_insert_with(|| exe_filename_uncached(pid))

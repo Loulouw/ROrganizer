@@ -20,7 +20,6 @@ use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 const SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
 /// Triggers assigned to 2+ BindingTargets in the given binding map.
-/// Pure helper, factored out for unit tests.
 pub(crate) fn compute_conflicts(
     bindings: &HashMap<BindingTarget, Trigger>,
 ) -> HashSet<Trigger> {
@@ -48,7 +47,6 @@ fn binding_target_sort_key(b: &BindingTarget) -> (u8, &str) {
 /// Drops a user-supplied `title_regex` if it can't be compiled. Returns
 /// `None` for invalid input so the caller falls back on the built-in
 /// default and the next save persists `null` rather than a broken regex.
-/// Pure helper for unit tests.
 pub(crate) fn validate_title_regex(opt: Option<String>) -> Option<String> {
     let s = opt?;
     regex::Regex::new(&s).ok().map(|_| s)
@@ -97,12 +95,9 @@ pub struct App {
     /// Whether the "About" modal is currently displayed. Owned by App so
     /// the dynamic height logic can reserve space for the overlay card.
     show_about: bool,
-    /// Decoded once at boot so the About modal can render the app icon as
-    /// a `TextureHandle`. The PNG loader of `egui_extras` is **not**
-    /// compiled in (only `svg` feature is enabled), so an
-    /// `Image::from_bytes("bytes://*.png", ...)` would fall back to the
-    /// red error placeholder. Kept as Option so a (highly improbable)
-    /// decode failure doesn't bring the whole window down.
+    /// Decoded once at boot. egui_extras is built without the PNG loader
+    /// (only `svg`), so `Image::from_bytes("bytes://*.png", ...)` would
+    /// render the red error placeholder. None on decode failure.
     about_icon: Option<egui::TextureHandle>,
 }
 
@@ -117,10 +112,10 @@ impl App {
         cc: &eframe::CreationContext<'_>,
         #[cfg(windows)] waiter_event: windows::Win32::Foundation::HANDLE,
     ) -> Self {
-        if let Ok(handle) = cc.window_handle() {
-            if let RawWindowHandle::Win32(h) = handle.as_raw() {
-                tray::register_main_hwnd(h.hwnd.get());
-            }
+        if let Ok(handle) = cc.window_handle()
+            && let RawWindowHandle::Win32(h) = handle.as_raw()
+        {
+            tray::register_main_hwnd(h.hwnd.get());
         }
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -485,14 +480,13 @@ impl App {
         // 1. Account bindings ordered by cycle_order — the topmost slot wins
         //    on a conflict, and the user controls that order via drag&drop.
         for slot in &self.cycle_order {
-            if let Some(trig) = self.bindings.get(&BindingTarget::Account(slot.clone())) {
-                if let Some(hwnd) = accounts
+            if let Some(trig) = self.bindings.get(&BindingTarget::Account(slot.clone()))
+                && let Some(hwnd) = accounts
                     .iter()
                     .find(|(s, _)| s == slot)
                     .map(|(_, h)| *h)
-                {
-                    bindings.push((*trig, BindingAction::Focus(hwnd)));
-                }
+            {
+                bindings.push((*trig, BindingAction::Focus(hwnd)));
             }
         }
         // 2. Cycle bindings come after — Account always wins on conflict.
@@ -569,9 +563,6 @@ impl App {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        // egui 0.34: `App::update` is deprecated — `ui` is now required.
-        // We keep the existing flow that drives sub-modules via the
-        // shared `Context`, so we just borrow it from the passed `Ui`.
         let ctx = ui.ctx().clone();
         let ctx = &ctx;
         while let Ok(ev) = self.tray_rx.try_recv() {

@@ -281,8 +281,8 @@ mod tests {
 
     #[test]
     fn status_label_follows_locale_switch() {
-        // Guards against Fix B regressions: relocalize must produce a label
-        // in the new locale, not the locale at TrayController construction.
+        // relocalize must produce a label in the new locale, not the locale
+        // at TrayController construction.
         let _g = locale_lock();
         rust_i18n::set_locale("fr");
         let fr = format_status_label(true, 5);

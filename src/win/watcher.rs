@@ -1,10 +1,8 @@
 //! Event-driven Dofus window watcher.
 //!
-//! Replaces the previous 1500 ms polling loop with a `SetWinEventHook`
-//! subscription. Whenever a window is created, destroyed, or has its title
-//! renamed, Windows posts an event to our message pump; we coalesce a burst
-//! of events into a single rescan after a short debounce so opening one
-//! Dofus client doesn't trigger 30 enumerations.
+//! Subscribes to `SetWinEventHook` for window create / destroy / namechange.
+//! A burst of events is coalesced into a single rescan after a short
+//! debounce so opening one Dofus client doesn't trigger 30 enumerations.
 
 use std::collections::HashSet;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
@@ -107,8 +105,10 @@ fn run(snapshot: WindowsSnapshot, ctx: egui::Context, regex: Regex, refresh_rx: 
 
     // Sanity: EVENT_OBJECT_DESTROY (0x8001) is in [CREATE=0x8000,
     // NAMECHANGE=0x800C] so the single SetWinEventHook range covers it.
-    debug_assert!(EVENT_OBJECT_CREATE <= EVENT_OBJECT_DESTROY);
-    debug_assert!(EVENT_OBJECT_DESTROY <= EVENT_OBJECT_NAMECHANGE);
+    const {
+        assert!(EVENT_OBJECT_CREATE <= EVENT_OBJECT_DESTROY);
+        assert!(EVENT_OBJECT_DESTROY <= EVENT_OBJECT_NAMECHANGE);
+    }
 
     loop {
         // Pump the message queue so OUTOFCONTEXT callbacks get delivered.

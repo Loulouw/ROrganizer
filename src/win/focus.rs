@@ -13,8 +13,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 /// if the HWND is no longer valid. Must be called on a thread whose process is
 /// either foreground or recently received user input — invocations from a global
 /// LL hook context may silently no-op due to the Windows foreground lock-out.
-/// The phase-5 hard-coded F12 trigger is therefore a smoke-test only; real
-/// user-bound focus actions will be wired through the UI thread in phase 7.
 pub fn focus_window(hwnd_raw: isize) {
     if hwnd_raw == 0 {
         return;
