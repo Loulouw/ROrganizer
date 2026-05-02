@@ -4,7 +4,7 @@
 
 # ROrganizer
 
-**Gère tes comptes Dofus Unity au clavier. Léger et rapide.**
+**Gère tes comptes Dofus Unity au clavier. Open-source. Sans télémétrie.**
 
 *Tu joues jusqu'à 8 comptes en parallèle ? Bascule de l'un à l'autre **d'un seul appui clavier ou souris**. Sans interagir avec Dofus, sans connexion réseau, sans usine à gaz.*
 
@@ -35,8 +35,18 @@
 ## Pourquoi ROrganizer ?
 
 Inspiré de **nAiO Organizer** — un outil que la communauté Dofus connaît
-bien — mais réécrit de zéro pour être plus léger, démarrer instantanément
-et offrir une interface soignée en thème clair ou sombre.
+bien — mais **entièrement open-source**. Pour un outil qui écoute tes
+raccourcis clavier et observe les fenêtres Dofus, c'est ce qui change
+tout.
+
+- 🔍 **Code source public**. N'importe qui peut le lire et vérifier
+  qu'il n'y a aucun keylogger, aucune télémétrie, aucune connexion
+  réseau cachée.
+- 🔒 **Binaire reproductible**. Tu peux recompiler depuis les sources
+  et comparer le SHA256 avec celui de la release pour t'assurer
+  qu'aucun tiers ne l'a modifié.
+- 🛠️ **Pérennité**. Si le projet s'arrête, n'importe qui peut le
+  reprendre — ton outil ne meurt pas avec un seul mainteneur.
 
 ## ✅ Respect de ta vie privée
 
@@ -52,7 +62,7 @@ et offrir une interface soignée en thème clair ou sombre.
   (tes raccourcis, ta langue, ton thème) dans le dossier AppData de
   Windows.
 
-## ⚡ Léger et rapide
+## ⚡ Performances
 
 <div align="center">
   <img src="resources/screenshots/perf-fr.svg" alt="Métriques de performance" width="720">
@@ -96,9 +106,9 @@ dès qu'ils sont lancés. Tu n'as qu'à leur attribuer un raccourci en
 cliquant sur « définir » à côté de chacun — et c'est mémorisé.
 
 **Ça consomme quoi quand je joue ?**
-Quasiment rien : **~58 Mo de RAM et 0 % de CPU au repos**. L'app
-reste silencieuse en arrière-plan jusqu'à ce que tu presses un de
-tes raccourcis.
+Très peu : **~65 Mo de RAM et 0 % de CPU au repos**. L'app reste
+silencieuse en arrière-plan jusqu'à ce que tu presses un de tes
+raccourcis.
 
 **Est-ce que je risque de me faire bannir ?**
 ROrganizer **n'interagit pas avec Dofus**. Il ne lit pas le jeu, ne

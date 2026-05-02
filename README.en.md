@@ -4,7 +4,7 @@
 
 # ROrganizer
 
-**Manage your Dofus Unity accounts from the keyboard. Light and fast.**
+**Manage your Dofus Unity accounts from the keyboard. Open-source. No telemetry.**
 
 *Playing up to 8 accounts in parallel? Switch between them with **a single keystroke or mouse click**. No interaction with Dofus, no network connection, no bloat.*
 
@@ -35,8 +35,17 @@
 ## Why ROrganizer?
 
 Inspired by **nAiO Organizer** — a tool well-known in the Dofus
-community — but rewritten from scratch in Rust to be lighter, start
-instantly and offer a polished UI in light or dark mode.
+community — but **fully open-source**. For a tool that listens to
+your keyboard shortcuts and watches your Dofus windows, that's what
+changes everything.
+
+- 🔍 **Public source code**. Anyone can read it and verify there's
+  no keylogger, no telemetry, no hidden network connection.
+- 🔒 **Reproducible binary**. You can rebuild from source and
+  compare the SHA256 with the one from the release to make sure no
+  third party has tampered with it.
+- 🛠️ **Future-proof**. If the project stops, anyone can pick it
+  up — your tool doesn't die with a single maintainer.
 
 ## ✅ Your privacy
 
@@ -51,7 +60,7 @@ instantly and offer a polished UI in light or dark mode.
 - The only file the app writes is **its own settings** (your
   shortcuts, language and theme) in the Windows AppData folder.
 
-## ⚡ Light and fast
+## ⚡ Performance
 
 <div align="center">
   <img src="resources/screenshots/perf-en.svg" alt="Performance metrics" width="720">
@@ -95,7 +104,7 @@ launches. You just bind a shortcut once by clicking "set" next to
 each account — it's remembered for next time.
 
 **What does it consume while I'm playing?**
-Almost nothing: **~58 MB of RAM and 0% CPU at idle**. The app stays
+Very little: **~65 MB of RAM and 0% CPU at idle**. The app stays
 silent in the background until you press one of your shortcuts.
 
 **Could I get banned for using this?**

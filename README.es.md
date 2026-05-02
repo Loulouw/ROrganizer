@@ -4,7 +4,7 @@
 
 # ROrganizer
 
-**Gestiona tus cuentas Dofus Unity desde el teclado. Ligero y rápido.**
+**Gestiona tus cuentas Dofus Unity desde el teclado. Open-source. Sin telemetría.**
 
 *¿Juegas con hasta 8 cuentas en paralelo? Cambia entre ellas **con una sola pulsación de tecla o ratón**. Sin interactuar con Dofus, sin conexión a internet, sin saturación.*
 
@@ -35,9 +35,17 @@
 ## ¿Por qué ROrganizer?
 
 Inspirado en **nAiO Organizer** — una herramienta que la comunidad
-Dofus conoce bien — pero reescrito desde cero en Rust para ser más
-ligero, arrancar al instante y ofrecer una interfaz cuidada en modo
-claro u oscuro.
+Dofus conoce bien — pero **totalmente open-source**. Para una
+herramienta que escucha tus atajos de teclado y observa tus
+ventanas Dofus, eso lo cambia todo.
+
+- 🔍 **Código fuente público**. Cualquiera puede leerlo y verificar
+  que no hay keylogger, ni telemetría, ni conexión de red oculta.
+- 🔒 **Binario reproducible**. Puedes recompilar desde el código
+  fuente y comparar el SHA256 con el de la release para asegurarte
+  de que ningún tercero lo ha modificado.
+- 🛠️ **Continuidad**. Si el proyecto se detiene, cualquiera puede
+  retomarlo — tu herramienta no muere con un solo mantenedor.
 
 ## ✅ Respeto a tu privacidad
 
@@ -51,7 +59,7 @@ claro u oscuro.
 - El único archivo que la app escribe es **su propia configuración**
   (tus atajos, tu idioma, tu tema) en la carpeta AppData de Windows.
 
-## ⚡ Ligero y rápido
+## ⚡ Rendimiento
 
 <div align="center">
   <img src="resources/screenshots/perf-es.svg" alt="Métricas de rendimiento" width="720">
@@ -96,7 +104,7 @@ en cuanto se inician. Solo tienes que asignar un atajo a cada una
 haciendo clic en «definir» — y queda guardado.
 
 **¿Cuánto consume mientras juego?**
-Casi nada: **~58 MB de RAM y 0 % de CPU en reposo**. La app se queda
+Muy poco: **~65 MB de RAM y 0 % de CPU en reposo**. La app se queda
 silenciosa en segundo plano hasta que pulsas un atajo.
 
 **¿Puedo ser baneado por usarla?**
