@@ -12,7 +12,8 @@ n'importe quel compte lancé via raccourcis clavier/souris globaux.
 ## État actuel
 
 Application fonctionnelle. `cargo test` doit rester vert et `cargo build`
-sans warning. À jour à la phase 15 (modal "À propos").
+sans warning. À jour à la phase 17 (icônes de classe), deps à jour au
+2026-08-05.
 
 ## Conventions
 
@@ -28,15 +29,21 @@ sans warning. À jour à la phase 15 (modal "À propos").
 
 ## Stack & deps clés
 
-- `eframe 0.29` avec `default-features = false, features = ["glow", "default_fonts"]`.
+- `eframe 0.35` avec `default-features = false, features = ["glow", "default_fonts"]`.
   ⚠ Ne PAS retirer plus de features — tester `default-features = false`
   sur `egui` casse la création de fenêtre (font lookup).
-- `egui_extras 0.29` avec uniquement le feature `svg`. Le PNG loader n'est
+- `egui_extras 0.35` avec uniquement le feature `svg`. Le PNG loader n'est
   PAS compilé : un `Image::from_bytes("bytes://*.png", ...)` rend le
   placeholder rouge d'erreur. Décoder les PNGs via la crate `image` puis
   `ctx.load_texture(...)` à la place. Voir `App::about_icon`.
-- `tray-icon 0.19`.
-- `windows 0.58` features : `Win32_Foundation`, `Win32_UI_WindowsAndMessaging`,
+- `egui_dnd 0.16` — suit strictement la version d'egui, pas de combinaison
+  intermédiaire compilable.
+- `tray-icon 0.24` en `default-features = false`. Les features par défaut
+  (`gtk`, `libxdo`) ne servent que le backend Linux/BSD, jamais compilé
+  ici : leurs deps sont target-gated. Les garder n'entretenait que la
+  famille gtk-rs non maintenue dans le lockfile et 9 advisories dans
+  chaque rapport d'audit.
+- `windows 0.62` features : `Win32_Foundation`, `Win32_UI_WindowsAndMessaging`,
   `Win32_UI_Input_KeyboardAndMouse`, `Win32_System_Threading`,
   `Win32_System_ProcessStatus`, `Win32_Globalization`, `Win32_Security`,
   `Win32_UI_Accessibility`.
@@ -44,9 +51,12 @@ sans warning. À jour à la phase 15 (modal "À propos").
 - `arc-swap 1` pour `WindowsSnapshot` (lecture lock-free hot path).
 - `webbrowser 1` pour ouvrir les URLs (évite la console qui flashe avec
   `cmd /C start`).
-- `image 0.25` (png only) + `ico 0.3` en build-deps pour générer le `.ico`
+- `rust-i18n 4` — la macro `i18n!` tourne au build et lit `locales/`.
+- `image 0.25` (png only) + `ico 0.5` en build-deps pour générer le `.ico`
   multi-résolution.
 - Pas de `tokio`, pas d'`async-runtime`. Threads natifs uniquement.
+- Aucun client HTTP dans l'arbre (`reqwest` / `hyper` / `tokio` absents du
+  lockfile) — c'est la traduction concrète de la règle « pas de réseau ».
 
 ## Build & run
 
@@ -188,6 +198,19 @@ fs::rename(tmp, path)?;
 critique : un blocage du Mutex sur le hot path keyboard introduirait un
 input lag global sur la machine.
 
+### egui : les API dépréciées sautent à la version suivante
+
+egui 0.35 a supprimé d'un coup tout ce qui était `#[deprecated]`. Un
+`#[allow(deprecated)]` laissé dans le code n'est donc pas une dette
+neutre, c'est une casse de compilation programmée au prochain bump.
+Corollaire : traiter les warnings de dépréciation au moment où ils
+apparaissent, pas quand ils bloquent.
+
+Le dropdown de langue utilisait `popup_below_widget` ; il est passé au
+builder `Popup::from_toggle_button_response`. ⚠ Ce constructeur gère
+lui-même le toggle sur clic — garder en plus un `Popup::toggle_id`
+inverserait deux fois et le popup ne s'ouvrirait jamais.
+
 ### `title_regex` invalide en config = pas de crash
 
 Le watcher panique si la regex utilisateur ne compile pas. La config
@@ -227,15 +250,66 @@ lock-free côté UI / hook callback. Le watcher publie via
 
 | Métrique | Valeur stable |
 |---|---|
-| Binary release | ~6.8 Mo |
-| RAM working set idle | ~65-67 Mo |
-| RAM private idle | ~50-53 Mo |
-| CPU idle | 0 % (mesuré sur 45 s) |
+| Binary release | ~8.1 Mio |
+| RAM working set idle | ~73 Mo |
+| RAM private idle | ~66-67 Mo |
+| CPU idle | 0 % (mesuré sur 40 s) |
 | Latence détection nouvelle fenêtre Dofus | ~150-200 ms |
+
+⚠ Mesurer la RAM **au moins 15 s après le lancement**. Plus tôt, l'atlas
+de polices et les textures ne sont pas encore réalisés et on lit ~60 Mo,
+ce qui fait conclure à tort à une régression au bump suivant.
 
 La cible originale `< 30 Mo RAM` est **inatteignable** avec
 eframe+glow+ICU. Pour viser plus bas il faudrait changer de techno
 (Win32+Direct2D natif, ou slint minimaliste).
+
+## Audit supply-chain avant tout bump de deps
+
+crates.io a été touché en 2026 par des campagnes réelles (TrapDoor, ver
+Miasma). Le vecteur est le code exécuté **pendant le build** — `build.rs`
+et proc-macros — pas le code shippé. Un `cargo update` à l'aveugle n'est
+donc pas acceptable.
+
+```powershell
+cargo install cargo-audit cargo-deny --locked   # --locked obligatoire
+cargo deny check advisories bans sources licenses
+cargo audit
+```
+
+`deny.toml` est versionné. Sa clé structurante est
+`[graph] targets = ["x86_64-pc-windows-msvc"]` : sans elle, l'audit porte
+sur le lockfile entier et remonte des advisories de crates jamais
+compilés ici — du bruit qui finirait par masquer un vrai problème. Le
+lockfile complet fait ~390 paquets, le graphe Windows ~245.
+
+`[sources] unknown-registry/unknown-git = "deny"` est le garde-fou
+central : il garantit que toute dépendance vient de crates.io.
+
+Ce que les outils ne couvrent pas et qui doit être fait à la main sur le
+diff du lockfile :
+- Lister les `build.rs` **nouveaux ou dont la version a changé** dans le
+  graphe Windows, et les lire. Les crates déjà présents à version
+  inchangée n'ont pas à être relus : Cargo vérifie le checksum du
+  tarball au download.
+- Grep d'IoC sur ces fichiers : `std::net`, `TcpStream`, `reqwest`,
+  `ureq`, `Command::new`, `home_dir`, `.ssh`, `.env`, `keystore`,
+  `wallet`, `AWS_`, `GITHUB_TOKEN`, blobs base64, écriture hors
+  `OUT_DIR`. Faux positif fréquent : `Command::new(rustc) --version`,
+  le sondage de version standard (serde, thiserror, proc-macro2, libc…).
+- Exclure `tests/`, `benches/`, `examples/` du scan : jamais compilés
+  quand le crate est une dépendance. C'est pourquoi `syn` embarque un
+  appel `reqwest` sans que ce soit un problème (dev-dependency, tests de
+  round-trip).
+- Vérifier la provenance des crates réellement nouveaux via
+  `crates.io/api/v1/crates/<nom>` + `/owners` : propriétaire, repo,
+  ancienneté, volume de téléchargements. Un crate récent à faible volume
+  dont le nom ressemble à un crate populaire = typosquat.
+
+Utile en cross-check sans rien installer : POST sur
+`https://api.osv.dev/v1/querybatch` avec la liste extraite de
+`cargo tree --target x86_64-pc-windows-msvc`. Deux bases valent mieux
+qu'une.
 
 ## Pattern de test programmatique
 
@@ -248,6 +322,16 @@ eframe+glow+ICU. Pour viser plus bas il faudrait changer de techno
 - Capturer une fenêtre : `Add-Type` System.Drawing + `CopyFromScreen`
   après `SetWindowPos` HWND_TOPMOST + `SetForegroundWindow` (sinon DWM
   rend du noir pour les surfaces hardware-accelerated).
+- Piloter le menu tray : sous Windows 11 la zone de notification n'est
+  plus une `ToolbarWindow32`, l'API `TB_GETBUTTON` ne trouve rien. Passer
+  par UI Automation — bouton nommé `ROrganizer` dans `Shell_TrayWnd`,
+  clic droit dessus, puis énumérer les `MenuItem` du popup.
+  Comparer les libellés en **`-ceq` exact** : `-like "*Activer*"` matche
+  aussi `Désactiver` (comparaison insensible à la casse).
+- Comparer deux screenshots : tester plusieurs décalages verticaux avant
+  de conclure. Un bump d'egui peut décaler tout le contenu de 1 px, ce
+  qui donne ~11 % de pixels différents pour un rendu par ailleurs
+  identique — à `dy=+1` l'écart retombe sous 1 %.
 
 ## Tests unitaires
 
