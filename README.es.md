@@ -67,7 +67,8 @@ ventanas Dofus, eso lo cambia todo.
 
 ## Funcionalidades
 
-- 🔍 **Detección automática** de tus cuentas Dofus al iniciarse
+- 🔍 **Detección automática** de tus cuentas al iniciarse, tanto si juegas
+  en **Dofus** como en **Dofus Experimental**
 - 🎯 **Un atajo por cuenta** : tecla del teclado o botón del ratón
 - 🔄 **Ciclo entre tus cuentas** con un atajo siguiente / anterior
 - ✋ **Arrastrar y soltar** para ordenar tus cuentas a tu gusto
@@ -100,11 +101,12 @@ Compatible con Windows 10 y Windows 11.
 
 **¿Tengo que configurar cada cuenta una por una?**
 No. ROrganizer **detecta automáticamente** todas tus cuentas Dofus
-en cuanto se inician. Solo tienes que asignar un atajo a cada una
-haciendo clic en «definir» — y queda guardado.
+en cuanto se inician, tanto en el cliente clásico como en **Dofus
+Experimental**. Solo tienes que asignar un atajo a cada una haciendo
+clic en «definir» — y queda guardado.
 
 **¿Cuánto consume mientras juego?**
-Muy poco: **~65 MB de RAM y 0 % de CPU en reposo**. La app se queda
+Muy poco: **~75 MB de RAM y 0 % de CPU en reposo**. La app se queda
 silenciosa en segundo plano hasta que pulsas un atajo.
 
 **¿Puedo ser baneado por usarla?**

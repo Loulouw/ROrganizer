@@ -68,7 +68,8 @@ changes everything.
 
 ## Features
 
-- 🔍 **Auto-detects** your Dofus accounts as soon as they're running
+- 🔍 **Auto-detects** your accounts as soon as they're running, whether you
+  play on **Dofus** or **Dofus Experimental**
 - 🎯 **One shortcut per account**: keyboard key or mouse button
 - 🔄 **Cycle through accounts** with a next / previous shortcut
 - ✋ **Drag-and-drop** to reorder accounts however you want
@@ -100,11 +101,12 @@ Works on Windows 10 and Windows 11.
 
 **Do I have to configure each account one by one?**
 No. ROrganizer **auto-detects** every Dofus account as soon as it
-launches. You just bind a shortcut once by clicking "set" next to
-each account — it's remembered for next time.
+launches, on the regular client as well as **Dofus Experimental**.
+You just bind a shortcut once by clicking "set" next to each
+account — it's remembered for next time.
 
 **What does it consume while I'm playing?**
-Very little: **~65 MB of RAM and 0% CPU at idle**. The app stays
+Very little: **~75 MB of RAM and 0% CPU at idle**. The app stays
 silent in the background until you press one of your shortcuts.
 
 **Could I get banned for using this?**

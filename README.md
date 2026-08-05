@@ -70,7 +70,8 @@ tout.
 
 ## Fonctionnalités
 
-- 🔍 **Détection automatique** de tes comptes Dofus dès qu'ils sont lancés
+- 🔍 **Détection automatique** de tes comptes dès qu'ils sont lancés, que
+  tu joues sur **Dofus** ou sur **Dofus Expérimental**
 - 🎯 **Un raccourci par compte** : touche du clavier ou bouton de souris
 - 🔄 **Cycle entre tes comptes** avec un raccourci suivant / précédent
 - ✋ **Glisse-dépose** pour ranger tes comptes dans l'ordre que tu veux
@@ -102,11 +103,12 @@ Compatible Windows 10 et Windows 11.
 
 **Faut-il configurer chaque compte un par un ?**
 Non. ROrganizer **détecte automatiquement** tous tes comptes Dofus
-dès qu'ils sont lancés. Tu n'as qu'à leur attribuer un raccourci en
-cliquant sur « définir » à côté de chacun — et c'est mémorisé.
+dès qu'ils sont lancés, sur le client classique comme sur **Dofus
+Expérimental**. Tu n'as qu'à leur attribuer un raccourci en cliquant
+sur « définir » à côté de chacun — et c'est mémorisé.
 
 **Ça consomme quoi quand je joue ?**
-Très peu : **~65 Mo de RAM et 0 % de CPU au repos**. L'app reste
+Très peu : **~75 Mo de RAM et 0 % de CPU au repos**. L'app reste
 silencieuse en arrière-plan jusqu'à ce que tu presses un de tes
 raccourcis.
 
