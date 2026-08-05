@@ -1,0 +1,56 @@
+# Contrôles supply-chain (cargo-deny). Rejouable :
+#   cargo deny check advisories bans sources licenses
+
+[graph]
+# L'app ne cible que Windows. Sans cette restriction, cargo-deny audite le
+# lockfile entier et remonte les advisories gtk/quick-xml/anyhow/memmap2 qui
+# ne sont jamais compilées ici — du bruit qui masquerait un vrai problème.
+targets = ["x86_64-pc-windows-msvc"]
+all-features = false
+
+[advisories]
+version = 2
+db-urls = ["https://github.com/RustSec/advisory-db"]
+# Un crate retiré de crates.io pour code malicieux est yanké : le refuser
+# est la première ligne de défense contre une compromission publiée.
+yanked = "deny"
+# "workspace" : seules les deps directes non maintenues sont bloquantes.
+# Une transitive non maintenue n'est pas actionnable de notre côté.
+unmaintained = "workspace"
+ignore = []
+
+[sources]
+# Le contrôle central : toute dépendance doit venir de crates.io. Un
+# registry ou un git tiers dans l'arbre est un vecteur d'injection direct.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "ISC",
+    "0BSD",
+    "Unlicense",
+    "Zlib",
+    "Unicode-3.0",
+    # option-ext (via directories) — copyleft par fichier, compatible avec
+    # une distribution en binaire.
+    "MPL-2.0",
+    # Données de police embarquées par epaint_default_fonts.
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+]
