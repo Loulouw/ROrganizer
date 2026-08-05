@@ -133,6 +133,23 @@ modos»**. Para verificar que tienes el binario correcto, compara su
 [release](https://github.com/Loulouw/ROrganizer/releases) —
 cualquier diferencia significaría que el ejecutable ha sido modificado.
 
+**Mi antivirus detecta un «troyano», ¿la app es peligrosa?**
+No, es un **falso positivo**. Para activar tus atajos incluso cuando
+Dofus está en primer plano, ROrganizer necesita escuchar el teclado y
+el ratón a nivel global de Windows y luego traer una ventana al
+frente. Un antivirus que juzga un programa por su forma, sin leer su
+código, no puede distinguir ese mecanismo del de un programa espía. El
+nombre que muestra (a menudo `Wacatac`) es una etiqueta genérica
+asignada automáticamente, no la identificación de un virus conocido.
+
+Lo que puedes comprobar tú mismo: el código fuente es público, **no se
+registra ninguna pulsación de teclado** y la app **no se conecta a
+ningún servidor** — verificable en el Monitor de recursos de Windows.
+Cada falso positivo se notifica a Microsoft al publicar una versión,
+pero la corrección tarda unos días en propagarse. Mientras tanto,
+puedes añadir el `.exe` como exclusión en tu antivirus, después de
+comprobar su SHA256.
+
 **¿Cómo desinstalo la aplicación?**
 Simplemente borra el `.exe`. Tus preferencias se guardan en
 `%APPDATA%\rorganizer\` — puedes borrar esa carpeta para una limpieza

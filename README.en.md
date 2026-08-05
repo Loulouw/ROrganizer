@@ -132,6 +132,22 @@ its **SHA256** with the one posted in the
 [release](https://github.com/Loulouw/ROrganizer/releases) notes —
 any difference would mean the exe has been tampered with.
 
+**My antivirus flags a "trojan", is the app dangerous?**
+No, it's a **false positive**. To fire your shortcuts even while Dofus
+is in front, ROrganizer has to listen to the keyboard and mouse at the
+Windows system level, then bring a window forward. An antivirus that
+judges a program by its shape, without reading its code, can't tell
+that mechanism apart from spyware. The name it shows (often `Wacatac`)
+is a generic label assigned automatically, not the identification of a
+known virus.
+
+What you can check yourself: the source code is public, **no keystroke
+is ever recorded** and the app **never connects to any server** — you
+can confirm it in Windows Resource Monitor. Every false positive is
+reported to Microsoft when a release ships, but the fix takes a few
+days to propagate. Until then, you can add the `.exe` as an exclusion
+in your antivirus, after checking its SHA256.
+
 **How do I uninstall it?**
 Just delete the `.exe`. Your preferences are stored in
 `%APPDATA%\rorganizer\` — delete that folder for a full clean-up.
