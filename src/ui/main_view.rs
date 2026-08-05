@@ -33,7 +33,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 .fill(theme::window_bg(theme))
                 .inner_margin(Margin::symmetric(12, 12)),
         )
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             draw_summary(ui, theme, ordered.len(), || app.request_refresh());
             ui.add_space(10.0);
 

@@ -20,7 +20,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 .inner_margin(egui::Margin::symmetric(0, 0)),
         )
         .show_separator_line(false)
-        .show_inside(ui, |ui| {
+        .show(ui, |ui| {
             let rect = ui.max_rect();
             let drag_response = ui.interact(
                 rect,
@@ -168,17 +168,13 @@ fn draw_lang_dropdown(ui: &mut egui::Ui, app: &mut App, theme: Theme) {
     let resp = lang_button(ui, current, theme)
         .on_hover_text(rust_i18n::t!("header.tooltip_lang").to_string());
 
-    let popup_id = ui.make_persistent_id("lang_popup");
-    if resp.clicked() {
-        egui::Popup::toggle_id(ui.ctx(), popup_id);
-    }
-    #[allow(deprecated)]
-    egui::popup_below_widget(
-        ui,
-        popup_id,
-        &resp,
-        egui::PopupCloseBehavior::CloseOnClick,
-        |ui| {
+    // `from_toggle_button_response` gère lui-même le toggle sur clic : ajouter
+    // un `Popup::toggle_id` en plus inverserait deux fois et le popup ne
+    // s'ouvrirait jamais.
+    egui::Popup::from_toggle_button_response(&resp)
+        .id(ui.make_persistent_id("lang_popup"))
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClick)
+        .show(|ui| {
             ui.set_min_width(120.0);
             for lang in Lang::ALL {
                 let row = ui.horizontal(|ui| {
@@ -207,8 +203,7 @@ fn draw_lang_dropdown(ui: &mut egui::Ui, app: &mut App, theme: Theme) {
                     app.set_lang(lang);
                 }
             }
-        },
-    );
+        });
 }
 
 fn lang_button(ui: &mut egui::Ui, current: Lang, theme: Theme) -> egui::Response {
