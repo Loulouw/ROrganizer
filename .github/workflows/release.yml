@@ -14,11 +14,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # fetch-depth 0 so the annotated tag object (which carries the release
-      # body) is available, not just the commit it points at.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Resolve version
         id: version
@@ -105,8 +101,19 @@ jobs:
 
           # The annotated tag message is the authored release body: written and
           # validated by the github-release skill before the tag is pushed.
-          # Single source of truth, so there is no draft to reconcile here.
-          $body = git tag -l --format='%(contents)' $tag
+          #
+          # Read it through the API, not with git: actions/checkout resolves the
+          # tag to its commit SHA and recreates the local ref, so on the runner
+          # it is a *lightweight* tag and `git tag --format=%(contents)` quietly
+          # returns the commit message instead. That shipped a release body made
+          # of the bump commit once already.
+          $ref = gh api "repos/$env:REPO/git/ref/tags/$tag" | ConvertFrom-Json
+          if ($ref.object.type -ne 'tag') {
+            throw "$tag is a lightweight tag. The release body lives in the annotated tag message: re-create it with git tag -a $tag --cleanup=verbatim -F <notes>"
+          }
+          $message = (gh api "repos/$env:REPO/git/tags/$($ref.object.sha)" | ConvertFrom-Json).message
+          if (-not $message.Trim()) { throw "Annotated tag $tag has an empty message" }
+          $body = $message -split "`r?`n"
 
           # Single-quoted here-string: no PowerShell interpolation, so markdown
           # backticks stay literal. Placeholders are substituted below.

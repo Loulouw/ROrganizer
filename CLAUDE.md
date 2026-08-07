@@ -92,11 +92,23 @@ L'attestation de provenance est rattachée à l'empreinte de l'artefact, pas
 
 Le workflow écrit les étapes restantes dans le résumé du run Actions.
 
-Le corps de la release est le **message du tag annoté**. Le workflow le
-lit via `git tag -l --format='%(contents)'` et y ajoute le bloc SHA256 /
-provenance. D'où le `fetch-depth: 0` du checkout : sans lui l'objet tag
-n'est pas récupéré. Corollaire : le tag doit être annoté (`git tag -a`),
-un tag léger donne un corps vide.
+Le corps de la release est le **message du tag annoté**, dans lequel le
+workflow insère le bloc SHA256 / provenance juste avant la section
+SmartScreen.
+
+Deux pièges, tous deux rencontrés en vrai à la v1.3.0 :
+
+- **Créer le tag avec `--cleanup=verbatim`.** Par défaut `git tag -F`
+  applique `--cleanup=strip`, qui supprime toute ligne commençant par `#`
+  en la prenant pour un commentaire : les titres `###` disparaissent tous,
+  y compris l'ancre SmartScreen dont dépend l'insertion.
+- **Lire le message par l'API, pas par `git`.** `actions/checkout` résout
+  le tag vers son SHA de commit et recrée la ref : sur le runner c'est un
+  tag *léger*, et `git tag --format='%(contents)'` retourne alors
+  silencieusement le message du **commit**. La v1.3.0 a ainsi publié un
+  corps de release constitué du message « chore: bump 1.3.0 ». Le workflow
+  passe donc par `git/ref/tags` puis `git/tags/<sha>`, et échoue
+  explicitement si le tag n'est pas annoté.
 
 Le skill local `/github-release` fait les contrôles pré-vol (version
 bumpée, tag inexistant, arbre propre, tests verts) et le format des
