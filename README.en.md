@@ -20,11 +20,12 @@
 
 ---
 
-> ⚠️ **Beware of impostors.** ROrganizer has **no official website**.
-> The only legitimate place to download the executable is the
-> [Releases page of this GitHub repo](https://github.com/Loulouw/ROrganizer/releases).
-> Any other site (forums, third-party download pages, "mirrors"…) is
-> not from me and may contain a modified binary.
+> ⚠️ **Beware of impostors.** ROrganizer is downloaded **only** from the
+> [Releases page of this GitHub repo](https://github.com/Loulouw/ROrganizer/releases),
+> as **a single executable**. Never inside an archive, never as a script,
+> never from a file host or a link shared elsewhere. Any file carrying my
+> name that does not match this description did not come from me — see
+> [SECURITY.md](SECURITY.md) to verify your download.
 
 ## Preview
 
@@ -41,9 +42,10 @@ changes everything.
 
 - 🔍 **Public source code**. Anyone can read it and verify there's
   no keylogger, no telemetry, no hidden network connection.
-- 🔒 **Reproducible binary**. You can rebuild from source and
-  compare the SHA256 with the one from the release to make sure no
-  third party has tampered with it.
+- 🔒 **Verifiable binary**. Every release is built by GitHub from the
+  public source, never on a personal machine, with a provenance
+  attestation you can check in one command. Nobody else can produce
+  one. See [SECURITY.md](SECURITY.md).
 - 🛠️ **Future-proof**. If the project stops, anyone can pick it
   up — your tool doesn't die with a single maintainer.
 
@@ -92,7 +94,7 @@ Works on Windows 10 and Windows 11.
 
 > 💡 **Prefer to build from source?**
 > With the `stable-x86_64-pc-windows-msvc` Rust toolchain (via [rustup](https://rustup.rs)):
-> ```bash
+> ```powershell
 > cargo build --release
 > .\target\release\rorganizer.exe
 > ```
@@ -127,10 +129,10 @@ Yes. ROrganizer isn't signed with a **code-signing certificate**
 (which costs around €300/year and isn't justifiable for a free
 open-source project). Windows SmartScreen therefore warns about any
 executable it doesn't recognize yet. Click **"More info"** then
-**"Run anyway"**. To make sure you have the right binary, compare
-its **SHA256** with the one posted in the
-[release](https://github.com/Loulouw/ROrganizer/releases) notes —
-any difference would mean the exe has been tampered with.
+**"Run anyway"**. To make sure you have the right binary, the full
+procedure is in [SECURITY.md](SECURITY.md): comparing the **SHA256**
+GitHub shows on the release page, and a **provenance attestation**
+you can check in one command from 1.3.0 onwards.
 
 **My antivirus flags a "trojan", is the app dangerous?**
 No, it's a **false positive**. To fire your shortcuts even while Dofus

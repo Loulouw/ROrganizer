@@ -20,11 +20,13 @@
 
 ---
 
-> ⚠️ **Attention aux contrefaçons.** ROrganizer n'a **pas de site web**
-> officiel. Le seul endroit légitime pour télécharger l'exécutable est
-> la page [Releases de ce dépôt GitHub](https://github.com/Loulouw/ROrganizer/releases).
-> Tout autre site (forums, pages de téléchargement tiers, « miroirs »…)
-> ne provient pas de moi et peut contenir un binaire modifié.
+> ⚠️ **Attention aux contrefaçons.** ROrganizer se télécharge **uniquement**
+> sur la page [Releases de ce dépôt GitHub](https://github.com/Loulouw/ROrganizer/releases),
+> sous la forme d'**un seul exécutable**. Jamais dans une archive, jamais
+> sous forme de script, jamais depuis un hébergeur de fichiers ou un lien
+> partagé ailleurs. Tout fichier qui porte mon nom sans correspondre à
+> cette description ne vient pas de moi — voir [SECURITY.md](SECURITY.md)
+> pour vérifier ton téléchargement.
 
 ## Aperçu
 
@@ -42,9 +44,11 @@ tout.
 - 🔍 **Code source public**. N'importe qui peut le lire et vérifier
   qu'il n'y a aucun keylogger, aucune télémétrie, aucune connexion
   réseau cachée.
-- 🔒 **Binaire reproductible**. Tu peux recompiler depuis les sources
-  et comparer le SHA256 avec celui de la release pour t'assurer
-  qu'aucun tiers ne l'a modifié.
+- 🔒 **Binaire vérifiable**. Chaque release est compilée par GitHub
+  depuis le code public, jamais sur une machine personnelle, avec une
+  attestation de provenance que tu peux contrôler en une commande.
+  Personne d'autre ne peut en produire une. Voir
+  [SECURITY.md](SECURITY.md).
 - 🛠️ **Pérennité**. Si le projet s'arrête, n'importe qui peut le
   reprendre — ton outil ne meurt pas avec un seul mainteneur.
 
@@ -94,7 +98,7 @@ Compatible Windows 10 et Windows 11.
 
 > 💡 **Tu préfères compiler depuis les sources ?**
 > Avec le toolchain Rust `stable-x86_64-pc-windows-msvc` (via [rustup](https://rustup.rs)) :
-> ```bash
+> ```powershell
 > cargo build --release
 > .\target\release\rorganizer.exe
 > ```
@@ -131,10 +135,10 @@ Oui. ROrganizer n'est pas signé avec un **certificat code-signing**
 open-source gratuit). Windows SmartScreen affiche donc une alerte
 par précaution sur tout exécutable peu connu. Clique sur
 **« Informations complémentaires »** puis **« Exécuter quand même »**.
-Pour vérifier que tu as bien le bon binaire, compare son **SHA256**
-avec celui publié dans les notes de la
-[release](https://github.com/Loulouw/ROrganizer/releases) — toute
-différence signifierait que l'exe a été modifié.
+Pour vérifier que tu as bien le bon binaire, la marche à suivre est
+détaillée dans [SECURITY.md](SECURITY.md) : comparaison du **SHA256**
+affiché par GitHub sur la page de la release, et **attestation de
+provenance** vérifiable en une commande à partir de la 1.3.0.
 
 **Mon antivirus détecte un « trojan », l'app est-elle dangereuse ?**
 Non, c'est un **faux positif**. Pour déclencher tes raccourcis même
