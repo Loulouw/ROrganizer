@@ -155,9 +155,11 @@ v1.3.0 — c'était faux. La garantie offerte est **l'attestation de
 provenance**, qui ne dépend d'aucune condition de build.
 
 Le CI compile toujours dans `D:\a\ROrganizer\ROrganizer`, donc la
-condition du chemin identique y est remplie : deux exécutions du workflow
-sur le même tag devraient donner le même binaire. À confirmer au premier
-re-run — non vérifié à ce jour.
+condition du chemin identique y est remplie. **Vérifié à la v1.3.0** :
+deux exécutions du workflow, sur deux commits différents mais à sources
+identiques et même rustc, ont produit le même binaire au bit près
+(`aa2fbd71…`). La reproductibilité entre runs CI est donc réelle, celle
+sur une machine tierce ne l'est pas.
 
 Pas de `rust-toolchain.toml` : ça forcerait la version de rustc à tous
 les contributeurs pour un bénéfice qui ne concerne que la vérification
