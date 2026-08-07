@@ -4,7 +4,7 @@
 
 # ROrganizer
 
-**Gestiona tus cuentas Dofus Unity desde el teclado. Open-source. Sin telemetría.**
+**Gestiona tus cuentas Dofus Unity y Retro desde el teclado. Open-source. Sin telemetría.**
 
 *¿Juegas con hasta 8 cuentas en paralelo? Cambia entre ellas **con una sola pulsación de tecla o ratón**. Sin interactuar con Dofus, sin conexión a internet, sin saturación.*
 
@@ -72,7 +72,7 @@ ventanas Dofus, eso lo cambia todo.
 ## Funcionalidades
 
 - 🔍 **Detección automática** de tus cuentas al iniciarse, tanto si juegas
-  en **Dofus** como en **Dofus Experimental**
+  en **Dofus**, **Dofus Retro** o **Dofus Experimental**
 - 🎯 **Un atajo por cuenta** : tecla del teclado o botón del ratón
 - 🔄 **Ciclo entre tus cuentas** con un atajo siguiente / anterior
 - ✋ **Arrastrar y soltar** para ordenar tus cuentas a tu gusto
@@ -106,8 +106,9 @@ Compatible con Windows 10 y Windows 11.
 **¿Tengo que configurar cada cuenta una por una?**
 No. ROrganizer **detecta automáticamente** todas tus cuentas Dofus
 en cuanto se inician, tanto en el cliente clásico como en **Dofus
-Experimental**. Solo tienes que asignar un atajo a cada una haciendo
-clic en «definir» — y queda guardado.
+Retro** y **Dofus Experimental**. Solo tienes que asignar un atajo a
+cada una haciendo clic en «definir» — y queda guardado. Las cuentas
+de Retro se muestran sin icono de clase: su ventana no lo indica.
 
 **¿Cuánto consume mientras juego?**
 Muy poco: **~75 MB de RAM y 0 % de CPU en reposo**. La app se queda

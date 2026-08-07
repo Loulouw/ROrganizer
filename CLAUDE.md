@@ -325,6 +325,33 @@ pendant qu'un Dofus démarre.
 lock-free côté UI / hook callback. Le watcher publie via
 `snapshot.store(Arc::new(buf.clone()))`.
 
+### Clients détectés
+
+Deux familles, deux formats de titre, deux exécutables :
+
+| Client | Exécutable | Titre |
+|---|---|---|
+| Dofus / Expérimental | `Dofus.exe` | `Pseudo - Iop - 2.75.4.13 - Release` |
+| Dofus Rétro | `Dofus Retro.exe` | `Pseudo - Dofus Retro v1.48.21` |
+
+**Le nom de l'exe Rétro contient une espace.** `is_dofus_exe` teste les deux
+noms ; filtrer sur `Dofus.exe` seul écarte Rétro *avant* la lecture du titre,
+donc ajouter une branche à la regex sans toucher au filtre ne produit
+strictement rien. C'est le piège de ce module.
+
+Le titre Rétro **ne contient pas la classe** — `DetectedWindow.class` vaut
+`None`, et `draw_account_row` réserve alors les 32 px de l'icône sans en
+dessiner. Ne pas « optimiser » cette réservation : la frame de la ligne a une
+marge verticale de 4 px dimensionnée pour l'icône (contre 11 px pour les
+lignes de cycle, qui n'en ont pas), donc une ligne sans réservation tombe à
+~26 px au lieu de 40 et fait mentir `ROW` dans `apply_dynamic_height`.
+
+Rétro est une app Electron : ~8 processus par client, mais un seul possède
+une fenêtre visible et titrée. Les auxiliaires sont invisibles ou sans titre,
+`enum_proc` les écarte sans coût. Avant la sélection d'un personnage, la
+fenêtre s'appelle `Dofus Retro v1.48.21` — pas de ` - `, donc pas de match,
+donc pas de ligne fantôme.
+
 ## Performance baseline
 
 | Métrique | Valeur stable |

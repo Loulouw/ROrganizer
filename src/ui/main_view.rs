@@ -248,16 +248,31 @@ fn draw_account_row(
                     draw_drag_handle(ui, theme);
                 });
                 ui.add_space(4.0);
-                if let Some(class) = w.class.as_deref()
-                    && let Some(name) = crate::class_icon::class_filename(class)
-                    && let Some(tex) = app.class_icon(name)
+                // Retro windows expose no class, so there is no icon to draw.
+                // The 32 px are reserved regardless: this frame uses a 4 px
+                // vertical margin sized for the icon, so letting it collapse
+                // would leave the row ~14 px shorter than every other one and
+                // invalidate ROW in App::apply_dynamic_height.
+                match w
+                    .class
+                    .as_deref()
+                    .and_then(crate::class_icon::class_filename)
+                    .and_then(|name| app.class_icon(name))
                 {
-                    ui.add(
-                        egui::Image::new(tex)
-                            .fit_to_exact_size(egui::vec2(32.0, 32.0)),
-                    );
-                    ui.add_space(8.0);
+                    Some(tex) => {
+                        ui.add(
+                            egui::Image::new(tex)
+                                .fit_to_exact_size(egui::vec2(32.0, 32.0)),
+                        );
+                    }
+                    None => {
+                        let _ = ui.allocate_exact_size(
+                            egui::vec2(32.0, 32.0),
+                            Sense::hover(),
+                        );
+                    }
                 }
+                ui.add_space(8.0);
                 ui.label(
                     egui::RichText::new(&w.slot_key)
                         .size(13.0)

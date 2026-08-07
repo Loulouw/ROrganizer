@@ -4,7 +4,7 @@
 
 # ROrganizer
 
-**Manage your Dofus Unity accounts from the keyboard. Open-source. No telemetry.**
+**Manage your Dofus Unity and Retro accounts from the keyboard. Open-source. No telemetry.**
 
 *Playing up to 8 accounts in parallel? Switch between them with **a single keystroke or mouse click**. No interaction with Dofus, no network connection, no bloat.*
 
@@ -71,7 +71,7 @@ changes everything.
 ## Features
 
 - 🔍 **Auto-detects** your accounts as soon as they're running, whether you
-  play on **Dofus** or **Dofus Experimental**
+  play on **Dofus**, **Dofus Retro** or **Dofus Experimental**
 - 🎯 **One shortcut per account**: keyboard key or mouse button
 - 🔄 **Cycle through accounts** with a next / previous shortcut
 - ✋ **Drag-and-drop** to reorder accounts however you want
@@ -103,9 +103,10 @@ Works on Windows 10 and Windows 11.
 
 **Do I have to configure each account one by one?**
 No. ROrganizer **auto-detects** every Dofus account as soon as it
-launches, on the regular client as well as **Dofus Experimental**.
-You just bind a shortcut once by clicking "set" next to each
-account — it's remembered for next time.
+launches, on the regular client as well as **Dofus Retro** and
+**Dofus Experimental**. You just bind a shortcut once by clicking
+"set" next to each account — it's remembered for next time. Retro
+accounts show no class icon: their window title doesn't carry it.
 
 **What does it consume while I'm playing?**
 Very little: **~75 MB of RAM and 0% CPU at idle**. The app stays
