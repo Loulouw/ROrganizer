@@ -72,6 +72,85 @@ cargo build --release          # ~50 s, ne pas distribuer un debug build
 est perdu. Pour du debug rapide, build sans le flag (`cargo build`) et
 lancer depuis un terminal. Pas de log fichier en prod.
 
+## Publication d'une release
+
+`.github/workflows/release.yml` se déclenche sur un tag `v*` : tests,
+build, attestation de provenance, création de la release **en brouillon**.
+**Ne jamais builder et uploader un exe à la main** — un binaire local n'a
+pas d'attestation.
+
+### Pourquoi un brouillon et pas une publication directe
+
+L'exe déclenche un faux positif Defender (`Wacatac`) tant qu'il n'a pas
+été soumis à Microsoft. La soumission blanchit **une empreinte précise** :
+recompiler entre la soumission et la publication produit un autre hash et
+annule le bénéfice. D'où le cycle en deux temps — build unique, soumission,
+puis `gh release edit <tag> --draft=false`.
+
+L'attestation de provenance est rattachée à l'empreinte de l'artefact, pas
+à la release : elle est vérifiable pendant toute la durée du brouillon.
+
+Le workflow écrit les étapes restantes dans le résumé du run Actions.
+
+Le corps de la release est le **message du tag annoté**. Le workflow le
+lit via `git tag -l --format='%(contents)'` et y ajoute le bloc SHA256 /
+provenance. D'où le `fetch-depth: 0` du checkout : sans lui l'objet tag
+n'est pas récupéré. Corollaire : le tag doit être annoté (`git tag -a`),
+un tag léger donne un corps vide.
+
+Le skill local `/github-release` fait les contrôles pré-vol (version
+bumpée, tag inexistant, arbre propre, tests verts) et le format des
+notes. Il est dans `.claude/`, donc non versionné.
+
+### Remaps de chemins
+
+Le binaire embarque les chemins absolus de la machine de build — sources
+de std, du registre cargo, emplacements de panic. Le build local de la
+v1.2.0 publiait ainsi `C:\Users\<nom>\.cargo\registry\…` 92 fois dans
+l'exe distribué.
+
+```
+--remap-path-prefix=$CARGO_HOME=/cargo
+--remap-path-prefix=$RUSTUP_HOME=/rustup
+--remap-path-prefix=$GITHUB_WORKSPACE=/src
+-Clink-arg=/Brepro        # sinon l'horodatage PE change à chaque build
+```
+
+Oublier le remap `rustup` laisse passer les chemins de la std — c'est
+celui qu'on rate en premier. L'étape *Fail on leaked absolute paths* du
+workflow échoue si un `X:\Users\` survit dans le binaire.
+
+### La reproductibilité ne tient PAS entre chemins différents
+
+Mesuré, pas supposé. Avec les flags ci-dessus, même rustc, `cargo clean`
+entre les deux :
+
+- deux builds **au même chemin** → hash bit-identique ;
+- deux builds à des **chemins différents** → 2 158 038 octets diffèrent.
+
+Le diff est trompeur : `.rsrc` diffère à 98 % et `.rdata` à 74 %, mais
+`.text` à 0,5 % seulement. En regardant les octets, ce sont des **RVA**,
+pas des données — `icon.ico` et `app.rc` générés sont byte-identiques,
+les 6 PNG de l'icône aussi, tout est juste décalé de 24 octets.
+
+Cause : `--remap-path-prefix` n'agit que sur ce que **rustc** enregistre.
+L'éditeur de liens MSVC reçoit les vrais chemins absolus des `.obj` et
+`.lib`, et son ordonnancement en dépend. Non contournable raisonnablement.
+
+**Conséquence à ne pas oublier** : ne jamais promettre à un utilisateur
+qu'il retrouvera le SHA256 en recompilant. Le README l'affirmait avant la
+v1.3.0 — c'était faux. La garantie offerte est **l'attestation de
+provenance**, qui ne dépend d'aucune condition de build.
+
+Le CI compile toujours dans `D:\a\ROrganizer\ROrganizer`, donc la
+condition du chemin identique y est remplie : deux exécutions du workflow
+sur le même tag devraient donner le même binaire. À confirmer au premier
+re-run — non vérifié à ce jour.
+
+Pas de `rust-toolchain.toml` : ça forcerait la version de rustc à tous
+les contributeurs pour un bénéfice qui ne concerne que la vérification
+d'une release.
+
 ## Gotchas critiques
 
 ### eframe + viewport caché

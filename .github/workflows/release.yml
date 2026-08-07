@@ -1,0 +1,175 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      # fetch-depth 0 so the annotated tag object (which carries the release
+      # body) is available, not just the commit it points at.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag -replace '^v', ''
+          $match = Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1
+          if (-not $match) { throw "No package version found in Cargo.toml" }
+          $manifest = $match.Matches[0].Groups[1].Value
+          if ($version -ne $manifest) {
+            throw "Tag $tag does not match Cargo.toml version $manifest"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "asset=ROrganizer-$version-x86_64-windows.exe" >> $env:GITHUB_OUTPUT
+
+      - name: Toolchain
+        shell: pwsh
+        run: |
+          rustup set profile minimal
+          rustup default stable-x86_64-pc-windows-msvc
+          rustup update stable-x86_64-pc-windows-msvc
+
+      # Absolute paths of the build machine get baked into the binary (panic
+      # locations, std and dependency sources): the hand-built 1.2.0 shipped
+      # the maintainer's home directory 92 times. These remaps strip them, and
+      # /Brepro drops the PE timestamp so two runs at the same path match.
+      # They do NOT buy third-party reproducibility - the MSVC linker orders
+      # its output by the absolute paths it is handed. See CLAUDE.md.
+      - name: Build
+        id: build
+        shell: pwsh
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          $cargoHome  = if ($env:CARGO_HOME)  { $env:CARGO_HOME }  else { "$env:USERPROFILE\.cargo" }
+          $rustupHome = if ($env:RUSTUP_HOME) { $env:RUSTUP_HOME } else { "$env:USERPROFILE\.rustup" }
+          $env:RUSTFLAGS = "--remap-path-prefix=$cargoHome=/cargo " +
+                           "--remap-path-prefix=$rustupHome=/rustup " +
+                           "--remap-path-prefix=$env:GITHUB_WORKSPACE=/src " +
+                           "-Clink-arg=/Brepro"
+
+          "rustc=$(rustc --version)" >> $env:GITHUB_OUTPUT
+
+          cargo test --release --locked
+          cargo build --release --locked
+
+          Copy-Item target/release/rorganizer.exe $env:ASSET
+
+      # If a remap stops matching (a runner image moving CARGO_HOME, say) the
+      # build stays green while the exe silently starts leaking build paths
+      # again. Fail loudly instead.
+      - name: Fail on leaked absolute paths
+        shell: pwsh
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          $bytes = [IO.File]::ReadAllBytes((Resolve-Path $env:ASSET))
+          $text = [Text.Encoding]::ASCII.GetString($bytes)
+          # String.Contains('') is true, so an unset variable would fail every
+          # release. Filter empties before testing.
+          $needles = @('\Users\', '\.cargo\', '\.rustup\', $env:GITHUB_WORKSPACE) |
+                     Where-Object { $_ }
+          foreach ($needle in $needles) {
+            if ($text.Contains($needle)) {
+              throw "Build path '$needle' leaked into the binary - check the remap-path-prefix flags"
+            }
+          }
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.version.outputs.asset }}
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUSTC_VERSION: ${{ steps.build.outputs.rustc }}
+          REPO: ${{ github.repository }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $sha = (Get-FileHash $env:ASSET -Algorithm SHA256).Hash.ToLower()
+
+          # The annotated tag message is the authored release body: written and
+          # validated by the github-release skill before the tag is pushed.
+          # Single source of truth, so there is no draft to reconcile here.
+          $body = git tag -l --format='%(contents)' $tag
+
+          # Single-quoted here-string: no PowerShell interpolation, so markdown
+          # backticks stay literal. Placeholders are substituted below.
+          # Indented to the block-scalar level: YAML strips exactly these ten
+          # spaces, which lands the closing '@ in column 0 as PowerShell
+          # requires. Dedenting it here would terminate the YAML block early.
+          $footer = @'
+
+          ### 🔐 Provenance et intégrité
+
+          SHA256 : `@SHA@`
+
+          Cet exécutable a été compilé par GitHub Actions depuis le code source de ce dépôt, et non sur une machine personnelle. Tu peux le vérifier avec le [GitHub CLI](https://cli.github.com) :
+
+          ```powershell
+          gh attestation verify .\@ASSET@ --repo @REPO@
+          ```
+
+          Compilé avec `@RUSTC@`. Voir [SECURITY.md](https://github.com/@REPO@/blob/main/SECURITY.md) pour la procédure de vérification.
+
+          '@
+
+          $footer = $footer.Replace('@SHA@', $sha).
+                            Replace('@ASSET@', $env:ASSET).
+                            Replace('@REPO@', $env:REPO).
+                            Replace('@RUSTC@', $env:RUSTC_VERSION)
+
+          # House style: positive sections first, Windows warnings last, Full
+          # Changelog as the closing line. So the block goes in just before the
+          # SmartScreen heading rather than at the end. Matched on the ASCII
+          # part of the heading to stay independent of emoji encoding.
+          $lines  = @($body)
+          $insert = @($footer -split "`r?`n")
+          $at = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -like '### *SmartScreen*') { $at = $i; break }
+          }
+          $out = if ($at -lt 0)      { $lines + $insert }
+                 elseif ($at -eq 0)  { $insert + $lines }
+                 else                { $lines[0..($at - 1)] + $insert + $lines[$at..($lines.Count - 1)] }
+
+          Set-Content -Path release-body.md -Value $out -Encoding utf8
+
+          # Created as a draft on purpose: the exe has to be submitted to
+          # Microsoft as a false positive before anyone downloads it, and the
+          # submission binds to this exact hash. Rebuilding later would void
+          # it, so the very bytes attested here are the ones published.
+          gh release create $tag --title $tag --notes-file release-body.md --draft $env:ASSET
+
+          @"
+          ## Brouillon créé — pas encore public
+
+          | | |
+          |---|---|
+          | Version | ``$tag`` |
+          | SHA256 | ``$sha`` |
+
+          ### Étapes restantes
+
+          1. Récupérer l'exécutable : ``gh release download $tag --repo $env:REPO``
+          2. Le soumettre à Microsoft comme faux positif : https://www.microsoft.com/en-us/wdsi/filesubmission
+          3. Attendre le verdict (24-72 h en général)
+          4. Publier : ``gh release edit $tag --draft=false --repo $env:REPO``
+
+          L'attestation de provenance est déjà valide et vérifiable dès maintenant, sans attendre la publication.
+          "@ | Set-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
