@@ -21,5 +21,8 @@ target
 # Claude Code per-developer notes (preferences, local paths, dev habits)
 CLAUDE.local.md
 
+# Operational notes kept out of the public repo (abuse reports, incident files)
+docs/
+
 # Logs
 *.log
