@@ -165,6 +165,184 @@ Pas de `rust-toolchain.toml` : ça forcerait la version de rustc à tous
 les contributeurs pour un bénéfice qui ne concerne que la vérification
 d'une release.
 
+## Site vitrine
+
+`site/` est publié sur `https://rorganizer.loulouw-labs.fr` par
+`.github/workflows/pages.yml` (GitHub Pages, source « GitHub Actions »).
+DNS : `CNAME rorganizer → Loulouw.github.io` — le nom du dépôt ne figure
+jamais dans l'enregistrement.
+
+**HTML et CSS écrits à la main, aucun build, aucune dépendance.** Ce n'est
+pas de la paresse : la règle supply-chain ci-dessous interdit d'exécuter du
+code de build non audité, et une chaîne npm ou un générateur de site en est
+exactement un. La source est la sortie, donc aucun écart où un bug se cache.
+Condition de réexamen : au-delà d'une dizaine de pages, la duplication des
+blocs `<head>` / nav / `hreflang` devient une fabrique de bugs SEO
+silencieux — passer alors à Zola (binaire préconstruit, pas de `cargo
+install`).
+
+### Multilingue
+
+`/` est un redirecteur en `noindex` qui lit `navigator.languages` ; les trois
+versions réelles sont `/fr/`, `/en/`, `/es/`, avec `hreflang` réciproques et
+`x-default` sur `/en/`. Deux pièges :
+
+- La racine est exclue par son `noindex`, **pas** par `robots.txt` : une page
+  interdite au crawl ne transmet jamais son `noindex`.
+- La détection compare la **sous-étiquette primaire** en parcourant la liste
+  **dans l'ordre**. Un `navigator.language.startsWith('fr')` raterait
+  `es-419` / `es-MX`, et des préférences `["de-DE", "fr"]` doivent mener au
+  français, pas au repli anglais.
+- La redirection utilise `location.replace()`. Avec `location.href`, la racine
+  reste dans l'historique et le bouton Retour reboucle sans fin.
+
+### Grilles CSS : `minmax(0, 1fr)`, jamais `1fr` nu
+
+Les enfants de grille gardent `min-width: auto`, donc un contenu non
+compressible élargit toute la grille au-delà du viewport. Mesuré sur ce
+site : 842 px de `scrollWidth` pour 500 px de fenêtre, à cause des blocs
+`<pre class="term">`. `overflow-x: auto` sur le `<pre>` ne suffit pas.
+
+### Polices
+
+Impossible de sous-grouper localement : ça demande `pyftsubset` ou
+`glyphhanger`, donc Python ou Node — qu'on n'installe pas. L'API CSS de
+Google Fonts sert déjà des `.woff2` découpés par plage ; on récupère celui de
+`latin`, qui couvre FR et ES (`¿` U+00BF et `¡` U+00A1 inclus). Les
+`OFL-*.txt` sont versionnés à côté : l'OFL exige que la licence accompagne
+les fichiers redistribués.
+
+Literata et Archivo sont servis en **variable** : un seul fichier couvre
+400→600, d'où `font-weight: 400 600` dans le `@font-face`.
+
+### Le vert de l'app est inutilisable sur fond clair
+
+`#97c459` sur `#f4f5f0` donne **1,85:1**. Le site est clair, donc l'accent
+textuel est assombri à `#4f7020` (5,2:1, conforme AA) et un second token
+`#67932e` (3,4:1) sert les surfaces sans texte. En thème sombre, `#97c459`
+retrouve sa valeur exacte et passe à 8,9:1.
+
+Corollaire de profondeur : en clair les panneaux se détachent par **ombre
+portée**, en sombre l'ombre ne se lit pas et c'est la luminosité relative
+plus le filet qui prennent le relais. Le token d'ombre tombe donc à `none`
+en sombre.
+
+### Le héros est démonstratif, pas décoratif
+
+Un repère vert descend les lignes de comptes de la capture, en phase avec des
+touches qui s'allument sous le texte : c'est le mécanisme du produit, pas un
+ornement. Trois points à respecter si on y touche :
+
+- Les coordonnées du repère sont **relevées au pixel** sur `app-*.png` — lignes
+  à y=167/257/347/437 sur 968, de x=24 à x=656 sur 680 — puis exprimées en
+  pourcentages pour suivre le redimensionnement. **Si l'UI de l'app change, il
+  faut les re-mesurer**, pas les ajuster à l'œil.
+- L'animation est **finie (trois passages)**, pas en boucle. Une animation
+  perpétuelle dans un héros finit par distraire au lieu d'expliquer.
+- `steps(1, end)` : le repère saute d'une ligne à l'autre. Un appui sur une
+  touche est instantané ; un glissement mentirait sur le comportement réel.
+
+### Régénérer les captures de l'app
+
+Les captures du site font **680×968**, soit le double de celles des README.
+Procédure, entièrement scriptable, avec ses quatre pièges :
+
+1. Mettre l'écran à **200 %** et lancer les clients Dofus voulus — sans eux
+   l'app affiche « 0 compte lancé » et la capture ne montre rien.
+2. Le process qui capture doit être **DPI-aware avant tout appel graphique**
+   (`SetProcessDpiAwarenessContext(-4)`), sinon `GetWindowRect` et
+   `CopyFromScreen` travaillent dans un espace virtuel à 96 DPI.
+3. `SetWindowPos` HWND_TOPMOST + `SetForegroundWindow` avant de copier, sinon
+   DWM rend du noir pour les surfaces accélérées.
+4. Les fenêtres Windows 11 ont des **coins arrondis** mais `GetWindowRect`
+   renvoie un rectangle : la capture contient quatre éclats de ce qui était
+   derrière. Il faut découper selon un rectangle arrondi (rayon 16 px à 200 %)
+   et laisser les coins transparents.
+
+La mise en scène des raccourcis passe par `config.json` (quatre comptes + les
+deux sens de cycle) : **sauvegarder la config de l'utilisateur et la restaurer
+à l'identique**. Changer de langue se fait par le champ `lang`, ce qui évite de
+piloter le menu déroulant de l'app. Single-instance : attendre la sortie
+complète du process entre deux lancements.
+
+### Ce que le site ne réutilise pas, et pourquoi
+
+- **`perf-*.svg`** : 720×200 à libellés de 12 px, illisibles une fois mis à
+  l'échelle sur un téléphone (~6,5 px). Ces SVG existent parce que le
+  markdown de GitHub ne sait pas mettre en page ; le site a du CSS, les
+  métriques y sont donc rebâties en HTML.
+- **Les icônes de classe** : propriété d'Ankama. Les afficher *dans l'app*
+  est couvert par le disclaimer ; les sortir comme ornement autonome sur un
+  site public de promotion est une exposition bien plus grande pour un gain
+  décoratif. Elles apparaissent déjà dans la capture de l'app, c'est
+  suffisant. Le motif de touches de clavier les remplace : générique, aucun
+  ayant droit.
+- **Aucun SHA256 en dur** : il change à chaque release. Le site montre les
+  commandes, GitHub affiche les empreintes.
+
+En revanche `docs/gen-social-preview.ps1` lit bien
+`site/assets/img/app-<lang>.png` et **pas** `resources/screenshots/` : la carte
+de partage doit montrer le même état que le héros du site. Elle réduit le
+680×968 à 340×484, ce qui donne un rendu plus net que l'ancienne source à
+taille native.
+
+### Compression des PNG
+
+Les images du site sont compressées à la main hors dépôt puis réinjectées :
+**417 Ko au total au lieu de 787**, soit 75 % de gagné sur les images seules.
+
+Ce n'est **pas** sans perte, contrairement à ce que laissent croire les
+outils : les cartes `og-*` passent de 32 bits à 8 bits indexés, `icon.png` voit
+64 % de ses pixels modifiés et 1 531 pixels d'alpha changés. En revanche c'est
+**visuellement équivalent aux tailles d'affichage** — mesuré sur le rendu de la
+page : écart maximal 42/255 et seulement 0,011 % des pixels au-delà de 16/255,
+parce que la réduction à l'affichage moyenne la quantification. Vérifié aussi
+sur les deux cas à risque : la carte à 640 px (rendu Discord) et l'icône à
+56 px sur fond sombre, sans halo.
+
+⚠ **`gen-social-preview.ps1` produit des PNG non compressés.** Après avoir
+régénéré les cartes, il faut les repasser à la compression, sinon on remonte de
+~180 Ko sans s'en apercevoir.
+
+### Pièges de cascade rencontrés en vrai, deux fois
+
+Deux sélecteurs descendants trop larges ont écrasé une règle de classe, parce
+qu'une classe plus un élément l'emporte sur une classe seule :
+
+- `.gate img { width: 56px }`, écrite pour l'icône de la page racine, sortait
+  les drapeaux des boutons en 56×56. Corrigé en `.gate > img`.
+- `.features li span { display: block }` attrapait les `span.key` imbriqués
+  dans les descriptions : les touches s'affichaient en blocs pleine largeur, en
+  desktop comme en mobile. Corrigé en `.features li > span`.
+
+Leçon générale : sur ce site, **préférer l'enfant direct au descendant** dès
+qu'une règle ne vise qu'un élément précis. Et diagnostiquer en injectant un
+script qui affiche `getComputedStyle`, plutôt qu'en raisonnant sur la
+spécificité.
+
+Diagnostic utile pour ce genre de cas : injecter dans une copie de la page un
+script qui affiche `getComputedStyle` des éléments suspects et le rendre en
+headless. Mesurer, plutôt que raisonner sur la spécificité.
+
+### Capture d'écran du site en headless
+
+Brave (Chromium) est utilisé pour vérifier le rendu. Trois pièges :
+
+- Sans `--user-data-dir` distinct, la commande **délègue à l'instance déjà
+  ouverte** et ne fait rien. Avec un profil neuf, elle peut aussi bloquer :
+  la combinaison qui marche ici est `--headless=new --disable-gpu
+  --no-sandbox --virtual-time-budget=3000`, sans `--user-data-dir`.
+- Le fichier est **écrit après** que le processus a rendu la main — vérifier
+  son existence dans un appel séparé, pas dans le même.
+- La fenêtre a une **largeur minimale d'environ 500 px** ;
+  `--force-device-scale-factor` ne réduit pas le viewport CSS. Pour un vrai
+  rendu à 390 px, charger la page dans une `<iframe width="390">` : le
+  document interne obtient alors un viewport CSS de 390 px.
+- `--force-dark-mode` n'est **pas** `prefers-color-scheme: dark` — c'est
+  l'inversion automatique de Chromium. Pour tester le thème sombre, poser
+  `data-theme="dark"` sur `<html>`, ce qui est le chemin de code réel du
+  basculeur.
+
 ## Gotchas critiques
 
 ### eframe + viewport caché

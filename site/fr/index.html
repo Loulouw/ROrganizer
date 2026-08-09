@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROrganizer — Organizer multicompte gratuit pour Dofus Unity et Rétro</title>
+<meta name="description" content="Organizer multicompte gratuit et open source pour Dofus Unity et Dofus Rétro. Bascule entre tes comptes d'un raccourci clavier ou souris. Hors-ligne, sans télémétrie, Windows 10 et 11.">
+
+<link rel="canonical" href="https://rorganizer.loulouw-labs.fr/fr/">
+<link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/">
+<link rel="alternate" hreflang="en" href="https://rorganizer.loulouw-labs.fr/en/">
+<link rel="alternate" hreflang="es" href="https://rorganizer.loulouw-labs.fr/es/">
+<link rel="alternate" hreflang="x-default" href="https://rorganizer.loulouw-labs.fr/en/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ROrganizer">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://rorganizer.loulouw-labs.fr/fr/">
+<meta property="og:title" content="ROrganizer — Organizer multicompte gratuit pour Dofus Unity et Rétro">
+<meta property="og:description" content="Bascule entre tes comptes Dofus d'un seul appui clavier ou souris. Gratuit, open source, hors-ligne.">
+<meta property="og:image" content="https://rorganizer.loulouw-labs.fr/assets/img/og-fr.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="ROrganizer — organizer multicompte pour Dofus Unity et Dofus Rétro">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="../assets/img/icon.png" type="image/png">
+<link rel="preload" href="../assets/fonts/archivo-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/literata-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/app.js"></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ROrganizer",
+  "url": "https://rorganizer.loulouw-labs.fr/fr/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "inLanguage": "fr",
+  "isAccessibleForFree": true,
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "downloadUrl": "https://github.com/Loulouw/ROrganizer/releases/latest",
+  "softwareHelp": "https://github.com/Loulouw/ROrganizer",
+  "author": { "@type": "Person", "name": "Loulouw" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+}
+</script>
+</head>
+<body>
+
+<header class="wrap topbar">
+  <a class="brand" href="./">
+    <img src="../assets/img/icon.png" width="28" height="28" alt="">
+    ROrganizer
+  </a>
+  <div class="controls">
+    <nav class="langset" aria-label="Langue">
+      <a href="../fr/" hreflang="fr" aria-current="true" title="Français">
+        <img class="flag" src="../assets/img/flags/fr.svg" width="21" height="15" alt="">
+        <span class="visually-hidden">Français</span>
+      </a>
+      <a href="../en/" hreflang="en" title="English">
+        <img class="flag" src="../assets/img/flags/en.svg" width="21" height="15" alt="">
+        <span class="visually-hidden">English</span>
+      </a>
+      <a href="../es/" hreflang="es" title="Español">
+        <img class="flag" src="../assets/img/flags/es.svg" width="21" height="15" alt="">
+        <span class="visually-hidden">Español</span>
+      </a>
+    </nav>
+    <button class="themetoggle" type="button" data-theme-toggle aria-label="Changer de thème">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 1.75a6.25 6.25 0 0 0 0 12.5z" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <section class="wrap hero">
+    <div>
+      <h1>Bascule entre tes comptes Dofus d'un seul appui.</h1>
+      <p class="hero__tagline">Organizer multicompte gratuit et open source, pour Dofus Unity et Dofus Rétro.</p>
+      <p class="hero__body">Tu joues jusqu'à huit comptes en parallèle ? Attribue une touche à chacun et passe de l'un à l'autre instantanément. Sans interagir avec le jeu, sans connexion réseau, sans usine à gaz.</p>
+      <div class="hero__actions">
+        <a class="btn btn--primary" href="https://github.com/Loulouw/ROrganizer/releases/latest">Télécharger pour Windows</a>
+        <a class="btn btn--ghost" href="https://github.com/Loulouw/ROrganizer">Voir le code source</a>
+      </div>
+      <p class="hero__note">Gratuit · Windows 10 et 11 · un seul fichier, aucun installeur</p>
+      <p class="hero__demo">
+        Une touche, un compte :
+        <span class="demo-keys" aria-hidden="true">
+          <span class="key key--demo">F1</span>
+          <span class="key key--demo">F2</span>
+          <span class="key key--demo">Mb4</span>
+          <span class="key key--demo">F4</span>
+        </span>
+      </p>
+    </div>
+    <div class="stack">
+      <div class="stack__pane stack__pane--back" aria-hidden="true"></div>
+      <div class="stack__pane stack__pane--mid" aria-hidden="true"></div>
+      <figure class="stack__pane stack__pane--front">
+        <img src="../assets/img/app-fr.png" width="680" height="968"
+             alt="La fenêtre de ROrganizer listant quatre comptes Dofus détectés, chacun avec son raccourci.">
+        <span class="stack__focus" aria-hidden="true"></span>
+      </figure>
+    </div>
+  </section>
+
+  <section class="wrap band split">
+    <div>
+      <p class="eyebrow">Pourquoi celui-là</p>
+      <h2>Un outil qui écoute ton clavier mérite d'être lisible.</h2>
+    </div>
+    <div>
+      <p class="lede">Inspiré de nAiO Organizer, que la communauté Dofus connaît bien — mais entièrement open source. Pour un programme qui surveille tes raccourcis et tes fenêtres, ça change tout.</p>
+      <dl class="deflist" style="margin-top:2rem">
+        <div>
+          <dt>Le code est public</dt>
+          <dd>N'importe qui peut le lire et vérifier qu'il n'y a aucun enregistreur de frappe, aucune télémétrie, aucune connexion cachée.</dd>
+        </div>
+        <div>
+          <dt>Le fichier téléchargé est vérifiable</dt>
+          <dd>Chaque version est compilée par GitHub depuis le code public, jamais sur une machine personnelle. Elle est accompagnée d'une preuve d'origine que tu peux contrôler en une commande — et que personne d'autre ne peut fabriquer.</dd>
+        </div>
+        <div>
+          <dt>Il ne meurt pas avec moi</dt>
+          <dd>Si j'arrête le projet, n'importe qui peut le reprendre. Ton outil ne dépend pas d'une seule personne.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="wrap band band--tight">
+    <p class="pull">Il ne lit pas le jeu, ne le modifie pas, ne lui envoie rien.
+      <span>ROrganizer se contente d'écouter tes raccourcis et de mettre la bonne fenêtre devant — exactement ce que fait Alt+Tab dans Windows.</span>
+    </p>
+  </section>
+
+  <section class="bleed bleed--accent">
+  <div class="wrap band split">
+    <div>
+      <p class="eyebrow">Vie privée</p>
+      <h2>Hors-ligne, et ça se vérifie.</h2>
+    </div>
+    <div class="assert">
+      <ul>
+        <li>L'application <strong>ne se connecte à aucun serveur</strong>, jamais.</li>
+        <li><strong>Elle ne touche pas à Dofus.</strong> Elle ne le lit pas, ne le modifie pas, ne lui envoie rien. Elle écoute tes raccourcis et met la bonne fenêtre devant.</li>
+        <li><strong>Aucune frappe n'est enregistrée.</strong> Les raccourcis sont reconnus à la volée puis oubliés.</li>
+        <li>Le seul fichier écrit sur ton disque est <strong>sa propre configuration</strong> : tes raccourcis, ta langue, ton thème.</li>
+      </ul>
+    </div>
+  </div>
+  </section>
+
+  <section class="wrap band split">
+    <div>
+      <p class="eyebrow">Ce que ça fait</p>
+      <h2>Six choses, bien faites.</h2>
+    </div>
+    <div>
+      <ul class="features">
+        <li><strong>Détection automatique</strong><span>Tes comptes apparaissent dès qu'ils sont lancés, sur Dofus, Dofus Rétro et Dofus Expérimental.</span></li>
+        <li><strong>Un raccourci par compte</strong><span>Une touche du clavier ou un bouton de souris. <span class="key key--set">F3</span> <span class="key key--set">Mb4</span></span></li>
+        <li><strong>Cycle entre les comptes</strong><span>Un raccourci suivant, un précédent, et tu fais le tour de ta team.</span></li>
+        <li><strong>Glisser-déposer</strong><span>Range tes comptes dans l'ordre qui te convient.</span></li>
+        <li><strong>Thème clair ou sombre</strong><span>En français, anglais ou espagnol.</span></li>
+        <li><strong>Discret dans la barre système</strong><span>Activable et désactivable d'un clic, sans quitter l'application.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="bleed bleed--dark">
+  <div class="wrap band split">
+    <div>
+      <p class="eyebrow">Poids réel</p>
+      <h2>Assez léger pour l'oublier.</h2>
+      <p class="lede" style="margin-top:1rem">Mesuré au repos, application active, pendant que tu joues.</p>
+    </div>
+    <dl class="metrics">
+      <div>
+        <dt>~8</dt>
+        <dd>Mo<small>l'exécutable</small></dd>
+      </div>
+      <div>
+        <dt>~75</dt>
+        <dd>Mo<small>de RAM utilisée</small></dd>
+      </div>
+      <div>
+        <dt>0 %</dt>
+        <dd>de CPU<small>quand tu joues</small></dd>
+      </div>
+      <div>
+        <dt>&lt;¼s</dt>
+        <dd>détection<small>d'un nouveau compte</small></dd>
+      </div>
+    </dl>
+  </div>
+  </section>
+
+  <section class="wrap band split split--reverse">
+    <div>
+      <p class="eyebrow">Démarrage</p>
+      <h2>Trois étapes, pas d'installation.</h2>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><strong>Télécharge</strong><p>Récupère le fichier depuis la page des versions. Aucun installeur, aucune dépendance.</p></li>
+        <li><strong>Lance</strong><p>Double-clique. ROrganizer détecte tout seul les comptes déjà ouverts.</p></li>
+        <li><strong>Configure</strong><p>Clique sur « définir » à côté d'un compte, puis presse la touche que tu veux lui donner.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="wrap band split">
+    <div>
+      <p class="eyebrow">Vérifier</p>
+      <h2>Deux commandes pour être sûr de ce que tu lances.</h2>
+    </div>
+    <div>
+      <p class="lede">GitHub affiche l'empreinte de chaque fichier publié à côté de son nom. Compare-la à la tienne :</p>
+      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> Get-FileHash .\ROrganizer-&lt;version&gt;-x86_64-windows.exe -Algorithm SHA256</pre>
+      <p class="lede" style="margin-top:1.75rem">Et depuis la version 1.3.0, chaque fichier porte une preuve d'origine signée par GitHub, qui le relie au code public et au tag publié :</p>
+      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> gh attestation verify .\ROrganizer-&lt;version&gt;-x86_64-windows.exe --repo Loulouw/ROrganizer</pre>
+      <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">La procédure complète est détaillée dans <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">la politique de sécurité du projet</a>.</p>
+    </div>
+  </section>
+
+  <section class="wrap band split">
+    <div>
+      <p class="eyebrow">Questions</p>
+      <h2>Ce qu'on me demande le plus souvent.</h2>
+    </div>
+    <div class="faq">
+      <div>
+        <h3>Faut-il configurer chaque compte un par un ?</h3>
+        <p>Non. ROrganizer détecte automatiquement tous tes comptes dès qu'ils sont lancés, sur le client classique comme sur Dofus Rétro et Dofus Expérimental. Tu n'as qu'à attribuer un raccourci à chacun, et c'est mémorisé. Les comptes Rétro s'affichent sans icône de classe : leur fenêtre ne l'indique pas.</p>
+      </div>
+      <div>
+        <h3>Est-ce que je risque de me faire bannir ?</h3>
+        <p>ROrganizer n'interagit pas avec Dofus. Il ne lit pas le jeu, ne le modifie pas, ne lui envoie aucune commande. Il fait passer une fenêtre devant — exactement ce que fait Alt+Tab dans Windows. Cela dit, l'usage d'outils tiers reste à tes risques au regard des conditions générales d'Ankama.</p>
+      </div>
+      <div>
+        <h3>Mes raccourcis marchent-ils pendant que je suis en jeu ?</h3>
+        <p>Oui. Ils sont écoutés au niveau global de Windows, donc ils fonctionnent quelle que soit la fenêtre au premier plan. Une nuance : si Dofus tourne en administrateur, lance ROrganizer en administrateur aussi.</p>
+      </div>
+      <div>
+        <h3>Windows affiche un avertissement bleu au premier lancement, c'est normal ?</h3>
+        <p>Oui. ROrganizer n'est pas signé avec un certificat de code, qui coûte plusieurs centaines d'euros par an et n'est pas justifiable pour un projet gratuit. Windows SmartScreen alerte par précaution sur tout programme peu répandu. Clique sur « Informations complémentaires » puis « Exécuter quand même ».</p>
+      </div>
+      <div>
+        <h3>Mon antivirus détecte un « trojan », l'application est-elle dangereuse ?</h3>
+        <p>Non, c'est un faux positif. Pour déclencher tes raccourcis même quand Dofus est au premier plan, ROrganizer doit écouter le clavier et la souris au niveau global de Windows, puis faire passer une fenêtre devant. Un antivirus qui juge un programme sur sa forme, sans lire son code, ne peut pas distinguer ce mécanisme de celui d'un logiciel espion. Le nom affiché — souvent <em>Wacatac</em> — est une étiquette générique attribuée automatiquement, pas l'identification d'un virus connu.</p>
+        <p>Ce que tu peux vérifier toi-même : le code est public, aucune frappe n'est enregistrée, et l'application ne se connecte à aucun serveur — constatable dans le Moniteur de ressources de Windows. Chaque faux positif est signalé à Microsoft à la publication d'une version, mais la correction met quelques jours à se propager. En attendant, tu peux ajouter le fichier en exclusion dans ton antivirus, après avoir vérifié son empreinte.</p>
+      </div>
+      <div>
+        <h3>Comment je désinstalle l'application ?</h3>
+        <p>Supprime le fichier. Tes préférences sont dans <code>%APPDATA%\rorganizer\</code> — supprime ce dossier pour un nettoyage complet. Aucune clé de registre modifiée, aucun service installé.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bleed bleed--dark">
+    <div class="wrap band warn">
+      <h2>Attention aux contrefaçons</h2>
+      <p>ROrganizer se télécharge <strong>uniquement</strong> depuis <a href="https://github.com/Loulouw/ROrganizer/releases">la page des versions du dépôt GitHub</a>, sous la forme d'un seul fichier exécutable.</p>
+      <p>Il n'est jamais distribué :</p>
+      <ul>
+        <li>dans une archive <code>.zip</code>, <code>.rar</code> ou <code>.7z</code> — encore moins protégée par mot de passe ;</li>
+        <li>sous forme de script <code>.bat</code>, <code>.cmd</code>, <code>.ps1</code> ou <code>.vbs</code> ;</li>
+        <li>via un installeur ou un <code>setup.exe</code> ;</li>
+        <li>depuis un hébergeur de fichiers, un lien Discord, un forum ou un site miroir.</li>
+      </ul>
+      <p>Un mot de passe d'archive communiqué à part — dans une vidéo, un commentaire, un message privé — sert à empêcher l'analyse antivirus automatique de l'hébergeur. C'est un signal d'alerte à lui seul.</p>
+      <p>Tout fichier portant le nom ROrganizer et ne correspondant pas à cette description <strong>ne vient pas de moi</strong>, quelle que soit la source qui le propose.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap footer">
+  <nav class="footer__links" aria-label="Liens du projet">
+    <a href="https://github.com/Loulouw/ROrganizer">Code source</a>
+    <a href="https://github.com/Loulouw/ROrganizer/releases">Versions</a>
+    <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">Sécurité</a>
+    <a href="https://github.com/Loulouw/ROrganizer/issues">Signaler un problème</a>
+  </nav>
+  <p>Outil tiers non affilié à Ankama Games ni au jeu Dofus. À utiliser à tes risques et conformément aux conditions générales d'utilisation de Dofus.</p>
+  <p>Certaines illustrations visibles dans l'application sont la propriété d'Ankama Studio. <strong>Dofus</strong> et les visuels associés sont des marques d'Ankama — tous droits réservés. Elles sont utilisées à des fins purement illustratives et non commerciales.</p>
+  <p>ROrganizer est distribué sous double licence, au choix : MIT ou Apache 2.0.</p>
+</footer>
+
+</body>
+</html>

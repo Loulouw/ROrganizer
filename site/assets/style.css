@@ -1,0 +1,1118 @@
+/* ROrganizer — feuille de style unique, partagée par les trois langues.
+   Thèse de mise en page : l'ordre de profondeur. Le sujet du produit est
+   l'empilement de fenêtres et le focus, donc la page est bâtie de panneaux
+   dont un seul est net et au premier plan.
+   L'accent vert n'est jamais décoratif : il ne marque que ce qui est
+   focalisé, actif ou vérifiable. */
+
+/* ---------------------------------------------------------------- polices */
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/archivo-700-latin.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fichier variable : une seule ressource couvre 400 à 600, et l'axe opsz
+   est appliqué automatiquement par font-optical-sizing. */
+@font-face {
+  font-family: 'Literata';
+  src: url('fonts/literata-var-latin.woff2') format('woff2');
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('fonts/jetbrains-mono-400-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ----------------------------------------------------------------- tokens */
+
+:root {
+  color-scheme: light;
+
+  --ground: #f4f5f0;
+  --surface: #fbfbf8;
+  --recess: #eceee5;
+  --ink: #1b1c18;
+  --ink-soft: #5d6058;
+  --rule: #d8dad0;
+  --rule-faint: #e6e8df;
+  --accent: #4f7020;
+  --accent-graphic: #67932e;
+  --accent-quiet: #eef3e2;
+
+  /* Sur fond clair la profondeur vient de l'ombre ; en sombre elle tombe à
+     zéro et c'est la luminosité relative qui prend le relais. */
+  --lift: 0 1px 2px rgb(27 28 24 / 6%), 0 8px 24px -6px rgb(27 28 24 / 14%);
+  --lift-soft: 0 1px 2px rgb(27 28 24 / 4%);
+
+  /* Le monde de l'app : surfaces sombres encastrées dans une page claire.
+     Volontairement identiques dans les deux thèmes. */
+  --app-ground: #1c1c1a;
+  --app-surface: #26261f;
+  --app-rule: #3a3a33;
+  --app-ink: #f2f2ee;
+  --app-ink-soft: #b4b2a9;
+  --app-accent: #97c459;
+
+  --fs-xs: clamp(0.75rem, 0.73rem + 0.12vw, 0.82rem);
+  --fs-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.95rem);
+  --fs-base: clamp(1rem, 0.97rem + 0.18vw, 1.09rem);
+  --fs-md: clamp(1.12rem, 1.04rem + 0.36vw, 1.32rem);
+  --fs-lg: clamp(1.45rem, 1.26rem + 0.9vw, 2.05rem);
+  --fs-xl: clamp(1.95rem, 1.55rem + 1.9vw, 3.1rem);
+  --fs-2xl: clamp(2.5rem, 1.85rem + 3.2vw, 4.35rem);
+
+  --measure: 63ch;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --band: clamp(3.5rem, 7vw, 6rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --ground: #161714;
+    --surface: #1f201c;
+    --recess: #121310;
+    --ink: #eceee6;
+    --ink-soft: #9a9d92;
+    --rule: #33352e;
+    --rule-faint: #26281f;
+    --accent: #97c459;
+    --accent-graphic: #97c459;
+    --accent-quiet: #23291a;
+
+    --lift: none;
+    --lift-soft: none;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ground: #161714;
+  --surface: #1f201c;
+  --recess: #121310;
+  --ink: #eceee6;
+  --ink-soft: #9a9d92;
+  --rule: #33352e;
+  --rule-faint: #26281f;
+  --accent: #97c459;
+  --accent-graphic: #97c459;
+  --accent-quiet: #23291a;
+
+  --lift: none;
+  --lift-soft: none;
+}
+
+/* ------------------------------------------------------------------- base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Literata', Georgia, 'Times New Roman', serif;
+  font-size: var(--fs-base);
+  font-weight: 400;
+  line-height: 1.65;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--fs-2xl);
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: var(--fs-lg);
+}
+
+h3 {
+  font-size: var(--fs-md);
+  letter-spacing: -0.014em;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+img,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-graphic);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- structures */
+
+.wrap {
+  width: 100%;
+  max-width: 1160px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Les sections sont séparées par des filets, jamais encartées. */
+.band {
+  border-top: 1px solid var(--rule);
+  padding-block: var(--band);
+}
+
+.band--tight {
+  padding-block: calc(var(--band) * 0.62);
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 1.5rem;
+}
+
+.lede {
+  max-width: var(--measure);
+  font-size: var(--fs-md);
+  color: var(--ink-soft);
+}
+
+/* Grille asymétrique : intitulé à gauche, contenu à droite.
+   `minmax(0, 1fr)` et non `1fr` : sans lui, les enfants gardent
+   `min-width: auto` et un contenu non compressible — les blocs de terminal —
+   élargit la grille au-delà du viewport. Mesuré : 842 px de scrollWidth pour
+   500 px de fenêtre avant ce correctif. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+}
+
+@media (width >= 62rem) {
+  .split {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    align-items: start;
+  }
+
+  /* Inverse le sens une seule fois dans la page, pour casser la répétition.
+     L'ordre du HTML reste titre puis contenu — c'est `order` qui permute, sinon
+     la lecture serait inversée sur mobile. */
+  .split--reverse {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  }
+
+  .split--reverse > :first-child {
+    order: 2;
+  }
+
+  .split--reverse > :last-child {
+    order: 1;
+  }
+}
+
+/* ------------------------------------------------------ bandes pleine largeur */
+
+/* Les sections contenues se ressemblaient toutes ; deux ou trois bandes bord à
+   bord découpent le défilement en chapitres. Le fond va sur `.bleed`, le
+   contenu reste dans `.wrap`. */
+.bleed > .band {
+  border-top: 0;
+}
+
+/* Remappage des tokens sur le sous-arbre : tout ce qui est à l'intérieur hérite
+   des bonnes couleurs sans qu'il faille surcharger chaque composant. */
+.bleed--dark {
+  --ground: #1c1c1a;
+  --surface: #26261f;
+  --recess: #16160f;
+  --ink: #f2f2ee;
+  --ink-soft: #b4b2a9;
+  --rule: #3a3a33;
+  --rule-faint: #2b2b24;
+  --accent: #97c459;
+  --accent-graphic: #97c459;
+  --accent-quiet: #23291a;
+  --lift: none;
+  --lift-soft: none;
+
+  background: var(--ground);
+  color: var(--ink);
+
+  /* En thème sombre, la bande (#1c1c1a) n'a que ~4 % de luminance d'écart avec
+     le fond de page (#161714) : sans filet elle se dissout. En thème clair le
+     contraste suffit et le filet ne se voit pas — la même règle sert les deux. */
+  border-block: 1px solid var(--rule);
+}
+
+.bleed--accent {
+  background: var(--accent-quiet);
+}
+
+/* -------------------------------------------------- citation typographique */
+
+/* Une seule dans la page, sur l'affirmation qui porte le plus. Le rail
+   d'accent est justifié : c'est une garantie vérifiable, ce que l'accent
+   encode partout ailleurs. */
+.pull {
+  max-width: 26ch;
+  margin: 0;
+  padding-left: clamp(1.1rem, 2.5vw, 1.75rem);
+  border-left: 3px solid var(--accent-graphic);
+  font-size: var(--fs-xl);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.pull span {
+  display: block;
+  max-width: 46ch;
+  margin-top: 1.25rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------------ entête */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 1.15rem;
+}
+
+.brand {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.06rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand img {
+  width: 28px;
+  height: 28px;
+}
+
+.controls {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Boîte fixe et `object-fit: cover` : les drapeaux du dépôt n'ont pas le même
+   rapport (FR et ES en 60×45, EN en 60×30), ils auraient des hauteurs
+   différentes côte à côte. Le filet est nécessaire — le blanc du drapeau
+   français et le jaune espagnol bavent sinon sur le fond clair. */
+.flag {
+  display: block;
+  flex: none;
+  width: 21px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 22%);
+}
+
+.langset {
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.langset a {
+  display: grid;
+  place-items: center;
+  padding: 0.3rem 0.42rem;
+  border-radius: 2px;
+  text-decoration: none;
+}
+
+/* Les langues inactives sont désaturées : l'état actif se lit donc à la fois
+   par la pastille et par la saturation, pas par la couleur seule. */
+.langset .flag {
+  opacity: 0.55;
+}
+
+.langset a:hover .flag {
+  opacity: 1;
+}
+
+/* L'accent marque l'état actif — c'est sa seule raison d'apparaître. */
+.langset a[aria-current='true'] {
+  background: var(--accent-quiet);
+  box-shadow: inset 0 0 0 1px var(--accent-graphic);
+}
+
+.langset a[aria-current='true'] .flag {
+  opacity: 1;
+}
+
+.themetoggle {
+  display: grid;
+  place-items: center;
+  width: 2.05rem;
+  height: 2.05rem;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.themetoggle:hover {
+  color: var(--ink);
+}
+
+.themetoggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Sous 48rem les commandes de l'en-tête sont manipulées au pouce : on porte la
+   zone tactile à ~40 px sans grossir les drapeaux ni l'icône. Les 33 px par
+   défaut passent le minimum de 24 px mais restent inconfortables. */
+@media (width < 48rem) {
+  .langset a {
+    padding-block: 0.75rem;
+  }
+
+  .themetoggle {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+/* -------------------------------------------------------------------- héros */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2.5rem, 5vw, 4rem);
+  padding-block: clamp(2.5rem, 6vw, 5rem) var(--band);
+}
+
+@media (width >= 62rem) {
+  .hero {
+    grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+    align-items: center;
+  }
+}
+
+.hero__tagline {
+  max-width: 34ch;
+  margin-top: 1.25rem;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.hero__body {
+  max-width: 46ch;
+  margin-top: 1rem;
+  color: var(--ink-soft);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.hero__note {
+  margin-top: 1.1rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+/* Bandeau de démonstration : les touches s'allument l'une après l'autre, en
+   phase avec le repère qui descend la liste des comptes dans la capture. */
+.hero__demo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-top: 1.6rem;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.demo-keys {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.btn {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.8rem 1.35rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--ground);
+  box-shadow: var(--lift-soft);
+}
+
+.btn--primary:hover {
+  filter: brightness(1.12);
+}
+
+.btn--ghost {
+  border-color: var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn--ghost:hover {
+  border-color: var(--ink-soft);
+}
+
+/* ------------------------------------------------- la pile de fenêtres */
+
+/* Deux panneaux en retrait derrière celui qui a le focus. Ils ne sont pas
+   décoratifs : ils représentent les autres comptes lancés, d'où la barre de
+   titre esquissée qui les fait lire comme des fenêtres et non des blocs. */
+.stack {
+  position: relative;
+  width: min(340px, 100%);
+  margin-inline: auto;
+  aspect-ratio: 340 / 484;
+}
+
+.stack__pane {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+}
+
+.stack__pane--back,
+.stack__pane--mid {
+  background: var(--recess);
+}
+
+/* Barre de titre esquissée, avec ses trois boutons de fenêtre : c'est elle qui
+   fait lire ces panneaux comme des fenêtres en arrière-plan plutôt que comme
+   des rectangles décoratifs. Sans ce détail la thèse de la page ne se lit pas. */
+.stack__pane--back::before,
+.stack__pane--mid::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 27px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.stack__pane--back::after,
+.stack__pane--mid::after {
+  content: '';
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  width: 26px;
+  height: 5px;
+  background-image: radial-gradient(circle, var(--rule) 55%, transparent 60%);
+  background-size: 10px 5px;
+  background-repeat: repeat-x;
+  opacity: 0.9;
+}
+
+.stack__pane--front {
+  margin: 0;
+  overflow: hidden;
+  border-color: var(--app-rule);
+  background: var(--app-ground);
+  box-shadow: var(--lift);
+}
+
+.stack__pane--front img {
+  display: block;
+  width: 100%;
+}
+
+/* Repère de focus posé sur la capture. Coordonnées relevées au pixel sur
+   `app-*.png` (lignes à y=167/257/347/437 sur 968, de x=24 à x=656 sur 680),
+   exprimées en pourcentages pour suivre le redimensionnement de l'image. */
+.stack__focus {
+  position: absolute;
+  top: 17.252%;
+  left: 3.529%;
+  width: 92.941%;
+  height: 8.678%;
+  border: 2px solid var(--app-accent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 4px rgb(151 196 89 / 16%);
+  pointer-events: none;
+}
+
+/* La page n'a qu'un mouvement, et il est démonstratif : il montre le
+   mécanisme du produit — une touche met un compte au premier plan. Il est
+   volontairement **fini** (trois passages) plutôt qu'en boucle : une animation
+   perpétuelle dans un héros finit par distraire au lieu d'expliquer. */
+@media (prefers-reduced-motion: no-preference) {
+  .stack__focus {
+    animation: focus-walk 4.4s steps(1, end) 3;
+  }
+
+  .demo-keys .key--demo {
+    animation: key-press 4.4s steps(1, end) 3;
+  }
+
+  .demo-keys .key--demo:nth-child(2) {
+    animation-delay: 1.1s;
+  }
+
+  .demo-keys .key--demo:nth-child(3) {
+    animation-delay: 2.2s;
+  }
+
+  .demo-keys .key--demo:nth-child(4) {
+    animation-delay: 3.3s;
+  }
+}
+
+@keyframes focus-walk {
+  0% {
+    top: 17.252%;
+  }
+  25% {
+    top: 26.550%;
+  }
+  50% {
+    top: 35.847%;
+  }
+  75% {
+    top: 45.145%;
+  }
+}
+
+/* `steps(1, end)` : le repère saute d'une ligne à l'autre au lieu de glisser.
+   Un appui sur une touche est instantané, un glissement mentirait sur le
+   comportement du logiciel. */
+@keyframes key-press {
+  0% {
+    border-color: var(--accent-graphic);
+    background: var(--accent-quiet);
+    color: var(--accent);
+  }
+  25% {
+    border-color: var(--rule);
+    background: var(--surface);
+    color: var(--ink);
+  }
+}
+
+@media (width >= 62rem) {
+  .stack {
+    width: min(340px, 100%);
+  }
+
+  .stack__pane--back {
+    transform: translate(30px, -26px) scale(0.94);
+  }
+
+  .stack__pane--mid {
+    transform: translate(16px, -13px) scale(0.97);
+  }
+}
+
+/* Le seul mouvement de la page : la pile se résout en focus au chargement,
+   parce que c'est exactement ce que fait le produit. Enfermé dans la requête
+   de largeur où la pile existe — sur mobile les panneaux sont empilés à
+   plat, il n'y aurait rien à résoudre. */
+@media (width >= 62rem) and (prefers-reduced-motion: no-preference) {
+  .stack__pane--back,
+  .stack__pane--mid,
+  .stack__pane--front {
+    animation: settle 620ms cubic-bezier(0.22, 0.7, 0.24, 1) both;
+  }
+
+  .stack__pane--back {
+    animation-name: settle-back;
+    animation-delay: 90ms;
+  }
+
+  .stack__pane--mid {
+    animation-name: settle-mid;
+    animation-delay: 45ms;
+  }
+}
+
+@keyframes settle-back {
+  from {
+    transform: translate(8px, -7px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translate(30px, -26px) scale(0.94);
+    opacity: 1;
+  }
+}
+
+@keyframes settle-mid {
+  from {
+    transform: translate(6px, -5px) scale(0.985);
+    opacity: 0;
+  }
+  to {
+    transform: translate(16px, -13px) scale(0.97);
+    opacity: 1;
+  }
+}
+
+@keyframes settle {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------ listes de définition */
+
+/* Pas de grille de cartes identiques : une liste de définitions séparée par
+   des filets, où le terme porte la typographie de titre. */
+.deflist {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.deflist > div {
+  padding-block: 1.4rem;
+  border-top: 1px solid var(--rule-faint);
+}
+
+.deflist > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.deflist dt {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: var(--fs-base);
+  letter-spacing: -0.012em;
+}
+
+.deflist dd {
+  max-width: var(--measure);
+  margin: 0.4rem 0 0;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------- vie privée */
+
+/* La teinte d'accent est portée par la bande pleine largeur (`.bleed--accent`),
+   pas par un encart : un panneau à l'intérieur d'une bande de même couleur
+   ferait doublon. */
+.assert ul {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assert li {
+  position: relative;
+  max-width: var(--measure);
+  padding-left: 1.6rem;
+}
+
+.assert li::before {
+  content: '';
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--accent-graphic);
+}
+
+/* ------------------------------------------------------ touches de clavier */
+
+/* Le motif récurrent du site. L'app affiche déjà ses raccourcis ainsi, donc
+   c'est un emprunt fonctionnel et non un ornement. */
+.key {
+  display: inline-block;
+  min-width: 2.1em;
+  padding: 0.1em 0.42em;
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: var(--lift-soft);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.82em;
+  text-align: center;
+  color: var(--ink);
+}
+
+.key--set {
+  border-color: var(--accent-graphic);
+  background: var(--accent-quiet);
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------- fonctionnalités */
+
+.features {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (width >= 48rem) {
+  .features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(2rem, 5vw, 4rem);
+  }
+}
+
+.features li {
+  padding-block: 1.15rem;
+  border-top: 1px solid var(--rule-faint);
+}
+
+.features li strong {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+}
+
+/* Enfant direct obligatoire : en sélecteur descendant, cette règle attrapait
+   aussi les `span.key` imbriqués dans la description et les passait en
+   `display: block` — les touches sortaient en blocs pleine largeur. Même piège
+   que `.gate img` contre `.flag`. */
+.features li > span {
+  display: block;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------- métriques */
+
+/* Reconstruites en HTML au lieu de réutiliser le SVG du README : celui-ci a
+   des libellés de 12 px qui deviennent illisibles une fois mis à l'échelle
+   sur un téléphone. */
+/* Les tuiles vivent dans une bande sombre pleine largeur : pas de cadre ni de
+   fond propre, seulement des filets de séparation. */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+@media (width >= 48rem) {
+  .metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.metrics > div {
+  padding: clamp(1.1rem, 2.4vw, 1.6rem) clamp(0.75rem, 2vw, 1.5rem);
+  border-top: 1px solid var(--rule-faint);
+}
+
+@media (width >= 48rem) {
+  .metrics > div {
+    border-top: 0;
+    border-left: 1px solid var(--rule-faint);
+  }
+
+  .metrics > div:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+.metrics dt {
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-size: clamp(2.1rem, 1.4rem + 2.8vw, 3.1rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics dd {
+  margin: 0.55rem 0 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+}
+
+.metrics dd small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--fs-xs);
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------- démarrage */
+
+/* La numérotation est justifiée ici, et seulement ici : c'est une vraie
+   séquence, l'ordre porte une information. */
+.steps {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+@media (width >= 48rem) {
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.steps li {
+  padding: clamp(1.25rem, 3vw, 1.9rem);
+  background: var(--surface);
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  display: block;
+  margin-bottom: 0.7rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+
+.steps strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-weight: 700;
+}
+
+.steps p {
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+}
+
+/* ---------------------------------------------------------------- preuves */
+
+/* Contenus de terminal réels, pas des extraits décoratifs. Aucune empreinte
+   codée en dur : elle changerait à chaque version. */
+.term {
+  margin: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--app-rule);
+  border-radius: 6px;
+  background: var(--app-ground);
+  color: var(--app-ink);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.term .prompt {
+  user-select: none;
+  color: var(--app-accent);
+}
+
+/* ------------------------------------------------------------------- FAQ */
+
+/* Texte visible et non replié : Google indexe mieux, et il n'y a aucun JS. */
+.faq {
+  display: grid;
+  gap: 0;
+}
+
+.faq > div {
+  max-width: 74ch;
+  padding-block: 1.5rem;
+  border-top: 1px solid var(--rule-faint);
+}
+
+.faq > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.faq h3 {
+  margin-bottom: 0.5rem;
+}
+
+.faq p + p {
+  margin-top: 0.7rem;
+}
+
+.faq p {
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------- contrefaçons */
+
+/* Bande sombre pleine largeur : sérieux sans être alarmiste. Pas de rouge — le
+   but est d'informer, pas d'angoisser à la sortie du site. Les couleurs
+   viennent du remappage de tokens de `.bleed--dark`. */
+.warn p {
+  max-width: var(--measure);
+  margin-top: 1rem;
+  color: var(--ink-soft);
+}
+
+.warn ul {
+  display: grid;
+  gap: 0.5rem;
+  max-width: var(--measure);
+  margin: 1.1rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------------- pied */
+
+.footer {
+  border-top: 1px solid var(--rule);
+  padding-block: var(--band) 3rem;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.footer p {
+  max-width: 72ch;
+}
+
+.footer p + p {
+  margin-top: 0.9rem;
+}
+
+.footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.75rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ------------------------------------------------ page racine (redirecteur) */
+
+.gate {
+  display: grid;
+  place-content: center;
+  gap: 1.75rem;
+  min-height: 100svh;
+  padding: var(--gutter);
+  text-align: center;
+}
+
+/* `.gate > img` et non `.gate img` : cette règle ne vise que l'icône de
+   l'application, enfant direct. En descendant, elle écrasait `.flag` — sa
+   spécificité est plus forte — et les drapeaux des boutons sortaient en
+   56×56. */
+.gate > img {
+  width: 56px;
+  height: 56px;
+  margin-inline: auto;
+}
+
+.gate__choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}

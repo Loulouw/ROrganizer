@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-gate>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROrganizer</title>
+
+<!-- Cette page ne porte aucun contenu : elle envoie le visiteur vers la
+     version correspondant à sa langue. Elle est donc exclue de l'index — mais
+     par `noindex` et non par robots.txt, sinon les robots ne liraient jamais
+     l'interdiction. Le crawl reste autorisé, et les trois versions sont
+     atteintes par le sitemap et les annotations hreflang. -->
+<meta name="robots" content="noindex, follow">
+
+<link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/">
+<link rel="alternate" hreflang="en" href="https://rorganizer.loulouw-labs.fr/en/">
+<link rel="alternate" hreflang="es" href="https://rorganizer.loulouw-labs.fr/es/">
+<link rel="alternate" hreflang="x-default" href="https://rorganizer.loulouw-labs.fr/en/">
+
+<link rel="icon" href="assets/img/icon.png" type="image/png">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/app.js"></script>
+</head>
+<body>
+
+<!-- Repli sans JavaScript : trois liens en clair. Un visiteur qui n'exécute
+     pas de script choisit lui-même, un robot suit les liens. -->
+<main class="gate">
+  <img src="assets/img/icon.png" width="56" height="56" alt="ROrganizer">
+  <div>
+    <h1 style="font-size:var(--fs-lg)">ROrganizer</h1>
+    <p style="margin-top:0.6rem;color:var(--ink-soft)">Choose your language · Choisis ta langue · Elige tu idioma</p>
+  </div>
+  <div class="gate__choice">
+    <a class="btn btn--ghost" href="fr/" hreflang="fr"><img class="flag" src="assets/img/flags/fr.svg" width="21" height="15" alt="">Français</a>
+    <a class="btn btn--ghost" href="en/" hreflang="en"><img class="flag" src="assets/img/flags/en.svg" width="21" height="15" alt="">English</a>
+    <a class="btn btn--ghost" href="es/" hreflang="es"><img class="flag" src="assets/img/flags/es.svg" width="21" height="15" alt="">Español</a>
+  </div>
+</main>
+
+</body>
+</html>

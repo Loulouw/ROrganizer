@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Les trois versions linguistiques, et pas la racine : celle-ci n'est qu'un
+     redirecteur en noindex. Chaque entrée déclare ses équivalents, x-default
+     compris, de façon réciproque. Pas de lastmod : une date versionnée à la
+     main devient fausse au premier oubli. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://rorganizer.loulouw-labs.fr/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rorganizer.loulouw-labs.fr/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://rorganizer.loulouw-labs.fr/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://rorganizer.loulouw-labs.fr/en/"/>
+  </url>
+
+  <url>
+    <loc>https://rorganizer.loulouw-labs.fr/en/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rorganizer.loulouw-labs.fr/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://rorganizer.loulouw-labs.fr/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://rorganizer.loulouw-labs.fr/en/"/>
+  </url>
+
+  <url>
+    <loc>https://rorganizer.loulouw-labs.fr/es/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://rorganizer.loulouw-labs.fr/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://rorganizer.loulouw-labs.fr/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://rorganizer.loulouw-labs.fr/en/"/>
+  </url>
+
+</urlset>

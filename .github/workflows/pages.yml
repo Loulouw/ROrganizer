@@ -1,0 +1,52 @@
+name: Pages
+
+# Le dossier site/ est du HTML/CSS écrit à la main : il est publié tel quel,
+# aucun outil de build n'est invoqué. Le workflow s'inclut lui-même dans le
+# filtre de chemins, sinon une correction du workflow ne redéploierait rien.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un déploiement Pages à la fois. On laisse celui en cours se terminer plutôt
+# que de l'annuler : une annulation en plein déploiement peut laisser le site
+# dans un état partiel.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # site/CNAME est versionné : un déploiement par workflow ne crée pas ce
+      # fichier, contrairement à une publication depuis une branche. Le réglage
+      # autoritaire reste celui du dépôt, ce contrôle sert de garde-fou contre
+      # une suppression accidentelle.
+      - name: Vérifier le domaine personnalisé
+        run: |
+          test -f site/CNAME || { echo "::error::site/CNAME manquant"; exit 1; }
+          grep -qx 'rorganizer.loulouw-labs.fr' site/CNAME \
+            || { echo "::error::site/CNAME ne contient pas le domaine attendu"; exit 1; }
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
