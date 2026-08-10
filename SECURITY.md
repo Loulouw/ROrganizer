@@ -26,6 +26,17 @@ Tout fichier portant le nom ROrganizer et ne correspondant pas à la
 description ci-dessus **ne vient pas de moi**, quelle que soit la source
 qui le propose.
 
+## Le seul site officiel
+
+**https://rorganizer.loulouw-labs.fr**
+
+Ce site présente l'application ; il **n'héberge aucun fichier**. Son bouton
+de téléchargement renvoie vers la page Releases ci-dessus, et c'est le seul
+comportement légitime.
+
+Autrement dit : un site qui propose ROrganizer en téléchargement direct n'est
+pas le mien, même s'il en reprend le nom, les captures ou l'apparence.
+
 Un mot de passe d'archive communiqué à part — dans une vidéo, un
 commentaire, un message privé — sert à empêcher l'analyse antivirus
 automatique de l'hébergeur. C'est un signal d'alerte à lui seul.
@@ -131,6 +142,16 @@ Dropbox…), a Discord link, a forum or a mirror site.
 
 Any file carrying the ROrganizer name that does not match the above
 **did not come from me**, whatever the source offering it.
+
+## The only official website
+
+**https://rorganizer.loulouw-labs.fr**
+
+That site presents the application; it **hosts no files**. Its download button
+points to the Releases page above, and that is the only legitimate behaviour.
+
+In other words: a website offering ROrganizer as a direct download is not mine,
+even if it reuses the name, the screenshots or the look.
 
 An archive password shared separately — in a video, a comment, a private
 message — exists to defeat the file host's automated malware scanning.

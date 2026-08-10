@@ -181,6 +181,31 @@ blocs `<head>` / nav / `hreflang` devient une fabrique de bugs SEO
 silencieux — passer alors à Zola (binaire préconstruit, pas de `cargo
 install`).
 
+### Indexation
+
+Search Console : propriété **Domaine** sur `loulouw-labs.fr`, vérifiée par un
+TXT à la racine, à côté du SPF — plusieurs TXT sur le même nom sont valides, la
+règle du « un seul » ne concerne que le SPF. La propriété couvre donc tous les
+futurs sous-domaines sans nouvelle vérification.
+
+IndexNow est actif pour Bing et Yandex. La clé **est** le nom du fichier déposé
+à la racine du site (`site/<clé>.txt`, contenant la clé elle-même). Pour
+resoumettre après ajout de pages :
+
+```powershell
+$key = (Get-ChildItem site\*.txt | Select-Object -First 1).BaseName
+Invoke-WebRequest -Uri https://api.indexnow.org/indexnow -Method Post `
+  -ContentType 'application/json; charset=utf-8' -Body (@{
+    host = 'rorganizer.loulouw-labs.fr'; key = $key
+    keyLocation = "https://rorganizer.loulouw-labs.fr/$key.txt"
+    urlList = @('https://rorganizer.loulouw-labs.fr/fr/')
+  } | ConvertTo-Json)
+```
+
+`202 Accepted` = pris en compte. `403` = clé non validée, vérifier que le
+fichier est bien servi. **Déployer le fichier de clé avant de pinguer**, sinon
+la validation échoue.
+
 ### Multilingue
 
 `/` est un redirecteur en `noindex` qui lit `navigator.languages` ; les trois
