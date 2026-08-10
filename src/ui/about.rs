@@ -16,6 +16,10 @@ use crate::theme::{self, Theme};
 
 const GITHUB_URL: &str = "https://github.com/Loulouw/ROrganizer";
 const ISSUES_URL: &str = "https://github.com/Loulouw/ROrganizer/issues";
+const WEBSITE_URL: &str = "https://rorganizer.loulouw-labs.fr";
+/// Affiché sans le schéma : c'est un domaine, il se lit dans les trois
+/// langues sans traduction, donc pas de clé i18n.
+const WEBSITE_LABEL: &str = "rorganizer.loulouw-labs.fr";
 const LICENSE_LABEL: &str = "MIT OR Apache-2.0";
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
@@ -52,6 +56,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     let mut config_dir_clicked = false;
     let mut github_clicked = false;
     let mut bug_clicked = false;
+    let mut website_clicked = false;
 
     egui::Area::new(egui::Id::new("about_overlay"))
         .order(egui::Order::Foreground)
@@ -110,6 +115,30 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
                                 .size(11.0)
                                 .color(theme::text_tertiary(theme)),
                             );
+                            // Une ligne de texte plutôt qu'une 4e ligne
+                            // d'action : la carte fait déjà 420 px pour une
+                            // fenêtre dont le minimum est 280, donc chaque
+                            // pixel ajouté aggrave le rognage quand aucun
+                            // compte n'est détecté.
+                            ui.add_space(6.0);
+                            let site = ui.add(
+                                egui::Label::new(
+                                    egui::RichText::new(WEBSITE_LABEL)
+                                        .size(11.0)
+                                        .color(match theme {
+                                            Theme::Dark => theme::ACTIVE_DARK,
+                                            Theme::Light => theme::ACTIVE_LIGHT,
+                                        }),
+                                )
+                                .sense(Sense::click()),
+                            );
+                            if site.hovered() {
+                                ui.ctx()
+                                    .set_cursor_icon(egui::CursorIcon::PointingHand);
+                            }
+                            if site.clicked() {
+                                website_clicked = true;
+                            }
                             ui.add_space(10.0);
                             ui.label(
                                 egui::RichText::new(t!("about.credit"))
@@ -180,6 +209,9 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     }
     if bug_clicked {
         let _ = webbrowser::open(ISSUES_URL);
+    }
+    if website_clicked {
+        let _ = webbrowser::open(WEBSITE_URL);
     }
     if config_dir_clicked
         && let Some(dir) = app.config_dir()
