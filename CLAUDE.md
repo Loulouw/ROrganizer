@@ -507,6 +507,27 @@ builder `Popup::from_toggle_button_response`. ⚠ Ce constructeur gère
 lui-même le toggle sur clic — garder en plus un `Popup::toggle_id`
 inverserait deux fois et le popup ne s'ouvrirait jamais.
 
+### Les bindings survivent aux personnages, la détection de conflit non
+
+`bindings` n'est jamais purgée : `ensure_cycle_order_covers_snapshot` ajoute
+les slots détectés sans jamais en retirer, et `clear_binding` n'est
+atteignable que depuis une ligne visible — donc seulement pour un client
+lancé. Un raccourci attribué à un personnage jamais relancé reste donc dans
+`config.json` indéfiniment, et c'est voulu : le retirer ferait perdre son
+raccourci à qui joue en alternance.
+
+Conséquence : `compute_conflicts` doit rester aligné sur ce que
+`sync_state_to_hooks` pousse réellement au hook, qui n'émet un `Focus` que
+pour les slots ayant un HWND vivant. D'où le paramètre `live_slots`. Compter
+les bindings fantômes signalait des conflits qui n'existaient pas au runtime.
+Les cibles de cycle, elles, sont toujours câblées et comptent toujours.
+
+Corollaire : `conflicts_cache` dépend du snapshot autant que des bindings, il
+est donc invalidé aussi dans `sync_state_to_hooks`. Cet appel a lieu en tête
+de `App::ui`, avant `apply_dynamic_height` et `main_view::draw` — les deux
+lecteurs — donc bannière et hauteur de fenêtre restent cohérentes dans la
+même frame.
+
 ### `title_regex` invalide en config = pas de crash
 
 Le watcher panique si la regex utilisateur ne compile pas. La config
@@ -667,7 +688,8 @@ qu'une.
   cursor, cycle wrap, etc.
 - `hooks::remap_cycle_index_after_reorder` : remap après reorder /
   shrink / current absent.
-- `app::compute_conflicts` : 0/1/N bindings.
+- `app::compute_conflicts` : 0/1/N bindings, et filtrage des comptes non
+  détectés (compte éteint seul, face à un compte lancé, face à un cycle).
 - `app::validate_title_regex` : drop d'un regex invalide.
 - `app::binding_target_sort_key` : ordre déterministe pour la
   persistence stable.

@@ -19,12 +19,24 @@ use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 
 const SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
-/// Triggers assigned to 2+ BindingTargets in the given binding map.
+/// Triggers assigned to 2+ BindingTargets that are actually wired.
+///
+/// Account bindings whose slot is absent from `live_slots` are skipped:
+/// `sync_state_to_hooks` only emits a `Focus` action for slots that have a
+/// live HWND, so a binding left over from a client that isn't running can
+/// never collide with anything. Cycle targets always count — they're pushed
+/// to the hook regardless of how many clients are up.
 pub(crate) fn compute_conflicts(
     bindings: &HashMap<BindingTarget, Trigger>,
+    live_slots: &[&str],
 ) -> HashSet<Trigger> {
     let mut counts: HashMap<Trigger, u32> = HashMap::new();
-    for t in bindings.values() {
+    for (target, t) in bindings {
+        if let BindingTarget::Account(slot) = target
+            && !live_slots.contains(&slot.as_str())
+        {
+            continue;
+        }
         *counts.entry(*t).or_insert(0) += 1;
     }
     counts
@@ -112,8 +124,9 @@ pub struct App {
     is_active: bool,
     last_status_count: usize,
     hooks: HookHandle,
-    /// Cached result of `compute_conflicts(&bindings)`. Invalidated to None
-    /// on every binding mutation; recomputed lazily on the next read.
+    /// Cached result of `compute_conflicts`. Invalidated to None on every
+    /// binding mutation *and* whenever the window snapshot changes (the set
+    /// of live slots is an input); recomputed lazily on the next read.
     conflicts_cache: Option<HashSet<Trigger>>,
     /// User-overridden title regex from config, or `None` to use the
     /// built-in default. We persist whatever we loaded (round-trip stable).
@@ -342,13 +355,15 @@ impl App {
             .copied()
     }
 
-    /// Set of triggers assigned to ≥ 2 BindingTargets. Used by the UI to
-    /// highlight conflicting rows + render the banner. Cached — the
+    /// Set of triggers assigned to ≥ 2 wired BindingTargets. Used by the UI
+    /// to highlight conflicting rows + render the banner. Cached — the
     /// expensive part is the HashMap counting, not the small final clone.
-    /// Invalidated on every binding mutation.
+    /// Invalidated on binding mutations and on snapshot changes.
     pub fn conflicting_triggers(&mut self) -> HashSet<Trigger> {
         if self.conflicts_cache.is_none() {
-            self.conflicts_cache = Some(compute_conflicts(&self.bindings));
+            let snap = self.windows.load();
+            let live: Vec<&str> = snap.iter().map(|w| w.slot_key.as_str()).collect();
+            self.conflicts_cache = Some(compute_conflicts(&self.bindings, &live));
         }
         self.conflicts_cache.as_ref().unwrap().clone()
     }
@@ -509,6 +524,8 @@ impl App {
             return;
         }
         self.last_synced_state = new_state;
+        // The live slot set feeds conflict detection too.
+        self.invalidate_conflicts_cache();
 
         let mut bindings: Vec<(Trigger, BindingAction)> =
             Vec::with_capacity(self.bindings.len());
@@ -667,14 +684,14 @@ mod tests {
     #[test]
     fn no_bindings_have_no_conflicts() {
         let bindings: HashMap<BindingTarget, Trigger> = HashMap::new();
-        assert!(compute_conflicts(&bindings).is_empty());
+        assert!(compute_conflicts(&bindings, &[]).is_empty());
     }
 
     #[test]
     fn single_binding_has_no_conflict() {
         let mut bindings = HashMap::new();
         bindings.insert(account("A"), Trigger::Key(0x70));
-        assert!(compute_conflicts(&bindings).is_empty());
+        assert!(compute_conflicts(&bindings, &["A"]).is_empty());
     }
 
     #[test]
@@ -683,7 +700,7 @@ mod tests {
         bindings.insert(account("A"), Trigger::Key(0x70));
         bindings.insert(account("B"), Trigger::Key(0x71));
         bindings.insert(BindingTarget::CycleNext, Trigger::Mouse(MouseBtn::X1));
-        assert!(compute_conflicts(&bindings).is_empty());
+        assert!(compute_conflicts(&bindings, &["A", "B"]).is_empty());
     }
 
     #[test]
@@ -691,7 +708,7 @@ mod tests {
         let mut bindings = HashMap::new();
         bindings.insert(account("A"), Trigger::Key(0x70));
         bindings.insert(account("B"), Trigger::Key(0x70));
-        let conflicts = compute_conflicts(&bindings);
+        let conflicts = compute_conflicts(&bindings, &["A", "B"]);
         assert_eq!(conflicts.len(), 1);
         assert!(conflicts.contains(&Trigger::Key(0x70)));
     }
@@ -702,7 +719,7 @@ mod tests {
         bindings.insert(account("A"), Trigger::Key(0x70));
         bindings.insert(account("B"), Trigger::Key(0x71));
         bindings.insert(BindingTarget::CycleNext, Trigger::Key(0x70));
-        let conflicts = compute_conflicts(&bindings);
+        let conflicts = compute_conflicts(&bindings, &["A", "B"]);
         assert_eq!(conflicts, [Trigger::Key(0x70)].into());
     }
 
@@ -712,7 +729,7 @@ mod tests {
         bindings.insert(account("A"), Trigger::Key(0x70));
         bindings.insert(account("B"), Trigger::Key(0x70));
         bindings.insert(BindingTarget::CycleNext, Trigger::Key(0x70));
-        let conflicts = compute_conflicts(&bindings);
+        let conflicts = compute_conflicts(&bindings, &["A", "B"]);
         // Conflict set is "trigger has more than one assignment", not a count.
         assert_eq!(conflicts.len(), 1);
     }
@@ -722,8 +739,56 @@ mod tests {
         let mut bindings = HashMap::new();
         bindings.insert(account("A"), Trigger::Mouse(MouseBtn::X1));
         bindings.insert(BindingTarget::CyclePrev, Trigger::Mouse(MouseBtn::X1));
-        let conflicts = compute_conflicts(&bindings);
+        let conflicts = compute_conflicts(&bindings, &["A"]);
         assert_eq!(conflicts, [Trigger::Mouse(MouseBtn::X1)].into());
+    }
+
+    #[test]
+    fn offline_account_does_not_conflict_with_live_one() {
+        // The reported bug: reassigning a key held by a client that isn't
+        // running must not light up the banner.
+        let mut bindings = HashMap::new();
+        bindings.insert(account("Live"), Trigger::Key(0x70));
+        bindings.insert(account("Offline"), Trigger::Key(0x70));
+        assert!(compute_conflicts(&bindings, &["Live"]).is_empty());
+    }
+
+    #[test]
+    fn two_offline_accounts_do_not_conflict() {
+        let mut bindings = HashMap::new();
+        bindings.insert(account("A"), Trigger::Key(0x70));
+        bindings.insert(account("B"), Trigger::Key(0x70));
+        assert!(compute_conflicts(&bindings, &[]).is_empty());
+    }
+
+    #[test]
+    fn offline_account_does_not_conflict_with_cycle() {
+        let mut bindings = HashMap::new();
+        bindings.insert(account("Offline"), Trigger::Key(0x70));
+        bindings.insert(BindingTarget::CycleNext, Trigger::Key(0x70));
+        assert!(compute_conflicts(&bindings, &["Other"]).is_empty());
+    }
+
+    #[test]
+    fn both_cycles_conflict_without_any_live_account() {
+        // Cycle bindings are always pushed to the hook, so they collide even
+        // when no client is running.
+        let mut bindings = HashMap::new();
+        bindings.insert(BindingTarget::CycleNext, Trigger::Key(0x70));
+        bindings.insert(BindingTarget::CyclePrev, Trigger::Key(0x70));
+        assert_eq!(compute_conflicts(&bindings, &[]), [Trigger::Key(0x70)].into());
+    }
+
+    #[test]
+    fn conflict_reappears_when_the_offline_account_comes_back() {
+        let mut bindings = HashMap::new();
+        bindings.insert(account("A"), Trigger::Key(0x70));
+        bindings.insert(account("B"), Trigger::Key(0x70));
+        assert!(compute_conflicts(&bindings, &["A"]).is_empty());
+        assert_eq!(
+            compute_conflicts(&bindings, &["A", "B"]),
+            [Trigger::Key(0x70)].into()
+        );
     }
 
     #[test]
