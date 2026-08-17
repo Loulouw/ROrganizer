@@ -12,10 +12,10 @@ keywords = ["dofus", "multibox", "window-manager", "tray", "windows"]
 categories = ["gui"]
 
 [dependencies]
-eframe = { version = "0.35", default-features = false, features = ["glow", "default_fonts"] }
-egui = "0.35"
-egui_extras = { version = "0.35", default-features = false, features = ["svg"] }
-egui_dnd = "0.16"
+eframe = { version = "0.36", default-features = false, features = ["glow", "default_fonts"] }
+egui = "0.36"
+egui_extras = { version = "0.36", default-features = false, features = ["svg"] }
+egui_dnd = "0.17"
 # default = ["gtk", "libxdo"] : uniquement le backend tray Linux/BSD, jamais
 # compilé ici (deps target-gated). Les garder ne ferait qu'entretenir la
 # famille gtk-rs non maintenue dans le lockfile et dans chaque rapport d'audit.

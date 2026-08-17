@@ -29,15 +29,19 @@ sans warning. À jour à la phase 17 (icônes de classe), deps à jour au
 
 ## Stack & deps clés
 
-- `eframe 0.35` avec `default-features = false, features = ["glow", "default_fonts"]`.
+- `eframe 0.36` avec `default-features = false, features = ["glow", "default_fonts"]`.
   ⚠ Ne PAS retirer plus de features — tester `default-features = false`
   sur `egui` casse la création de fenêtre (font lookup).
-- `egui_extras 0.35` avec uniquement le feature `svg`. Le PNG loader n'est
+- `egui_extras 0.36` avec uniquement le feature `svg`. Le PNG loader n'est
   PAS compilé : un `Image::from_bytes("bytes://*.png", ...)` rend le
   placeholder rouge d'erreur. Décoder les PNGs via la crate `image` puis
   `ctx.load_texture(...)` à la place. Voir `App::about_icon`.
-- `egui_dnd 0.16` — suit strictement la version d'egui, pas de combinaison
+- `egui_dnd 0.17` — suit strictement la version d'egui, pas de combinaison
   intermédiaire compilable.
+- **MSRV réelle : 1.95**, imposée par egui 0.36. Rien ne l'épingle (pas de
+  `rust-toolchain.toml`, `release.yml` prend `stable` flottant), donc c'est
+  une contrainte invisible : un contributeur sur une toolchain plus ancienne
+  se prend une erreur de compilation dans une dépendance, pas dans ce code.
 - `tray-icon 0.24` en `default-features = false`. Les features par défaut
   (`gtk`, `libxdo`) ne servent que le backend Linux/BSD, jamais compilé
   ici : leurs deps sont target-gated. Les garder n'entretenait que la
