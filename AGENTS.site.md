@@ -26,6 +26,11 @@ bugs: move to Zola (prebuilt binary, no `cargo install`).
   `["de-DE", "fr"]` must lead to French, not the English fallback.
 - Redirect with `location.replace()`. With `location.href` the root stays in
   history and Back loops forever.
+- The root carries a **French** social card (`og:*`, `twitter:card`):
+  Discord/X/Facebook bots don't run JS, so a pasted bare URL previews the
+  root itself. French because most of the audience is. Mirror `/fr/` when
+  its `og:*` change. The root's `WebSite` JSON-LD stays paired with `/en/`
+  (see Indexing), not `/fr/`: it follows Googlebot, not the audience.
 
 ## Indexing
 
