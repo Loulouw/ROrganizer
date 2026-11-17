@@ -108,7 +108,8 @@ viewport commands pile up unprocessed, and channels drained in `App::ui`
 are never drained. Tray handlers (run on the main thread) must therefore
 act through Win32 on `tray::MAIN_HWND`:
 
-- show: `ShowWindow(SW_SHOW)` + `SetForegroundWindow`;
+- show: `ShowWindow(SW_SHOW)`, or `SW_RESTORE` when minimized to the
+  taskbar, + `SetForegroundWindow`;
 - close: `ShowWindow(SW_SHOW)` **then** `PostMessageW(WM_CLOSE)`, otherwise
   `WM_CLOSE` waits in the queue until the next wake-up.
 
@@ -174,6 +175,9 @@ Programmatic end-to-end checks on Windows:
   window of our PID with `MN_GETHMENU`, then `GetMenuStringW` +
   `GetMenuItemRect` per item. Compare labels exactly: `-like "*Activer*"`
   also matches `Désactiver`.
+- Taskbar order of grouped Dofus windows: not exposed to UIA. Move the
+  cursor onto the `Dofus.exe` button with `mouse_event` moves, wait ~2 s
+  and screenshot the thumbnail flyout: its titles give the order.
 - Screenshot diffs: try several vertical offsets. An egui bump can shift
   everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
 

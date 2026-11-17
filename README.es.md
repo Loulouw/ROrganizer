@@ -82,6 +82,10 @@ ventanas Dofus, eso lo cambia todo.
 - 🌓 **Tema claro u oscuro**, en FR / EN / ES
 - 📍 **Discreto en la bandeja del sistema** Windows, activable con
   un clic
+- 🗂️ **Ordena la barra de tareas** según el orden de tus cuentas, con
+  un clic
+- ⚙️ **Ajustes**: atajos solo en Dofus, minimizar a la barra de tareas,
+  ventana siempre visible o no
 
 ## Empieza en 3 pasos
 
@@ -127,8 +131,10 @@ las condiciones de uso de Ankama.
 **¿Funcionan los atajos cuando estoy en el juego?**
 Sí. Los atajos se escuchan **a nivel global de Windows**, así que
 funcionan independientemente de la ventana en primer plano (Dofus,
-navegador, otra app…). Una salvedad: si Dofus se ejecuta como
-**administrador**, lanza ROrganizer también como administrador.
+navegador, otra app…). Si prefieres que solo funcionen en Dofus, marca
+la opción en los ajustes (el engranaje). Una salvedad: si Dofus se
+ejecuta como **administrador**, lanza ROrganizer también como
+administrador.
 
 **Windows muestra una advertencia azul al primer arranque, ¿es normal?**
 Sí. ROrganizer no está firmado con un **certificado de firma de

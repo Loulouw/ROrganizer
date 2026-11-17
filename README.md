@@ -84,6 +84,9 @@ tout.
 - ✋ **Glisse-dépose** pour ranger tes comptes dans l'ordre que tu veux
 - 🌓 **Thème clair ou sombre**, en FR / EN / ES
 - 📍 **Discret dans la barre système** Windows, activable d'un clic
+- 🗂️ **Barre des tâches triée** dans l'ordre de tes comptes, d'un clic
+- ⚙️ **Réglages** : raccourcis seulement dans Dofus, réduction dans la
+  barre des tâches, fenêtre toujours au premier plan ou non
 
 ## Démarrage en 3 étapes
 
@@ -131,8 +134,10 @@ risques au regard des conditions générales d'utilisation d'Ankama.
 **Mes raccourcis marchent-ils pendant que je suis en jeu ?**
 Oui. Les raccourcis sont écoutés **au niveau global de Windows**,
 donc ils fonctionnent peu importe la fenêtre au premier plan
-(Dofus, navigateur, autre app…). À une nuance près : si Dofus tourne
-en **administrateur**, lance ROrganizer également en administrateur.
+(Dofus, navigateur, autre app…). Si tu préfères qu'ils ne marchent que
+dans Dofus, coche l'option dans les réglages (la roue crantée). À une
+nuance près : si Dofus tourne en **administrateur**, lance ROrganizer
+également en administrateur.
 
 **Windows affiche un avertissement bleu au premier lancement, c'est normal ?**
 Oui. ROrganizer n'est pas signé avec un **certificat code-signing**

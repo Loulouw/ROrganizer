@@ -80,6 +80,9 @@ changes everything.
 - ✋ **Drag-and-drop** to reorder accounts however you want
 - 🌓 **Light or dark theme**, in FR / EN / ES
 - 📍 **Lives in the Windows system tray**, one click to activate
+- 🗂️ **Sorts the taskbar** in the order of your accounts, in one click
+- ⚙️ **Settings**: shortcuts only in Dofus, minimize to the taskbar,
+  window always on top or not
 
 ## Get started in 3 steps
 
@@ -125,8 +128,9 @@ regarding Ankama's terms of service.
 **Do shortcuts work while I'm in-game?**
 Yes. Shortcuts are listened to **at the Windows system level**, so
 they work no matter which window is in front (Dofus, your browser,
-another app…). One caveat: if Dofus runs as **administrator**, run
-ROrganizer as administrator too.
+another app…). If you'd rather have them work in Dofus only, tick the
+option in the settings (the gear). One caveat: if Dofus runs as
+**administrator**, run ROrganizer as administrator too.
 
 **Windows shows a blue warning at first launch, is this normal?**
 Yes. ROrganizer isn't signed with a **code-signing certificate**
