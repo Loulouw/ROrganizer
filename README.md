@@ -83,10 +83,12 @@ tout.
 - 🔄 **Cycle entre tes comptes** avec un raccourci suivant / précédent
 - ✋ **Glisse-dépose** pour ranger tes comptes dans l'ordre que tu veux
 - 🌓 **Thème clair ou sombre**, en FR / EN / ES
-- 📍 **Discret dans la barre système** Windows, activable d'un clic
-- 🗂️ **Barre des tâches triée** dans l'ordre de tes comptes, d'un clic
-- ⚙️ **Réglages** : raccourcis seulement dans Dofus, réduction dans la
-  barre des tâches, fenêtre toujours au premier plan ou non
+- 📍 **Discret, où tu veux** : réduit dans la barre système ou dans la
+  barre des tâches, activable d'un clic
+- 🗂️ **Barre des tâches rangée** : un clic range les fenêtres Dofus dans
+  l'ordre de tes comptes
+- ⚙️ **Réglé à ta façon** : raccourcis seulement dans Dofus, fenêtre
+  toujours au premier plan ou non, position retenue d'un lancement à l'autre
 
 ## Démarrage en 3 étapes
 

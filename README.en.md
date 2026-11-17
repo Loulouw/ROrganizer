@@ -79,10 +79,12 @@ changes everything.
 - 🔄 **Cycle through accounts** with a next / previous shortcut
 - ✋ **Drag-and-drop** to reorder accounts however you want
 - 🌓 **Light or dark theme**, in FR / EN / ES
-- 📍 **Lives in the Windows system tray**, one click to activate
-- 🗂️ **Sorts the taskbar** in the order of your accounts, in one click
-- ⚙️ **Settings**: shortcuts only in Dofus, minimize to the taskbar,
-  window always on top or not
+- 📍 **Quiet, where you want it**: minimized to the system tray or to the
+  taskbar, enabled with one click
+- 🗂️ **A tidy taskbar**: one click puts the Dofus windows in the order of
+  your accounts
+- ⚙️ **Set up your way**: shortcuts in Dofus only, window always on top or
+  not, position remembered from one launch to the next
 
 ## Get started in 3 steps
 

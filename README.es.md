@@ -80,12 +80,12 @@ ventanas Dofus, eso lo cambia todo.
 - 🔄 **Ciclo entre tus cuentas** con un atajo siguiente / anterior
 - ✋ **Arrastrar y soltar** para ordenar tus cuentas a tu gusto
 - 🌓 **Tema claro u oscuro**, en FR / EN / ES
-- 📍 **Discreto en la bandeja del sistema** Windows, activable con
-  un clic
-- 🗂️ **Ordena la barra de tareas** según el orden de tus cuentas, con
-  un clic
-- ⚙️ **Ajustes**: atajos solo en Dofus, minimizar a la barra de tareas,
-  ventana siempre visible o no
+- 📍 **Discreto, donde quieras**: se minimiza a la bandeja del sistema o a
+  la barra de tareas, activable con un clic
+- 🗂️ **Barra de tareas ordenada**: un clic ordena las ventanas de Dofus
+  según el orden de tus cuentas
+- ⚙️ **A tu manera**: atajos solo en Dofus, ventana siempre visible o no,
+  posición recordada de un inicio a otro
 
 ## Empieza en 3 pasos
 
