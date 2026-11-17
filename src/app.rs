@@ -566,6 +566,9 @@ impl App {
         const PANEL_PAD: f32 = 24.0; // 12 top + 12 bottom
         const SUMMARY: f32 = 22.0; // count label + refresh button row
         const ROW: f32 = 46.0; // frame ~40 (32 icon + 8 v-pad) + 6 inter-row gap
+        // `draw_empty_state`: 20 space + 13 pt title + 6 + 11 pt hint. Taller
+        // than one ROW: reserving a row clipped the bottom of the window.
+        const EMPTY_STATE: f32 = 64.0;
         const CYCLE_HEAD: f32 = 32.0; // separator + label + spacing
         const CYCLE_BLOCK: f32 = 2.0 * ROW + 4.0; // 2 rows + small slack
         const SUMMARY_GAP: f32 = 10.0;
@@ -577,8 +580,8 @@ impl App {
         const TOGGLE_BUTTON: f32 = 46.0;
         const TOGGLE_HINT: f32 = 22.0;
 
-        let n_accounts = self.windows.load().len() as f32;
-        let n_for_height = n_accounts.max(1.0); // reserve ~1 row even when empty
+        let n_accounts = self.windows.load().len();
+        let list_h = if n_accounts == 0 { EMPTY_STATE } else { n_accounts as f32 * ROW };
         let n_conflicts = self.conflicting_triggers().len() as f32;
         let banner_h = if n_conflicts > 0.0 {
             BANNER_BASE + n_conflicts * BANNER_PER_LINE
@@ -590,7 +593,7 @@ impl App {
             + PANEL_PAD
             + SUMMARY
             + SUMMARY_GAP
-            + n_for_height * ROW
+            + list_h
             + banner_h
             + CYCLE_HEAD
             + CYCLE_BLOCK
