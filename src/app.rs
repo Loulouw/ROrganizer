@@ -433,6 +433,20 @@ impl App {
         let _ = self.refresh_tx.send(());
     }
 
+    /// Reorders the taskbar buttons of the live accounts to match
+    /// `cycle_order`, on a background thread. Repaints once done so the
+    /// greyed-out button comes back.
+    pub fn sort_taskbar(&self, ctx: &egui::Context) {
+        let snap = self.windows.load();
+        let hwnds: Vec<isize> = self
+            .cycle_order
+            .iter()
+            .filter_map(|slot| snap.iter().find(|w| &w.slot_key == slot).map(|w| w.hwnd))
+            .collect();
+        let ctx = ctx.clone();
+        win::taskbar::reorder(hwnds, move || ctx.request_repaint());
+    }
+
     /// Records where the user left the window. Skipped while it is minimized
     /// or hidden, where Windows reports a parking spot.
     fn track_window_pos(&mut self) {

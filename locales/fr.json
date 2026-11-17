@@ -17,6 +17,7 @@
     "tooltip_theme": "Changer de thème",
     "tooltip_lang": "Langue",
     "tooltip_refresh": "Rafraîchir",
+    "tooltip_sort_taskbar": "Trier la barre des tâches dans cet ordre",
     "tooltip_settings": "Réglages"
   },
   "settings": {

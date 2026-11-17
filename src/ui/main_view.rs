@@ -34,7 +34,13 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 .inner_margin(Margin::symmetric(12, 12)),
         )
         .show(ui, |ui| {
-            draw_summary(ui, theme, ordered.len(), || app.request_refresh());
+            draw_summary(
+                ui,
+                theme,
+                ordered.len(),
+                || app.request_refresh(),
+                || app.sort_taskbar(ctx),
+            );
             ui.add_space(10.0);
 
             if ordered.is_empty() {
@@ -111,7 +117,13 @@ fn draw_active_toggle(ui: &mut egui::Ui, ctx: &egui::Context, theme: Theme, app:
     }
 }
 
-fn draw_summary<F: FnOnce()>(ui: &mut egui::Ui, theme: Theme, count: usize, on_refresh: F) {
+fn draw_summary(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    count: usize,
+    on_refresh: impl FnOnce(),
+    on_sort_taskbar: impl FnOnce(),
+) {
     ui.horizontal(|ui| {
         let label = match count {
             0 => t!("main.accounts_zero").to_string(),
@@ -127,8 +139,39 @@ fn draw_summary<F: FnOnce()>(ui: &mut egui::Ui, theme: Theme, count: usize, on_r
             if refresh_button(ui, theme).clicked() {
                 on_refresh();
             }
+            // Ordering means something from two windows on.
+            if count >= 2 {
+                let busy = win::taskbar::is_sorting();
+                if sort_taskbar_button(ui, theme, busy).clicked() && !busy {
+                    on_sort_taskbar();
+                }
+            }
         });
     });
+}
+
+/// Three left-aligned bars of decreasing length, drawn rather than taken
+/// from a font glyph. Greyed out and inert while a reorder runs.
+fn sort_taskbar_button(ui: &mut egui::Ui, theme: Theme, busy: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(26.0, 22.0), Sense::click());
+    if response.hovered() && !busy {
+        ui.painter().rect_filled(rect, 4.0, theme::hover_bg(theme));
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    let color = if busy {
+        theme::text_tertiary(theme)
+    } else {
+        theme::text_secondary(theme)
+    };
+    let left = rect.center().x - 5.0;
+    for (i, len) in [10.0, 7.0, 4.0].into_iter().enumerate() {
+        let y = rect.center().y - 4.0 + i as f32 * 4.0;
+        ui.painter().line_segment(
+            [egui::pos2(left, y), egui::pos2(left + len, y)],
+            Stroke::new(1.5, color),
+        );
+    }
+    response.on_hover_text(t!("header.tooltip_sort_taskbar").to_string())
 }
 
 fn refresh_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
