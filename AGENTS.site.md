@@ -50,6 +50,10 @@ Invoke-WebRequest -Uri https://api.indexnow.org/indexnow -Method Post `
 `202 Accepted` = taken into account. `403` = key not validated, check the
 file is served.
 
+Site name: Google reads `WebSite` JSON-LD from the home page. Here that is
+the `noindex` root, which sends Googlebot (no `Accept-Language`) to `/en/`,
+so both carry the same `WebSite` block. Keep them identical.
+
 ## CSS
 
 - Grids: `minmax(0, 1fr)`, never bare `1fr`. Grid children keep
@@ -72,6 +76,10 @@ theme: `#97c459` as is (8.9:1). Light panels stand out by drop shadow; in
 dark, shadows don't read, so relative luminance + border take over and the
 shadow token is `none`.
 
+`<meta name="theme-color">` carries `--ground` per `prefers-color-scheme`;
+`app.js` overwrites both with the explicit theme when the toggle (or a saved
+choice) wins. Change `--ground` → update the metas and `GROUND` in `app.js`.
+
 ## Fonts
 
 Local subsetting needs `pyftsubset` or `glyphhanger`, i.e. Python or Node —
@@ -89,6 +97,9 @@ keys lighting up under the text: it demonstrates the product mechanism.
 - Coordinates are **pixel-measured** on `app-*.png` — rows at
   y=167/257/347/437 of 968, x=24 to x=656 of 680 — then expressed in %. If
   the app UI changes, re-measure; don't adjust by eye.
+- The marker moves by `transform: translateY()`, never `top`: a `top`
+  change counts toward CLS. `translateY` percentages are relative to the
+  marker's own height (84 px), so a 90 px row step is 107.143 %.
 - **Finite** (three passes): a perpetual hero animation distracts.
 - `steps(1, end)`: a key press is instant, a glide would misrepresent it.
 

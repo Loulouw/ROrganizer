@@ -613,7 +613,10 @@ svg {
 
 /* Repère de focus posé sur la capture. Coordonnées relevées au pixel sur
    `app-*.png` (lignes à y=167/257/347/437 sur 968, de x=24 à x=656 sur 680),
-   exprimées en pourcentages pour suivre le redimensionnement de l'image. */
+   exprimées en pourcentages pour suivre le redimensionnement de l'image.
+   L'animation déplace le repère par `transform`, pas par `top` : un
+   changement de `top` compte dans le CLS, un `transform` non. Le pas de
+   ligne (90 px) vaut 90/84 = 107,143 % de la hauteur du repère (84 px). */
 .stack__focus {
   position: absolute;
   top: 17.252%;
@@ -654,16 +657,16 @@ svg {
 
 @keyframes focus-walk {
   0% {
-    top: 17.252%;
+    transform: none;
   }
   25% {
-    top: 26.550%;
+    transform: translateY(107.143%);
   }
   50% {
-    top: 35.847%;
+    transform: translateY(214.286%);
   }
   75% {
-    top: 45.145%;
+    transform: translateY(321.429%);
   }
 }
 

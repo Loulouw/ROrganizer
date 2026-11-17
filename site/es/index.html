@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ROrganizer — Organizer multicuenta gratuito para Dofus Unity y Retro</title>
-<meta name="description" content="Organizer multicuenta gratuito y open source para Dofus Unity y Dofus Retro. Cambia entre tus cuentas con una sola tecla o botón del ratón. Sin conexión, sin telemetría, Windows 10 y 11.">
+<title>ROrganizer — Organizer multicuenta Dofus 3 (Unity) y Retro</title>
+<meta name="description" content="Organizer multicuenta gratuito y open source para Dofus 3 (Unity) y Dofus Retro. Cambia entre tus cuentas con una sola tecla o botón del ratón. Sin conexión, sin telemetría, Windows 10 y 11.">
 
 <link rel="canonical" href="https://rorganizer.loulouw-labs.fr/es/">
 <link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/">
@@ -15,14 +15,18 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="ROrganizer">
 <meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="fr_FR">
+<meta property="og:locale:alternate" content="en_GB">
 <meta property="og:url" content="https://rorganizer.loulouw-labs.fr/es/">
-<meta property="og:title" content="ROrganizer — Organizer multicuenta gratuito para Dofus Unity y Retro">
+<meta property="og:title" content="ROrganizer — Organizer multicuenta gratuito, Dofus 3 (Unity) y Retro">
 <meta property="og:description" content="Cambia entre tus cuentas de Dofus con una sola pulsación. Gratuito, open source, sin conexión.">
 <meta property="og:image" content="https://rorganizer.loulouw-labs.fr/assets/img/og-es.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="ROrganizer — organizer multicuenta para Dofus Unity y Dofus Retro">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f4f5f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161714" media="(prefers-color-scheme: dark)">
 
 <link rel="icon" href="../assets/img/icon.png" type="image/png">
 <link rel="preload" href="../assets/fonts/archivo-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -40,10 +44,10 @@
   "operatingSystem": "Windows 10, Windows 11",
   "inLanguage": "es",
   "isAccessibleForFree": true,
-  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "license": ["https://opensource.org/licenses/MIT", "https://www.apache.org/licenses/LICENSE-2.0"],
   "downloadUrl": "https://github.com/Loulouw/ROrganizer/releases/latest",
   "softwareHelp": "https://github.com/Loulouw/ROrganizer",
-  "author": { "@type": "Person", "name": "Loulouw" },
+  "author": { "@type": "Person", "name": "Loulouw", "url": "https://github.com/Loulouw" },
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
 }
 </script>
@@ -84,8 +88,8 @@
   <section class="wrap hero">
     <div>
       <h1>Cambia entre tus cuentas de Dofus con una sola tecla.</h1>
-      <p class="hero__tagline">Organizer multicuenta gratuito y open source, para Dofus Unity y Dofus Retro.</p>
-      <p class="hero__body">¿Juegas con hasta ocho cuentas a la vez? Asigna una tecla a cada una y pasa de una a otra al instante. Sin interactuar con el juego, sin conexión a internet, sin saturación.</p>
+      <p class="hero__tagline">Organizer multicuenta gratuito y open source, para Dofus 3 (Unity) y Dofus Retro.</p>
+      <p class="hero__body">¿Juegas con hasta ocho cuentas a la vez? Asigna una tecla a cada una y pasa de una a otra al instante. Sin interactuar con el juego, sin conexión a internet, sin complicaciones.</p>
       <div class="hero__actions">
         <a class="btn btn--primary" href="https://github.com/Loulouw/ROrganizer/releases/latest">Descargar para Windows</a>
         <a class="btn btn--ghost" href="https://github.com/Loulouw/ROrganizer">Ver el código fuente</a>
@@ -105,7 +109,7 @@
       <div class="stack__pane stack__pane--back" aria-hidden="true"></div>
       <div class="stack__pane stack__pane--mid" aria-hidden="true"></div>
       <figure class="stack__pane stack__pane--front">
-        <img src="../assets/img/app-es.png" width="680" height="968"
+        <img src="../assets/img/app-es.png" width="680" height="968" fetchpriority="high"
              alt="La ventana de ROrganizer con cuatro cuentas de Dofus detectadas, cada una con su atajo.">
         <span class="stack__focus" aria-hidden="true"></span>
       </figure>
@@ -118,7 +122,7 @@
       <h2>Una herramienta que escucha tu teclado debería poder leerse.</h2>
     </div>
     <div>
-      <p class="lede">Inspirado en nAiO Organizer, una herramienta que la comunidad Dofus conoce bien — pero totalmente open source. Para un programa que escucha tus atajos y observa tus ventanas, eso lo cambia todo.</p>
+      <p class="lede">Inspirado en nAiO Organizer, una herramienta que la comunidad de Dofus conoce bien — pero totalmente open source. Para un programa que escucha tus atajos y observa tus ventanas, eso lo cambia todo.</p>
       <dl class="deflist" style="margin-top:2rem">
         <div>
           <dt>El código es público</dt>
@@ -138,7 +142,7 @@
 
   <section class="wrap band band--tight">
     <p class="pull">No lee el juego, no lo modifica, no le envía nada.
-      <span>ROrganizer solo escucha tus atajos y trae la ventana correcta al frente — exactamente lo mismo que hace Alt+Tab en Windows.</span>
+      <span>ROrganizer solo escucha tus atajos y pone en primer plano la ventana correcta — exactamente lo mismo que hace Alt+Tab en Windows.</span>
     </p>
   </section>
 
@@ -151,7 +155,7 @@
     <div class="assert">
       <ul>
         <li>La app <strong>nunca se conecta a ningún servidor</strong>.</li>
-        <li><strong>No toca Dofus.</strong> No lo lee, no lo modifica, no le envía nada. Solo escucha tus atajos y trae la ventana correcta al frente.</li>
+        <li><strong>No toca Dofus.</strong> No lo lee, no lo modifica, no le envía nada. Solo escucha tus atajos y pone en primer plano la ventana correcta.</li>
         <li><strong>No se registra ninguna pulsación de tecla.</strong> Los atajos se identifican al vuelo y se olvidan al instante.</li>
         <li>El único archivo que escribe en tu disco es <strong>su propia configuración</strong>: tus atajos, tu idioma, tu tema.</li>
       </ul>
@@ -211,8 +215,8 @@
     </div>
     <div>
       <ol class="steps">
-        <li><strong>Descarga</strong><p>Coge el archivo desde la página de versiones. Sin instalador, sin dependencias.</p></li>
-        <li><strong>Lanza</strong><p>Doble clic. ROrganizer detecta por sí solo las cuentas que ya tienes abiertas.</p></li>
+        <li><strong>Descarga</strong><p>Obtén el archivo desde la página de versiones. Sin instalador, sin dependencias.</p></li>
+        <li><strong>Ejecuta</strong><p>Doble clic. ROrganizer detecta por sí solo las cuentas que ya tienes abiertas.</p></li>
         <li><strong>Configura</strong><p>Haz clic en «definir» junto a una cuenta y pulsa la tecla que quieras asignarle.</p></li>
       </ol>
     </div>
@@ -224,11 +228,11 @@
       <h2>Dos comandos para estar seguro de lo que ejecutas.</h2>
     </div>
     <div>
-      <p class="lede">GitHub muestra la huella de cada archivo publicado junto a su nombre. Compárala con la tuya:</p>
+      <p class="lede">GitHub muestra el hash de cada archivo publicado junto a su nombre. Compáralo con el tuyo:</p>
       <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> Get-FileHash .\ROrganizer-&lt;versión&gt;-x86_64-windows.exe -Algorithm SHA256</pre>
       <p class="lede" style="margin-top:1.75rem">Y a partir de la versión 1.3.0, cada archivo lleva una atestación de procedencia firmada por GitHub, que lo vincula al código público y a la etiqueta publicada:</p>
       <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> gh attestation verify .\ROrganizer-&lt;versión&gt;-x86_64-windows.exe --repo Loulouw/ROrganizer</pre>
-      <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">El procedimiento completo está detallado en <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">la política de seguridad del proyecto</a> (en inglés y francés).</p>
+      <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">El procedimiento completo está detallado en <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md#security-english">la política de seguridad del proyecto</a> (en inglés).</p>
     </div>
   </section>
 
@@ -243,21 +247,21 @@
         <p>No. ROrganizer detecta automáticamente todas tus cuentas en cuanto se inician, tanto en el cliente clásico como en Dofus Retro y Dofus Experimental. Solo tienes que asignar un atajo a cada una, y queda guardado. Las cuentas de Retro se muestran sin icono de clase: su ventana no lo indica.</p>
       </div>
       <div>
-        <h3>¿Puedo ser baneado por usarlo?</h3>
-        <p>ROrganizer no interactúa con Dofus. No lo lee, no lo modifica, no le envía ningún comando. Solo trae una ventana al frente — exactamente lo mismo que hace Alt+Tab en Windows. Dicho esto, el uso de herramientas de terceros es bajo tu propia responsabilidad respecto a las condiciones de uso de Ankama.</p>
+        <h3>¿Me pueden banear por usarlo?</h3>
+        <p>ROrganizer no interactúa con Dofus. No lo lee, no lo modifica, no le envía ningún comando. Solo pone una ventana en primer plano — exactamente lo mismo que hace Alt+Tab en Windows. Dicho esto, el uso de herramientas de terceros es bajo tu propia responsabilidad respecto a las condiciones de uso de Ankama.</p>
       </div>
       <div>
         <h3>¿Funcionan los atajos mientras estoy en el juego?</h3>
-        <p>Sí. Se escuchan a nivel global de Windows, así que funcionan independientemente de la ventana en primer plano. Una salvedad: si Dofus se ejecuta como administrador, lanza ROrganizer también como administrador.</p>
+        <p>Sí. Se escuchan a nivel global de Windows, así que funcionan independientemente de la ventana en primer plano. Una salvedad: si Dofus se ejecuta como administrador, ejecuta ROrganizer también como administrador.</p>
       </div>
       <div>
-        <h3>Windows muestra una advertencia azul al primer arranque, ¿es normal?</h3>
-        <p>Sí. ROrganizer no está firmado con un certificado de firma de código, que cuesta varios cientos de euros al año y no es justificable para un proyecto gratuito. Windows SmartScreen alerta por precaución sobre cualquier programa poco conocido. Haz clic en «Más información» y luego en «Ejecutar de todos modos».</p>
+        <h3>Windows muestra una advertencia azul la primera vez que lo abres, ¿es normal?</h3>
+        <p>Sí. ROrganizer no está firmado con un certificado de firma de código, que cuesta varios cientos de euros al año y no es justificable para un proyecto gratuito. Windows SmartScreen alerta por precaución sobre cualquier programa poco conocido. Haz clic en «Más información» y luego en «Ejecutar de todas formas».</p>
       </div>
       <div>
         <h3>Mi antivirus detecta un «troyano», ¿la app es peligrosa?</h3>
-        <p>No, es un falso positivo. Para activar tus atajos incluso cuando Dofus está en primer plano, ROrganizer necesita escuchar el teclado y el ratón a nivel global de Windows y luego traer una ventana al frente. Un antivirus que juzga un programa por su forma, sin leer su código, no puede distinguir ese mecanismo del de un programa espía. El nombre que muestra — a menudo <em>Wacatac</em> — es una etiqueta genérica asignada automáticamente, no la identificación de un virus conocido.</p>
-        <p>Lo que puedes comprobar tú mismo: el código fuente es público, no se registra ninguna pulsación de teclado y la app no se conecta a ningún servidor — verificable en el Monitor de recursos de Windows. Cada falso positivo se notifica a Microsoft al publicar una versión, pero la corrección tarda unos días en propagarse. Mientras tanto, puedes añadir el archivo como exclusión en tu antivirus, después de comprobar su huella.</p>
+        <p>No, es un falso positivo. Para activar tus atajos incluso cuando Dofus está en primer plano, ROrganizer necesita escuchar el teclado y el ratón a nivel global de Windows y luego poner una ventana en primer plano. Un antivirus que juzga un programa por su forma, sin leer su código, no puede distinguir ese mecanismo del de un programa espía. El nombre que muestra — a menudo <em>Wacatac</em> — es una etiqueta genérica asignada automáticamente, no la identificación de un virus conocido.</p>
+        <p>Lo que puedes comprobar tú mismo: el código fuente es público, no se registra ninguna pulsación de teclado y la app no se conecta a ningún servidor — verificable en el Monitor de recursos de Windows. Cada falso positivo se notifica a Microsoft al publicar una versión, pero la corrección tarda unos días en propagarse. Mientras tanto, puedes añadir el archivo como exclusión en tu antivirus, después de comprobar su hash.</p>
       </div>
       <div>
         <h3>¿Cómo desinstalo la aplicación?</h3>
@@ -289,7 +293,7 @@
   <nav class="footer__links" aria-label="Enlaces del proyecto">
     <a href="https://github.com/Loulouw/ROrganizer">Código fuente</a>
     <a href="https://github.com/Loulouw/ROrganizer/releases">Versiones</a>
-    <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">Seguridad</a>
+    <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md#security-english">Seguridad</a>
     <a href="https://github.com/Loulouw/ROrganizer/issues">Informar de un problema</a>
   </nav>
   <p>Herramienta de terceros, sin afiliación con Ankama Games ni con el juego Dofus. Úsala bajo tu propia responsabilidad y conforme a las condiciones de uso de Dofus.</p>

@@ -29,9 +29,23 @@
 
   /* ------------------------------------------------------------- thème */
 
+  /* Les <meta name="theme-color"> suivent `prefers-color-scheme` par leur
+     attribut `media`. Un choix explicite doit les surcharger, sinon la barre
+     du navigateur mobile garde la couleur de l'OS. Valeurs = `--ground` de
+     style.css pour chaque thème. */
+  var GROUND = { light: '#f4f5f0', dark: '#161714' };
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var metas = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < metas.length; i++) {
+      metas[i].setAttribute('content', GROUND[theme]);
+    }
+  }
+
   var savedTheme = read(THEME_KEY);
   if (savedTheme === 'dark' || savedTheme === 'light') {
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    applyTheme(savedTheme);
   }
 
   function currentTheme() {
@@ -86,7 +100,7 @@
     if (toggle) {
       toggle.addEventListener('click', function () {
         var next = currentTheme() === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
+        applyTheme(next);
         write(THEME_KEY, next);
       });
     }

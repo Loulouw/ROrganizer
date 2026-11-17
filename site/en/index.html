@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ROrganizer — Free multi-account organizer for Dofus Unity and Retro</title>
-<meta name="description" content="Free and open-source multi-account organizer for Dofus Unity and Dofus Retro. Switch between your accounts with a single key or mouse button. Offline, no telemetry, Windows 10 and 11.">
+<title>ROrganizer — Dofus 3 (Unity) &amp; Retro multi-account organizer</title>
+<meta name="description" content="Free and open-source multi-account organizer for Dofus 3 (Unity) and Dofus Retro. Switch between your accounts with a single key or mouse button. Offline, no telemetry, Windows 10 and 11.">
 
 <link rel="canonical" href="https://rorganizer.loulouw-labs.fr/en/">
 <link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/">
@@ -15,14 +15,18 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="ROrganizer">
 <meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="fr_FR">
+<meta property="og:locale:alternate" content="es_ES">
 <meta property="og:url" content="https://rorganizer.loulouw-labs.fr/en/">
-<meta property="og:title" content="ROrganizer — Free multi-account organizer for Dofus Unity and Retro">
+<meta property="og:title" content="ROrganizer — Free multi-account organizer for Dofus 3 (Unity) and Retro">
 <meta property="og:description" content="Switch between your Dofus accounts with a single keystroke. Free, open source, offline.">
 <meta property="og:image" content="https://rorganizer.loulouw-labs.fr/assets/img/og-en.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="ROrganizer — multi-account organizer for Dofus Unity and Dofus Retro">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f4f5f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161714" media="(prefers-color-scheme: dark)">
 
 <link rel="icon" href="../assets/img/icon.png" type="image/png">
 <link rel="preload" href="../assets/fonts/archivo-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -40,11 +44,22 @@
   "operatingSystem": "Windows 10, Windows 11",
   "inLanguage": "en",
   "isAccessibleForFree": true,
-  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "license": ["https://opensource.org/licenses/MIT", "https://www.apache.org/licenses/LICENSE-2.0"],
   "downloadUrl": "https://github.com/Loulouw/ROrganizer/releases/latest",
   "softwareHelp": "https://github.com/Loulouw/ROrganizer",
-  "author": { "@type": "Person", "name": "Loulouw" },
+  "author": { "@type": "Person", "name": "Loulouw", "url": "https://github.com/Loulouw" },
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+}
+</script>
+<!-- Nom du site pour Google : il le lit sur la page d'accueil, ici la
+     racine en noindex qui redirige Googlebot (sans Accept-Language) vers
+     /en/. Le bloc est donc porté par les deux. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "ROrganizer",
+  "url": "https://rorganizer.loulouw-labs.fr/"
 }
 </script>
 </head>
@@ -84,7 +99,7 @@
   <section class="wrap hero">
     <div>
       <h1>Switch between your Dofus accounts with one key.</h1>
-      <p class="hero__tagline">A free, open-source multi-account organizer for Dofus Unity and Dofus Retro.</p>
+      <p class="hero__tagline">A free, open-source multi-account organizer for Dofus 3 (Unity) and Dofus Retro.</p>
       <p class="hero__body">Playing up to eight accounts at once? Give each one a key and move between them instantly. Without touching the game, without a network connection, without the bloat.</p>
       <div class="hero__actions">
         <a class="btn btn--primary" href="https://github.com/Loulouw/ROrganizer/releases/latest">Download for Windows</a>
@@ -105,7 +120,7 @@
       <div class="stack__pane stack__pane--back" aria-hidden="true"></div>
       <div class="stack__pane stack__pane--mid" aria-hidden="true"></div>
       <figure class="stack__pane stack__pane--front">
-        <img src="../assets/img/app-en.png" width="680" height="968"
+        <img src="../assets/img/app-en.png" width="680" height="968" fetchpriority="high"
              alt="The ROrganizer window listing four detected Dofus accounts, each with its shortcut.">
         <span class="stack__focus" aria-hidden="true"></span>
       </figure>
@@ -115,7 +130,7 @@
   <section class="wrap band split">
     <div>
       <p class="eyebrow">Why this one</p>
-      <h2>A tool that listens to your keyboard should be readable.</h2>
+      <h2>A tool that listens to your keyboard should be open to inspection.</h2>
     </div>
     <div>
       <p class="lede">Inspired by nAiO Organizer, which the Dofus community knows well — but entirely open source. For a program that watches your shortcuts and your windows, that changes everything.</p>
@@ -129,7 +144,7 @@
           <dd>Every release is built by GitHub from the public source, never on a personal machine. It ships with a proof of origin you can check with one command — and that nobody else can forge.</dd>
         </div>
         <div>
-          <dt>It does not die with me</dt>
+          <dt>It won't die with me</dt>
           <dd>If I stop working on it, anyone can pick it up. Your tool does not depend on one person.</dd>
         </div>
       </dl>
@@ -168,7 +183,7 @@
       <ul class="features">
         <li><strong>Automatic detection</strong><span>Your accounts appear as soon as they launch, on Dofus, Dofus Retro and Dofus Experimental.</span></li>
         <li><strong>One shortcut per account</strong><span>A keyboard key or a mouse button. <span class="key key--set">F3</span> <span class="key key--set">Mb4</span></span></li>
-        <li><strong>Cycle through accounts</strong><span>A next shortcut, a previous one, and you go round your whole team.</span></li>
+        <li><strong>Cycle through accounts</strong><span>A next shortcut, a previous one, and you cycle through your whole team.</span></li>
         <li><strong>Drag and drop</strong><span>Arrange your accounts in whatever order suits you.</span></li>
         <li><strong>Light or dark theme</strong><span>In French, English or Spanish.</span></li>
         <li><strong>Quiet in the system tray</strong><span>Enable or disable it with one click, without quitting.</span></li>
@@ -193,7 +208,7 @@
         <dd>MB<small>of RAM in use</small></dd>
       </div>
       <div>
-        <dt>0 %</dt>
+        <dt>0%</dt>
         <dd>CPU<small>while you play</small></dd>
       </div>
       <div>
@@ -228,7 +243,7 @@
       <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> Get-FileHash .\ROrganizer-&lt;version&gt;-x86_64-windows.exe -Algorithm SHA256</pre>
       <p class="lede" style="margin-top:1.75rem">And from version 1.3.0 onwards, every file carries a proof of origin signed by GitHub, binding it to the public source and the published tag:</p>
       <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> gh attestation verify .\ROrganizer-&lt;version&gt;-x86_64-windows.exe --repo Loulouw/ROrganizer</pre>
-      <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">The full procedure is documented in <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">the project's security policy</a>.</p>
+      <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">The full procedure is documented in <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md#security-english">the project's security policy</a>.</p>
     </div>
   </section>
 
@@ -248,7 +263,7 @@
       </div>
       <div>
         <h3>Do my shortcuts work while I'm in game?</h3>
-        <p>Yes. They are listened for at the Windows global level, so they work whichever window is in the foreground. One caveat: if Dofus runs as administrator, run ROrganizer as administrator too.</p>
+        <p>Yes. They are system-wide hotkeys, so they work whichever window is in the foreground. One caveat: if Dofus runs as administrator, run ROrganizer as administrator too.</p>
       </div>
       <div>
         <h3>Windows shows a blue warning on first launch — is that normal?</h3>
@@ -256,7 +271,7 @@
       </div>
       <div>
         <h3>My antivirus flags a “trojan” — is the app dangerous?</h3>
-        <p>No, it is a false positive. To trigger your shortcuts even when Dofus is in the foreground, ROrganizer has to listen to the keyboard and mouse at the Windows global level, then bring a window forward. An antivirus that judges a program by its shape, without reading its code, cannot tell that mechanism apart from spyware. The name it shows — often <em>Wacatac</em> — is a generic label assigned automatically, not the identification of a known virus.</p>
+        <p>No, it is a false positive. To trigger your shortcuts even when Dofus is in the foreground, ROrganizer has to listen to the keyboard and mouse system-wide, then bring a window forward. An antivirus that judges a program by what it looks like, without reading its code, cannot tell that mechanism apart from spyware. The name it shows — often <em>Wacatac</em> — is a generic label assigned automatically, not the identification of a known virus.</p>
         <p>What you can check yourself: the source is public, no keystroke is recorded, and the app connects to no server — observable in the Windows Resource Monitor. Every false positive is reported to Microsoft when a release ships, but the correction takes a few days to propagate. In the meantime you can add the file as an exclusion in your antivirus, after checking its checksum.</p>
       </div>
       <div>
@@ -268,8 +283,8 @@
 
   <section class="bleed bleed--dark">
     <div class="wrap band warn">
-      <h2>Beware of counterfeits</h2>
-      <p>ROrganizer is downloaded <strong>only</strong> from <a href="https://github.com/Loulouw/ROrganizer/releases">the releases page of the GitHub repository</a>, as a single executable file.</p>
+      <h2>Beware of fake downloads</h2>
+      <p>ROrganizer is available <strong>only</strong> from <a href="https://github.com/Loulouw/ROrganizer/releases">the releases page of the GitHub repository</a>, as a single executable file.</p>
       <p><strong>This website hosts no files.</strong> The download button sends you to GitHub — that is expected, and it is the only legitimate behaviour.</p>
       <p>It is never distributed:</p>
       <ul>
@@ -279,7 +294,7 @@
         <li>from a file host, a Discord link, a forum or a mirror site.</li>
       </ul>
       <p>An archive password shared separately — in a video, a comment, a private message — exists to defeat the file host's automated malware scanning. That alone is a red flag.</p>
-      <p>Any file carrying the ROrganizer name that does not match this description <strong>did not come from me</strong>, whatever the source offering it.</p>
+      <p>Any file carrying the ROrganizer name that does not match this description <strong>did not come from me</strong>, wherever you found it.</p>
     </div>
   </section>
 
@@ -289,7 +304,7 @@
   <nav class="footer__links" aria-label="Project links">
     <a href="https://github.com/Loulouw/ROrganizer">Source code</a>
     <a href="https://github.com/Loulouw/ROrganizer/releases">Releases</a>
-    <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md">Security</a>
+    <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md#security-english">Security</a>
     <a href="https://github.com/Loulouw/ROrganizer/issues">Report an issue</a>
   </nav>
   <p>A third-party tool, not affiliated with Ankama Games or the game Dofus. Use it at your own risk and in accordance with the Dofus terms of service.</p>
