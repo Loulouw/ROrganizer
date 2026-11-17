@@ -30,6 +30,8 @@
     "quit": "Quit",
     "activate": "Activate",
     "deactivate": "Deactivate",
+    "status_active_zero": "Active · 0 accounts",
+    "status_active_one": "Active · 1 account",
     "status_active": "Active · %{count} accounts",
     "status_inactive": "Inactive"
   },

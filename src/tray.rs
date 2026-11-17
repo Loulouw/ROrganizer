@@ -244,10 +244,13 @@ fn build_icon(active: bool) -> Result<Icon, tray_icon::BadIcon> {
 /// `TrayController` so it can be unit-tested without instantiating the
 /// underlying Win32 tray icon.
 fn format_status_label(active: bool, count: usize) -> String {
-    if active {
-        rust_i18n::t!("tray.status_active", count = count.to_string()).to_string()
-    } else {
-        rust_i18n::t!("tray.status_inactive").to_string()
+    match (active, count) {
+        (false, _) => rust_i18n::t!("tray.status_inactive").to_string(),
+        // Same zero / one / many split as `main.accounts_*`: French puts
+        // 0 in the singular, English and Spanish don't.
+        (true, 0) => rust_i18n::t!("tray.status_active_zero").to_string(),
+        (true, 1) => rust_i18n::t!("tray.status_active_one").to_string(),
+        (true, n) => rust_i18n::t!("tray.status_active", count = n.to_string()).to_string(),
     }
 }
 
@@ -277,6 +280,10 @@ mod tests {
         let _g = locale_lock();
         rust_i18n::set_locale("en");
         assert_eq!(format_status_label(true, 3), "Active · 3 accounts");
+        assert_eq!(format_status_label(true, 1), "Active · 1 account");
+        rust_i18n::set_locale("fr");
+        assert_eq!(format_status_label(true, 0), "Actif · 0 compte");
+        assert_eq!(format_status_label(true, 1), "Actif · 1 compte");
     }
 
     #[test]

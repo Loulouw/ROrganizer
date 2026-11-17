@@ -30,12 +30,14 @@
     "quit": "Quitter",
     "activate": "Activer",
     "deactivate": "Désactiver",
+    "status_active_zero": "Actif · 0 compte",
+    "status_active_one": "Actif · 1 compte",
     "status_active": "Actif · %{count} comptes",
     "status_inactive": "Inactif"
   },
   "binding": {
     "set": "définir",
-    "prompt": "Appuyez sur une touche ou un bouton de souris",
+    "prompt": "Appuie sur une touche ou un bouton de souris",
     "cancel_hint": "Échap pour annuler",
     "modal_title": "Définir un raccourci",
     "for_account": "pour %{name}",
