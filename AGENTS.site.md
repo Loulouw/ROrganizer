@@ -38,7 +38,7 @@ contains the key itself. Deploy the key file before pinging. Resubmit after
 adding pages:
 
 ```powershell
-$key = (Get-ChildItem site\*.txt | Select-Object -First 1).BaseName
+$key = (Get-ChildItem site\*.txt -Exclude robots.txt).BaseName
 Invoke-WebRequest -Uri https://api.indexnow.org/indexnow -Method Post `
   -ContentType 'application/json; charset=utf-8' -Body (@{
     host = 'rorganizer.loulouw-labs.fr'; key = $key
@@ -77,8 +77,9 @@ shadow token is `none`.
 Local subsetting needs `pyftsubset` or `glyphhanger`, i.e. Python or Node —
 not installed. Take the `latin` `.woff2` served by the Google Fonts CSS API
 (covers FR and ES, `¿` and `¡` included). Keep the `OFL-*.txt` next to
-them: the OFL requires it. Literata and Archivo are variable: one file
-covers 400→600, hence `font-weight: 400 600` in `@font-face`.
+them: the OFL requires it. Literata is variable (one file covers 400→600,
+hence `font-weight: 400 600`); Archivo 700 and JetBrains Mono 400 are
+static, one weight each.
 
 ## Hero animation
 

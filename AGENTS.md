@@ -69,7 +69,7 @@ cargo audit
 ```
 
 `deny.toml` key settings: `[graph] targets = ["x86_64-pc-windows-msvc"]`
-scopes the audit to the ~245 crates compiled here instead of the ~390 in
+scopes the audit to the ~240 crates compiled here instead of the ~390 in
 the lockfile (advisories for never-compiled crates bury real ones);
 `unknown-registry/unknown-git = "deny"` keeps every dependency on
 crates.io.
