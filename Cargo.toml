@@ -12,14 +12,16 @@ keywords = ["dofus", "multibox", "window-manager", "tray", "windows"]
 categories = ["gui"]
 
 [dependencies]
-eframe = { version = "0.36", default-features = false, features = ["glow", "default_fonts"] }
-egui = "0.36"
-egui_extras = { version = "0.36", default-features = false, features = ["svg"] }
-egui_dnd = "0.17"
+eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts"] }
+# Les glyphes ⟳ ⚠ 📁 de l'UI n'existent que dans les polices emoji embarquées,
+# que default_fonts n'inclut pas : sans cette feature, tofu à l'écran.
+egui = { version = "0.37", features = ["monochrome_emoji_fonts"] }
+egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
+egui_dnd = "0.18"
 # default = ["gtk", "libxdo"] : uniquement le backend tray Linux/BSD, jamais
 # compilé ici (deps target-gated). Les garder ne ferait qu'entretenir la
 # famille gtk-rs non maintenue dans le lockfile et dans chaque rapport d'audit.
-tray-icon = { version = "0.24", default-features = false }
+tray-icon = { version = "0.26", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 directories = "6"
@@ -45,7 +47,7 @@ windows = { version = "0.62", features = [
 [build-dependencies]
 embed-resource = "3"
 image = { version = "0.25", default-features = false, features = ["png"] }
-ico = "0.5"
+ico = "0.6"
 
 [dev-dependencies]
 tempfile = "3"

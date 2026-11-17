@@ -14,9 +14,11 @@ because Pages publishes the whole `site/` directory.
 ## Hard rules
 
 - `cargo test` green, `cargo build` with zero warnings.
-- No network: zero outbound sockets. No HTTP client in the tree
-  (`reqwest`, `hyper`, `tokio` absent from `Cargo.lock`). Native threads,
-  no async runtime.
+- No network: zero outbound sockets. No HTTP client or async runtime in
+  the Windows build: `cargo tree --target x86_64-pc-windows-msvc -i <crate>`
+  prints nothing for `reqwest`, `hyper`, `tokio`. `Cargo.lock` is not the
+  test: it also resolves wasm-only deps, and winit's `wasm-bindgen-futures`
+  pulls `tokio` in there. Native threads only.
 - No file logging, no temp files, never log keystrokes. The only file the
   app writes is `%APPDATA%\rorganizer\config.json`.
 - Manifest stays `asInvoker`: LL hooks work from a user process as long as
@@ -37,7 +39,7 @@ cargo build --release   # never distribute a debug build
 Release builds set `windows_subsystem = "windows"`: no console,
 `eprintln!` is lost. Debug with a plain `cargo build` run from a terminal.
 
-Effective MSRV is 1.95, imposed by egui 0.36, and nothing pins it: an older
+Effective MSRV is 1.95, imposed by egui 0.37, and nothing pins it: an older
 toolchain fails inside a dependency, not in this code. No
 `rust-toolchain.toml` on purpose — it would force a rustc version on every
 contributor for a benefit limited to release verification.
@@ -46,7 +48,14 @@ contributor for a benefit limited to release verification.
 
 - `eframe`: `default-features = false, features = ["glow", "default_fonts"]`.
   Don't strip further: `default-features = false` on `egui` breaks window
-  creation (font lookup).
+  creation (font lookup). Default features left off on purpose:
+  `clipboard` (arboard; the app has no text input) and `system_fonts`
+  (pulls `fontique` to list the system fonts; only buys colored emoji and
+  non-Latin glyphs).
+- `egui`: `monochrome_emoji_fonts` is required. Since 0.37 the bundled
+  emoji/icon fonts are no longer part of `default_fonts`, and the UI uses
+  glyphs only they carry (⟳ refresh, ⚠ and 📁 in About): without the
+  feature they render as tofu boxes, with no build warning.
 - `egui_extras`: `svg` only, no PNG loader compiled.
   `Image::from_bytes("bytes://*.png")` renders the red error placeholder.
   Decode with `image`, then `ctx.load_texture` (see `decode_about_icon`).
@@ -110,7 +119,8 @@ capture therefore goes through egui events (`Event::Key` → `key_to_vk`).
 Rejected: hook on the main thread (no fix, freezes), defocusing during
 capture (visible focus flicker). Accepted limits:
 
-- `egui::Key` is finite: no media keys, F21+, Pause;
+- `key_to_vk` is the whitelist: F21+ don't exist in `egui::Key`, and the
+  Pause/lock/media/browser keys egui 0.37 added are not mapped;
 - `Num0`–`Num9` conflate numpad and top row;
 - OEM keys on non-US layouts map by physical position (² → `Backtick` →
   0xC0) while the hook receives the real VK (0xDE).
@@ -158,10 +168,14 @@ Programmatic end-to-end checks on Windows:
   (`SetProcessDpiAwarenessContext(-4)`), then `SetWindowPos(HWND_TOPMOST)`
   + `SetForegroundWindow` before `CopyFromScreen` — otherwise DWM renders
   accelerated surfaces black.
-- Tray menu on Windows 11: no longer a `ToolbarWindow32`. Use UI
-  Automation: button `ROrganizer` in `Shell_TrayWnd`, right-click,
-  enumerate the `MenuItem`s. Compare labels with `-ceq`: `-like
-  "*Activer*"` also matches `Désactiver`.
+- Tray menu on Windows 11: no longer a `ToolbarWindow32`. Find the button
+  `ROrganizer` with UI Automation in `Shell_TrayWnd`; an exe run from a new
+  path lands in the overflow flyout instead: click the `SystemTrayIcon`
+  chevron, then search `TopLevelWindowForOverflowXamlIsland`. Right-click
+  it. UIA may list no `MenuItem` in the popup: read the visible `#32768`
+  window of our PID with `MN_GETHMENU`, then `GetMenuStringW` +
+  `GetMenuItemRect` per item. Compare labels exactly: `-like "*Activer*"`
+  also matches `Désactiver`.
 - Screenshot diffs: try several vertical offsets. An egui bump can shift
   everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
 
@@ -169,11 +183,16 @@ Programmatic end-to-end checks on Windows:
 
 | Metric | Stable value |
 |---|---|
-| Release binary | ~8.1 MiB |
+| Release binary | ~8.2 MiB |
 | RAM working set, idle | ~73 MB |
 | RAM private, idle | ~66-67 MB |
 | CPU, idle | 0 % (over 40 s) |
 | New Dofus window detection | ~150-200 ms |
+
+Measured 2026-11 with 4 Unity clients open: ~82 MB working set, ~74 MB
+private, and 0.4-0.7 s of CPU over 40 s idle (window shown or hidden),
+identical on egui 0.36 and 0.37. The client count moves these numbers:
+compare two builds under the same setup rather than against the table.
 
 Measure RAM at least 15 s after launch: earlier, the font atlas and
 textures aren't realized yet (~60 MB), which looks like a regression at the

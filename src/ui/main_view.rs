@@ -172,7 +172,7 @@ fn draw_account_list(
     let pre_order: Vec<SlotKey> = ordered.iter().map(|w| w.slot_key.clone()).collect();
     let mut row_action: Option<RowAction> = None;
 
-    egui_dnd::dnd(ui, "accounts_dnd").show_vec(
+    egui_dnd::dnd(ui, egui::Id::unique("accounts_dnd")).show_vec(
         ordered,
         |ui, w, handle, _state| {
             let in_conflict = app

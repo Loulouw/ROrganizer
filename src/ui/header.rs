@@ -24,7 +24,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
             let rect = ui.max_rect();
             let drag_response = ui.interact(
                 rect,
-                egui::Id::new("title_bar_drag"),
+                egui::Id::unique("title_bar_drag"),
                 Sense::click_and_drag(),
             );
             if drag_response.drag_started() {

@@ -49,7 +49,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
         BindingTarget::CyclePrev => t!("cycle.prev").to_string(),
     };
 
-    egui::Area::new(egui::Id::new("capture_overlay"))
+    egui::Area::new(egui::Id::unique("capture_overlay"))
         .order(egui::Order::Foreground)
         .fixed_pos(screen_rect.left_top())
         .show(ctx, |ui| {

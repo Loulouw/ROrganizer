@@ -58,7 +58,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     let mut bug_clicked = false;
     let mut website_clicked = false;
 
-    egui::Area::new(egui::Id::new("about_overlay"))
+    egui::Area::new(egui::Id::unique("about_overlay"))
         .order(egui::Order::Foreground)
         .fixed_pos(screen_rect.left_top())
         .show(ctx, |ui| {
@@ -67,7 +67,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
             // when they overlap.
             let backdrop_resp = ui.interact(
                 screen_rect,
-                egui::Id::new("about_backdrop"),
+                egui::Id::unique("about_backdrop"),
                 Sense::click(),
             );
             ui.painter()

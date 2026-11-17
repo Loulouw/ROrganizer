@@ -223,7 +223,7 @@ fn ensure_icons() -> (&'static [u8], &'static [u8]) {
     let inactive = INACTIVE_RGBA.get_or_init(|| {
         let mut bytes = active.clone();
         // Rec.709 luma; alpha unchanged so the inactive icon stays visible.
-        for px in bytes.chunks_exact_mut(4) {
+        for px in bytes.as_chunks_mut::<4>().0 {
             let l = (px[0] as f32 * 0.2126 + px[1] as f32 * 0.7152 + px[2] as f32 * 0.0722) as u8;
             px[0] = l;
             px[1] = l;
