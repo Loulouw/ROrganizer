@@ -48,21 +48,28 @@ pub struct DetectedWindow {
 struct EnumCtx<'a> {
     re: &'a Regex,
     out: &'a mut Vec<DetectedWindow>,
+    dofus_pids: &'a mut Vec<u32>,
     exe_cache: &'a mut ExeCache,
     seen_pids: &'a mut HashSet<u32>,
 }
 
+/// Fills `out` with the windows matching `re`, and `dofus_pids` with every
+/// Dofus process owning a visible window, matched or not (login screen,
+/// character selection).
 pub fn enumerate_dofus_windows(
     re: &Regex,
     out: &mut Vec<DetectedWindow>,
+    dofus_pids: &mut Vec<u32>,
     exe_cache: &mut ExeCache,
     seen_pids: &mut HashSet<u32>,
 ) {
     out.clear();
+    dofus_pids.clear();
     seen_pids.clear();
     let mut ctx = EnumCtx {
         re,
         out,
+        dofus_pids,
         exe_cache,
         seen_pids,
     };
@@ -94,6 +101,9 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL { unsafe
     };
     if !is_dofus {
         return BOOL(1);
+    }
+    if !ctx.dofus_pids.contains(&pid) {
+        ctx.dofus_pids.push(pid);
     }
 
     let len = GetWindowTextLengthW(hwnd);

@@ -59,6 +59,13 @@ impl HookHandle {
         state.cycle_index = if len == 0 { 0 } else { cycle_index.min(len - 1) };
         state.cycle_current_hwnd = state.cycle_hwnds.get(state.cycle_index).copied();
     }
+
+    /// Bindings only fire while a Dofus window is in front (user option).
+    pub fn set_dofus_only(&self, on: bool) {
+        let Some(state_mut) = state::HOOK_STATE.get() else { return };
+        let Ok(mut state) = state_mut.lock() else { return };
+        state.dofus_only = on;
+    }
 }
 
 /// Returns the new `cycle_index` after `cycle_hwnds` has been replaced.
@@ -88,13 +95,15 @@ fn remap_cycle_index_after_reorder(
 }
 
 /// Installs the global LL hooks (keyboard + mouse) and returns the handle
-/// the rest of the app uses to drive them. Panics if called twice.
-pub fn install() -> HookHandle {
+/// the rest of the app uses to drive them. `dofus_only` is the user's
+/// "shortcuts only in Dofus" option. Panics if called twice.
+pub fn install(dofus_only: bool) -> HookHandle {
     let st = state::HookState {
         bindings: Vec::new(),
         cycle_hwnds: Vec::new(),
         cycle_index: 0,
         cycle_current_hwnd: None,
+        dofus_only,
     };
     state::HOOK_STATE
         .set(Mutex::new(st))

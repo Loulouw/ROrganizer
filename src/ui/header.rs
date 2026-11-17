@@ -34,10 +34,10 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
             ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(8.0);
-                    let about_resp = settings_button(ui, theme)
-                        .on_hover_text(t!("header.tooltip_about").to_string());
-                    if about_resp.clicked() {
-                        app.open_about();
+                    let settings_resp = settings_button(ui, theme)
+                        .on_hover_text(t!("header.tooltip_settings").to_string());
+                    if settings_resp.clicked() {
+                        app.open_settings();
                     }
                     ui.add_space(6.0);
                     ui.label(
@@ -56,8 +56,14 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                             if close.clicked() {
                                 app.request_close(ctx);
                             }
-                            let mini = titlebar_button(ui, "\u{2013}", theme)
-                                .on_hover_text(t!("header.tooltip_minimize").to_string());
+                            let mini = titlebar_button(ui, "\u{2013}", theme).on_hover_text(
+                                if app.minimize_to_taskbar() {
+                                    t!("header.tooltip_minimize_taskbar")
+                                } else {
+                                    t!("header.tooltip_minimize")
+                                }
+                                .to_string(),
+                            );
                             if mini.clicked() {
                                 app.request_minimize(ctx);
                             }

@@ -7,23 +7,35 @@
     "empty_hint": "Launch Dofus to see your characters here.",
     "activate": "Activate",
     "deactivate": "Deactivate",
-    "activate_hint": "minimizes to the system tray"
+    "activate_hint": "minimizes to the system tray",
+    "activate_hint_taskbar": "minimizes to the taskbar"
   },
   "header": {
     "tooltip_minimize": "Minimize to system tray",
+    "tooltip_minimize_taskbar": "Minimize to taskbar",
     "tooltip_close": "Close",
     "tooltip_theme": "Toggle theme",
     "tooltip_lang": "Language",
     "tooltip_refresh": "Refresh",
-    "tooltip_about": "About"
+    "tooltip_settings": "Settings"
+  },
+  "settings": {
+    "tab_options": "Options",
+    "tab_about": "About",
+    "dofus_only": "Shortcuts only in Dofus",
+    "dofus_only_hint": "In other applications, the key or button works as usual.",
+    "minimize_to_taskbar": "Minimize to the taskbar",
+    "minimize_to_taskbar_hint": "“–” and “Activate” minimize the window to the taskbar instead of the system tray.",
+    "always_on_top": "Always on top",
+    "always_on_top_hint": "The window stays above Dofus and every other window.",
+    "close": "Close",
+    "esc_hint": "Esc to close"
   },
   "about": {
     "credit": "Built by Loulouw with the help of Claude",
     "ankama_credit": "Illustrations © Ankama Studio. Dofus is a trademark of Ankama — all rights reserved.",
     "report_bug": "Report a bug",
-    "open_config_dir": "Open config folder",
-    "close": "Close",
-    "esc_hint": "Esc to close"
+    "open_config_dir": "Open config folder"
   },
   "tray": {
     "show": "Show",

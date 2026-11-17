@@ -7,23 +7,35 @@
     "empty_hint": "Inicia Dofus para ver tus personajes aquí.",
     "activate": "Activar",
     "deactivate": "Desactivar",
-    "activate_hint": "se minimiza a la bandeja del sistema"
+    "activate_hint": "se minimiza a la bandeja del sistema",
+    "activate_hint_taskbar": "se minimiza a la barra de tareas"
   },
   "header": {
     "tooltip_minimize": "Minimizar a la bandeja",
+    "tooltip_minimize_taskbar": "Minimizar a la barra de tareas",
     "tooltip_close": "Cerrar",
     "tooltip_theme": "Cambiar tema",
     "tooltip_lang": "Idioma",
     "tooltip_refresh": "Actualizar",
-    "tooltip_about": "Acerca de"
+    "tooltip_settings": "Ajustes"
+  },
+  "settings": {
+    "tab_options": "Opciones",
+    "tab_about": "Acerca de",
+    "dofus_only": "Atajos solo en Dofus",
+    "dofus_only_hint": "En otras aplicaciones, la tecla o el botón funciona con normalidad.",
+    "minimize_to_taskbar": "Minimizar a la barra de tareas",
+    "minimize_to_taskbar_hint": "«–» y «Activar» minimizan la ventana a la barra de tareas en lugar de la bandeja del sistema.",
+    "always_on_top": "Siempre visible",
+    "always_on_top_hint": "La ventana se mantiene encima de Dofus y de las demás ventanas.",
+    "close": "Cerrar",
+    "esc_hint": "Esc para cerrar"
   },
   "about": {
     "credit": "Desarrollado por Loulouw con la ayuda de Claude",
     "ankama_credit": "Ilustraciones © Ankama Studio. Dofus es una marca de Ankama — todos los derechos reservados.",
     "report_bug": "Reportar un error",
-    "open_config_dir": "Abrir carpeta de configuración",
-    "close": "Cerrar",
-    "esc_hint": "Esc para cerrar"
+    "open_config_dir": "Abrir carpeta de configuración"
   },
   "tray": {
     "show": "Mostrar",

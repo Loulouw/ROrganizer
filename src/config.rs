@@ -22,6 +22,25 @@ pub struct StoredConfig {
     /// title format changes without rebuilding.
     #[serde(default)]
     pub title_regex: Option<String>,
+    /// Bindings only fire while a Dofus window is in front. Off when missing:
+    /// existing users keep shortcuts that work from any application.
+    #[serde(default)]
+    pub shortcuts_only_in_dofus: bool,
+    /// "–" and "Activer" minimize to the taskbar instead of hiding in the
+    /// system tray.
+    #[serde(default)]
+    pub minimize_to_taskbar: bool,
+    /// Main window kept above every other one. On when missing: it always
+    /// was before the option existed.
+    #[serde(default = "default_true")]
+    pub always_on_top: bool,
+    /// Top-left corner of the main window, physical screen pixels.
+    #[serde(default)]
+    pub window_pos: Option<(i32, i32)>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// `%APPDATA%\rorganizer\config.json` on Windows. Returns None on platforms
@@ -99,7 +118,28 @@ mod tests {
             lang: Lang::Fr,
             theme: Theme::Dark,
             title_regex: None,
+            shortcuts_only_in_dofus: true,
+            minimize_to_taskbar: true,
+            always_on_top: false,
+            window_pos: Some((-1200, 340)),
         }
+    }
+
+    #[test]
+    fn config_written_before_the_settings_keeps_previous_behaviour() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        let mut json = serde_json::to_value(sample_config()).unwrap();
+        let obj = json.as_object_mut().unwrap();
+        for key in ["shortcuts_only_in_dofus", "minimize_to_taskbar", "always_on_top", "window_pos"] {
+            obj.remove(key);
+        }
+        std::fs::write(&path, json.to_string()).unwrap();
+        let cfg = load(&path).expect("old config loads");
+        assert!(!cfg.shortcuts_only_in_dofus);
+        assert!(!cfg.minimize_to_taskbar);
+        assert!(cfg.always_on_top);
+        assert_eq!(cfg.window_pos, None);
     }
 
     #[test]
@@ -114,6 +154,10 @@ mod tests {
         assert_eq!(loaded.cycle_order, cfg.cycle_order);
         assert_eq!(loaded.lang, cfg.lang);
         assert_eq!(loaded.theme, cfg.theme);
+        assert_eq!(loaded.shortcuts_only_in_dofus, cfg.shortcuts_only_in_dofus);
+        assert_eq!(loaded.minimize_to_taskbar, cfg.minimize_to_taskbar);
+        assert_eq!(loaded.always_on_top, cfg.always_on_top);
+        assert_eq!(loaded.window_pos, cfg.window_pos);
     }
 
     #[test]

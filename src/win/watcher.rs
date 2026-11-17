@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use arc_swap::ArcSwap;
@@ -16,8 +16,9 @@ use regex::Regex;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
 use windows::Win32::UI::WindowsAndMessaging::{
-    DispatchMessageW, PeekMessageW, TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY,
-    EVENT_OBJECT_NAMECHANGE, MSG, PM_REMOVE, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
+    DispatchMessageW, GetWindowThreadProcessId, PeekMessageW, TranslateMessage,
+    EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, EVENT_OBJECT_NAMECHANGE, MSG, PM_REMOVE,
+    WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
 };
 
 use super::enumerate::{enumerate_dofus_windows, DetectedWindow};
@@ -28,6 +29,19 @@ use super::process::ExeCache;
 /// and get an `Arc<Vec<...>>` that's a stable view for the duration of the
 /// borrow — even if the watcher publishes a new snapshot mid-read.
 pub type WindowsSnapshot = Arc<ArcSwap<Vec<DetectedWindow>>>;
+
+/// Every Dofus process owning a visible window at the last rescan, logged
+/// in or not. Read by the LL hooks, which must not query processes.
+static DOFUS_PIDS: LazyLock<ArcSwap<Vec<u32>>> =
+    LazyLock::new(|| ArcSwap::from_pointee(Vec::new()));
+
+/// Whether `hwnd` belongs to a running Dofus client, whatever its title
+/// (login screen, character selection).
+pub fn is_dofus_window(hwnd: isize) -> bool {
+    let mut pid = 0u32;
+    unsafe { GetWindowThreadProcessId(HWND(hwnd as *mut _), Some(&mut pid)) };
+    pid != 0 && DOFUS_PIDS.load().contains(&pid)
+}
 
 /// Coalescing window: after a relevant WinEvent fires we wait up to this
 /// long for follow-ups (e.g. CREATE → NAMECHANGE during init) before
@@ -154,8 +168,12 @@ fn rescan(
     exe_cache: &mut ExeCache,
     seen_pids: &mut HashSet<u32>,
 ) {
-    enumerate_dofus_windows(regex, buf, exe_cache, seen_pids);
+    let mut dofus_pids = Vec::new();
+    enumerate_dofus_windows(regex, buf, &mut dofus_pids, exe_cache, seen_pids);
     exe_cache.retain(|pid, _| seen_pids.contains(pid));
+    if **DOFUS_PIDS.load() != dofus_pids {
+        DOFUS_PIDS.store(Arc::new(dofus_pids));
+    }
     snapshot.store(Arc::new(buf.clone()));
     ctx.request_repaint();
 }

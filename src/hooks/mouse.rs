@@ -50,7 +50,12 @@ pub unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPAR
 
     let focus_target = HOOK_STATE.get().and_then(|m| {
         let mut state = m.lock().ok()?;
-        resolve_action(&mut state, t, crate::win::foreground_window)
+        resolve_action(
+            &mut state,
+            t,
+            crate::win::foreground_window,
+            crate::win::is_dofus_window,
+        )
     });
 
     if let Some(hwnd) = focus_target {

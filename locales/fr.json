@@ -7,23 +7,35 @@
     "empty_hint": "Lance Dofus pour voir tes personnages ici.",
     "activate": "Activer",
     "deactivate": "Désactiver",
-    "activate_hint": "se réduit dans la barre système"
+    "activate_hint": "se réduit dans la barre système",
+    "activate_hint_taskbar": "se réduit dans la barre des tâches"
   },
   "header": {
     "tooltip_minimize": "Réduire dans la barre système",
+    "tooltip_minimize_taskbar": "Réduire dans la barre des tâches",
     "tooltip_close": "Fermer",
     "tooltip_theme": "Changer de thème",
     "tooltip_lang": "Langue",
     "tooltip_refresh": "Rafraîchir",
-    "tooltip_about": "À propos"
+    "tooltip_settings": "Réglages"
+  },
+  "settings": {
+    "tab_options": "Options",
+    "tab_about": "À propos",
+    "dofus_only": "Raccourcis seulement dans Dofus",
+    "dofus_only_hint": "Dans une autre application, la touche ou le bouton fonctionne normalement.",
+    "minimize_to_taskbar": "Réduire dans la barre des tâches",
+    "minimize_to_taskbar_hint": "« – » et « Activer » réduisent la fenêtre en bas de l'écran au lieu de la barre système.",
+    "always_on_top": "Toujours au premier plan",
+    "always_on_top_hint": "La fenêtre reste au-dessus de Dofus et des autres fenêtres.",
+    "close": "Fermer",
+    "esc_hint": "Échap pour fermer"
   },
   "about": {
     "credit": "Développé par Loulouw avec l'aide de Claude",
     "ankama_credit": "Illustrations © Ankama Studio. Dofus est une marque d'Ankama — tous droits réservés.",
     "report_bug": "Signaler un bug",
-    "open_config_dir": "Ouvrir le dossier de config",
-    "close": "Fermer",
-    "esc_hint": "Échap pour fermer"
+    "open_config_dir": "Ouvrir le dossier de config"
   },
   "tray": {
     "show": "Afficher",

@@ -9,7 +9,7 @@ use tray_icon::{Icon, TrayIcon, TrayIconBuilder, TrayIconEvent};
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{
-    PostMessageW, SetForegroundWindow, ShowWindow, SW_SHOW, WM_CLOSE,
+    IsIconic, PostMessageW, SetForegroundWindow, ShowWindow, SW_RESTORE, SW_SHOW, WM_CLOSE,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +33,10 @@ fn show_main_window() {
     if let Some(&raw) = MAIN_HWND.get() {
         let hwnd = HWND(raw as *mut _);
         unsafe {
-            let _ = ShowWindow(hwnd, SW_SHOW);
+            // Minimized to the taskbar (option): SW_SHOW would leave it
+            // iconic.
+            let cmd = if IsIconic(hwnd).as_bool() { SW_RESTORE } else { SW_SHOW };
+            let _ = ShowWindow(hwnd, cmd);
             let _ = SetForegroundWindow(hwnd);
         }
     }

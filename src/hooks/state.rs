@@ -23,6 +23,9 @@ pub struct HookState {
     /// so we can re-locate it inside `cycle_hwnds` after a reorder, keeping
     /// the user "on the same account" across drags.
     pub cycle_current_hwnd: Option<isize>,
+    /// Bindings only fire while a Dofus window is in front; elsewhere the
+    /// key or button goes through untouched.
+    pub dofus_only: bool,
 }
 
 pub static HOOK_STATE: OnceLock<Mutex<HookState>> = OnceLock::new();

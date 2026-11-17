@@ -41,7 +41,6 @@ fn main() -> eframe::Result<()> {
         .with_resizable(false)
         .with_decorations(false)
         .with_transparent(false)
-        .with_window_level(egui::WindowLevel::AlwaysOnTop)
         .with_icon(Arc::new(icon_data))
         .with_title("ROrganizer");
 

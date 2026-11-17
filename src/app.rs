@@ -131,9 +131,16 @@ pub struct App {
     /// User-overridden title regex from config, or `None` to use the
     /// built-in default. We persist whatever we loaded (round-trip stable).
     title_regex: Option<String>,
-    /// Whether the "About" modal is currently displayed. Owned by App so
-    /// the dynamic height logic can reserve space for the overlay card.
-    show_about: bool,
+    /// Whether the settings modal is displayed. Owned by App so the dynamic
+    /// height logic can reserve space for the overlay card.
+    show_settings: bool,
+    settings_tab: ui::settings::Tab,
+    shortcuts_only_in_dofus: bool,
+    minimize_to_taskbar: bool,
+    always_on_top: bool,
+    main_hwnd: Option<isize>,
+    /// Last known top-left corner of the main window, physical pixels.
+    window_pos: Option<(i32, i32)>,
     /// Decoded once at boot. egui_extras is built without the PNG loader
     /// (only `svg`), so `Image::from_bytes("bytes://*.png", ...)` would
     /// render the red error placeholder. None on decode failure.
@@ -155,10 +162,12 @@ impl App {
         cc: &eframe::CreationContext<'_>,
         #[cfg(windows)] waiter_event: windows::Win32::Foundation::HANDLE,
     ) -> Self {
-        if let Ok(handle) = cc.window_handle()
-            && let RawWindowHandle::Win32(h) = handle.as_raw()
-        {
-            tray::register_main_hwnd(h.hwnd.get());
+        let main_hwnd = match cc.window_handle().map(|h| h.as_raw()) {
+            Ok(RawWindowHandle::Win32(h)) => Some(h.hwnd.get()),
+            _ => None,
+        };
+        if let Some(hwnd) = main_hwnd {
+            tray::register_main_hwnd(hwnd);
         }
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -168,6 +177,18 @@ impl App {
         // Load persisted config if any (silently falls back to defaults).
         let config_path = config::default_path();
         let stored = config_path.as_ref().and_then(|p| config::load(p));
+        let shortcuts_only_in_dofus = stored.as_ref().is_some_and(|c| c.shortcuts_only_in_dofus);
+        let minimize_to_taskbar = stored.as_ref().is_some_and(|c| c.minimize_to_taskbar);
+        let always_on_top = stored.as_ref().is_none_or(|c| c.always_on_top);
+        let window_pos = stored.as_ref().and_then(|c| c.window_pos);
+        if always_on_top {
+            cc.egui_ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
+                egui::WindowLevel::AlwaysOnTop,
+            ));
+        }
+        if let (Some(hwnd), Some(pos)) = (main_hwnd, window_pos) {
+            win::placement::restore(hwnd, pos);
+        }
 
         let (theme, lang, bindings, cycle_order, title_regex) = match stored {
             Some(cfg) => (
@@ -212,7 +233,7 @@ impl App {
         let (refresh_tx, refresh_rx) = channel();
         win::spawn_watcher(windows.clone(), cc.egui_ctx.clone(), regex_src, refresh_rx);
 
-        let hooks = crate::hooks::install();
+        let hooks = crate::hooks::install(shortcuts_only_in_dofus);
 
         Self {
             theme,
@@ -235,7 +256,13 @@ impl App {
             hooks,
             conflicts_cache: None,
             title_regex,
-            show_about: false,
+            show_settings: false,
+            settings_tab: ui::settings::Tab::Options,
+            shortcuts_only_in_dofus,
+            minimize_to_taskbar,
+            always_on_top,
+            main_hwnd,
+            window_pos,
             about_icon,
             class_icons,
         }
@@ -253,19 +280,70 @@ impl App {
         self.is_active
     }
 
-    pub fn is_about_open(&self) -> bool {
-        self.show_about
+    pub fn is_settings_open(&self) -> bool {
+        self.show_settings
     }
 
-    pub fn open_about(&mut self) {
-        self.show_about = true;
+    /// Opens on the Options tab: the gear is first a settings button.
+    pub fn open_settings(&mut self) {
+        self.show_settings = true;
+        self.settings_tab = ui::settings::Tab::Options;
     }
 
-    pub fn close_about(&mut self) {
-        self.show_about = false;
+    pub fn close_settings(&mut self) {
+        self.show_settings = false;
     }
 
-    /// Parent of the persisted config file, used by the About modal to
+    pub fn settings_tab(&self) -> ui::settings::Tab {
+        self.settings_tab
+    }
+
+    pub fn set_settings_tab(&mut self, tab: ui::settings::Tab) {
+        self.settings_tab = tab;
+    }
+
+    pub fn shortcuts_only_in_dofus(&self) -> bool {
+        self.shortcuts_only_in_dofus
+    }
+
+    pub fn set_shortcuts_only_in_dofus(&mut self, on: bool) {
+        if self.shortcuts_only_in_dofus != on {
+            self.shortcuts_only_in_dofus = on;
+            self.hooks.set_dofus_only(on);
+            self.mark_dirty();
+        }
+    }
+
+    pub fn minimize_to_taskbar(&self) -> bool {
+        self.minimize_to_taskbar
+    }
+
+    pub fn set_minimize_to_taskbar(&mut self, on: bool) {
+        if self.minimize_to_taskbar != on {
+            self.minimize_to_taskbar = on;
+            self.mark_dirty();
+        }
+    }
+
+    pub fn always_on_top(&self) -> bool {
+        self.always_on_top
+    }
+
+    /// Applied right away, no restart needed.
+    pub fn set_always_on_top(&mut self, ctx: &egui::Context, on: bool) {
+        if self.always_on_top != on {
+            self.always_on_top = on;
+            let level = if on {
+                egui::WindowLevel::AlwaysOnTop
+            } else {
+                egui::WindowLevel::Normal
+            };
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(level));
+            self.mark_dirty();
+        }
+    }
+
+    /// Parent of the persisted config file, used by the settings modal to
     /// open the directory in Explorer. None when no usable config dir
     /// could be detected (extremely rare on Windows).
     pub fn config_dir(&self) -> Option<&std::path::Path> {
@@ -278,7 +356,25 @@ impl App {
 
     pub fn request_activate(&mut self, ctx: &egui::Context) {
         self.set_active(true);
-        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        self.put_away(ctx);
+    }
+
+    /// Takes the window off screen the way the user chose: minimized to the
+    /// taskbar, or hidden in the system tray.
+    fn put_away(&self, ctx: &egui::Context) {
+        let cmd = if self.minimize_to_taskbar {
+            egui::ViewportCommand::Minimized(true)
+        } else {
+            egui::ViewportCommand::Visible(false)
+        };
+        ctx.send_viewport_cmd(cmd);
+    }
+
+    /// Brings the window back, whichever way it was put away.
+    fn bring_back(ctx: &egui::Context) {
+        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+        ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
     }
 
     pub fn request_deactivate(&mut self) {
@@ -337,8 +433,18 @@ impl App {
         let _ = self.refresh_tx.send(());
     }
 
+    /// Records where the user left the window. Skipped while it is minimized
+    /// or hidden, where Windows reports a parking spot.
+    fn track_window_pos(&mut self) {
+        let pos = self.main_hwnd.and_then(win::placement::position);
+        if pos.is_some() && pos != self.window_pos {
+            self.window_pos = pos;
+            self.mark_dirty();
+        }
+    }
+
     pub fn request_minimize(&self, ctx: &egui::Context) {
-        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        self.put_away(ctx);
     }
 
     pub fn request_close(&self, ctx: &egui::Context) {
@@ -494,6 +600,10 @@ impl App {
             lang: self.lang,
             theme: self.theme,
             title_regex: self.title_regex.clone(),
+            shortcuts_only_in_dofus: self.shortcuts_only_in_dofus,
+            minimize_to_taskbar: self.minimize_to_taskbar,
+            always_on_top: self.always_on_top,
+            window_pos: self.window_pos,
         };
         let _ = config::save_atomic(path, &cfg);
     }
@@ -599,14 +709,12 @@ impl App {
             + CYCLE_BLOCK
             + toggle_h
             + TAIL_PAD;
-        // The About modal card is 380 px tall + 20 px padding. When it's
-        // open we force the viewport at least that tall so the card
-        // doesn't get clipped at the bottom — a clipped close button
-        // would visually look like the modal is broken.
-        const ABOUT_MIN: f32 = 420.0;
+        // While the settings card is open, the viewport is kept at least that
+        // tall (+ margin) so the card isn't clipped at the bottom — a clipped
+        // close button would look like a broken modal.
         let mut desired = desired_content;
-        if self.show_about {
-            desired = desired.max(ABOUT_MIN);
+        if self.show_settings {
+            desired = desired.max(ui::settings::CARD_HEIGHT + 20.0);
         }
         let desired = desired.clamp(280.0, 600.0);
 
@@ -623,10 +731,7 @@ impl eframe::App for App {
         let ctx = &ctx;
         while let Ok(ev) = self.tray_rx.try_recv() {
             match ev {
-                TrayEvent::ShowRequested => {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
-                }
+                TrayEvent::ShowRequested => Self::bring_back(ctx),
                 TrayEvent::ToggleRequested => {
                     // The tray callback already called Win32 ShowWindow to
                     // wake the parked eframe loop. eframe's tracked
@@ -639,11 +744,11 @@ impl eframe::App for App {
                     self.set_active(new_active);
                     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
                     if new_active {
-                        // Tray Activer: hide window (running in background).
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                        // Tray Activer: put the window away (running in background).
+                        self.put_away(ctx);
                     } else {
                         // Tray Désactiver: bring the window forward.
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                        Self::bring_back(ctx);
                     }
                 }
             }
@@ -658,16 +763,18 @@ impl eframe::App for App {
         self.sync_state_to_hooks(false);
         self.update_tray_status(false);
         self.apply_dynamic_height(ctx);
+        self.track_window_pos();
 
         ui::header::draw(ui, self);
         ui::main_view::draw(ui, self);
         ui::capture::draw(ctx, self);
-        ui::about::draw(ctx, self);
+        ui::settings::draw(ctx, self);
 
         self.flush_if_due();
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.track_window_pos();
         if self.last_dirty_at.is_some() {
             self.persist_config();
             self.last_dirty_at = None;
