@@ -567,7 +567,7 @@ fn pill_colors(theme: Theme, has_binding: bool, hovered: bool) -> (Color32, Colo
             theme::TEXT_TERTIARY_DARK,
         ),
         Theme::Light => (
-            Color32::from_rgb(0xF1, 0xEF, 0xE8),
+            Color32::from_rgb(0xE6, 0xE3, 0xDA),
             Color32::TRANSPARENT,
             Color32::from_rgba_unmultiplied(0x00, 0x00, 0x00, 0x10),
             Color32::from_rgba_unmultiplied(0x00, 0x00, 0x00, 0x22),

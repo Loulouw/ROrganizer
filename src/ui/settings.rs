@@ -58,7 +58,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     let screen_rect = ctx.content_rect();
     let backdrop = match theme {
         Theme::Dark => Color32::from_rgba_unmultiplied(0x10, 0x10, 0x0E, 0xCC),
-        Theme::Light => Color32::from_rgba_unmultiplied(0xFA, 0xFA, 0xF7, 0xCC),
+        Theme::Light => Color32::from_rgba_unmultiplied(0xD8, 0xD5, 0xCD, 0xCC),
     };
     let card_bg = match theme {
         Theme::Dark => theme::BG_ROW_DARK,
@@ -427,9 +427,9 @@ fn row_palette(theme: Theme, hovered: bool) -> (Color32, Color32) {
             (bg, theme::BORDER_SUBTLE_DARK)
         }
         Theme::Light => {
-            let base = Color32::from_rgb(0xF1, 0xEF, 0xE8);
+            let base = Color32::from_rgb(0xEA, 0xE8, 0xE1);
             let bg = if hovered {
-                Color32::from_rgb(0xE8, 0xE6, 0xDF)
+                Color32::from_rgb(0xE0, 0xDD, 0xD5)
             } else {
                 base
             };

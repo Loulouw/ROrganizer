@@ -33,14 +33,16 @@ pub const CONFLICT_BORDER_DARK: Color32 = Color32::from_rgba_premultiplied(0xE2,
 pub const CONFLICT_PILL_BG_DARK: Color32 = Color32::from_rgb(0x50, 0x13, 0x13);
 pub const CONFLICT_PILL_TEXT_DARK: Color32 = Color32::from_rgb(0xF0, 0x95, 0x95);
 
-// Light palette.
-pub const BG_WINDOW_LIGHT: Color32 = Color32::from_rgb(0xFA, 0xFA, 0xF7);
-pub const BG_ROW_LIGHT: Color32 = Color32::from_rgb(0xFF, 0xFF, 0xFF);
-pub const BORDER_SUBTLE_LIGHT: Color32 = Color32::from_rgba_premultiplied(0x14, 0x14, 0x14, 0x14);
-pub const BORDER_STRONG_LIGHT: Color32 = Color32::from_rgba_premultiplied(0x21, 0x21, 0x21, 0x21);
+// Light palette. Warm grey window with off-white rows: pure white rows on a
+// near-white window glared and left the rows without visible edges.
+pub const BG_WINDOW_LIGHT: Color32 = Color32::from_rgb(0xE9, 0xE7, 0xE1);
+pub const BG_ROW_LIGHT: Color32 = Color32::from_rgb(0xF5, 0xF4, 0xF0);
+// Black at low alpha: a light border must darken what is under it.
+pub const BORDER_SUBTLE_LIGHT: Color32 = Color32::from_rgba_premultiplied(0x00, 0x00, 0x00, 0x1C);
+pub const BORDER_STRONG_LIGHT: Color32 = Color32::from_rgba_premultiplied(0x00, 0x00, 0x00, 0x2E);
 pub const TEXT_PRIMARY_LIGHT: Color32 = Color32::from_rgb(0x2C, 0x2C, 0x2A);
-pub const TEXT_SECONDARY_LIGHT: Color32 = Color32::from_rgb(0x5F, 0x5E, 0x5A);
-pub const TEXT_TERTIARY_LIGHT: Color32 = Color32::from_rgb(0x88, 0x87, 0x80);
+pub const TEXT_SECONDARY_LIGHT: Color32 = Color32::from_rgb(0x4F, 0x4E, 0x4A);
+pub const TEXT_TERTIARY_LIGHT: Color32 = Color32::from_rgb(0x6E, 0x6D, 0x66);
 pub const ACTIVE_LIGHT: Color32 = Color32::from_rgb(0x63, 0x99, 0x22);
 
 // Conflict palette (light)
@@ -118,7 +120,7 @@ pub fn text_tertiary(theme: Theme) -> Color32 {
 pub fn hover_bg(theme: Theme) -> Color32 {
     match theme {
         Theme::Dark => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
-        Theme::Light => Color32::from_rgba_premultiplied(0x18, 0x18, 0x18, 0x18),
+        Theme::Light => Color32::from_rgba_premultiplied(0x00, 0x00, 0x00, 0x12),
     }
 }
 

@@ -30,7 +30,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     let screen_rect = ctx.content_rect();
     let backdrop = match theme {
         Theme::Dark => Color32::from_rgba_unmultiplied(0x10, 0x10, 0x0E, 0xCC),
-        Theme::Light => Color32::from_rgba_unmultiplied(0xFA, 0xFA, 0xF7, 0xCC),
+        Theme::Light => Color32::from_rgba_unmultiplied(0xD8, 0xD5, 0xCD, 0xCC),
     };
     let card_bg = match theme {
         Theme::Dark => theme::BG_ROW_DARK,
