@@ -6,6 +6,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetForegroundWindow, ShowWindow, SW_RESTORE,
 };
 
+/// HWND of the window currently in front, if any.
+pub fn foreground_window() -> Option<isize> {
+    let hwnd = unsafe { GetForegroundWindow() };
+    (!hwnd.0.is_null()).then_some(hwnd.0 as isize)
+}
+
 /// Bring the Win32 window owning `hwnd_raw` to the foreground.
 ///
 /// Uses the AttachThreadInput dance because a non-foreground process is otherwise
