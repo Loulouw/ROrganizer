@@ -1,6 +1,8 @@
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
+use crate::win::keyboard_layout;
+
 pub type SlotKey = String;
 
 /// What the user is binding a Trigger to.
@@ -37,6 +39,10 @@ pub enum WheelDir {
 impl Trigger {
     pub fn display_label(&self) -> String {
         match self {
+            // The printed character depends on the layout (AZERTY 0xDE is `²`).
+            Trigger::Key(vk) if is_oem_vk(*vk) => keyboard_layout::vk_to_char(*vk)
+                .map(String::from)
+                .unwrap_or_else(|| vk_to_label(*vk)),
             Trigger::Key(vk) => vk_to_label(*vk),
             Trigger::Mouse(MouseBtn::Middle) => "MWheel".into(),
             Trigger::Mouse(MouseBtn::X1) => "Mb4".into(),
@@ -45,6 +51,83 @@ impl Trigger {
             Trigger::Wheel(WheelDir::Down) => "MWh\u{2193}".into(),
         }
     }
+}
+
+/// VK the LL hook will receive for this key press.
+///
+/// The hook gets the VK the active layout assigns to the scan code, while
+/// `key_to_vk` assumes US-QWERTY: AZERTY `²` would be stored as 0xC0, which
+/// the hook sees as `ù`. Keys of the typing area are therefore resolved from
+/// their physical position on the active layout; the rest (F-keys,
+/// navigation, no physical key reported) go through `key_to_vk`.
+pub fn event_to_vk(key: egui::Key, physical_key: Option<egui::Key>) -> Option<u32> {
+    physical_key
+        .and_then(typing_scan_code)
+        .and_then(keyboard_layout::scan_code_to_vk)
+        .or_else(|| key_to_vk(key))
+}
+
+/// Set-1 scan code of a typing-area key, named by egui after its US-QWERTY
+/// legend. Digits stay ambiguous: egui reports the numpad digits as the same
+/// `NumX`, so a numpad press resolves to the top-row VK, as `key_to_vk` does.
+fn typing_scan_code(key: egui::Key) -> Option<u32> {
+    use egui::Key;
+    Some(match key {
+        Key::Num1 => 0x02,
+        Key::Num2 => 0x03,
+        Key::Num3 => 0x04,
+        Key::Num4 => 0x05,
+        Key::Num5 => 0x06,
+        Key::Num6 => 0x07,
+        Key::Num7 => 0x08,
+        Key::Num8 => 0x09,
+        Key::Num9 => 0x0A,
+        Key::Num0 => 0x0B,
+        Key::Minus => 0x0C,
+        Key::Equals => 0x0D,
+        Key::Q => 0x10,
+        Key::W => 0x11,
+        Key::E => 0x12,
+        Key::R => 0x13,
+        Key::T => 0x14,
+        Key::Y => 0x15,
+        Key::U => 0x16,
+        Key::I => 0x17,
+        Key::O => 0x18,
+        Key::P => 0x19,
+        Key::OpenBracket => 0x1A,
+        Key::CloseBracket => 0x1B,
+        Key::A => 0x1E,
+        Key::S => 0x1F,
+        Key::D => 0x20,
+        Key::F => 0x21,
+        Key::G => 0x22,
+        Key::H => 0x23,
+        Key::J => 0x24,
+        Key::K => 0x25,
+        Key::L => 0x26,
+        Key::Semicolon => 0x27,
+        Key::Quote => 0x28,
+        Key::Backtick => 0x29,
+        Key::Backslash => 0x2B,
+        Key::Z => 0x2C,
+        Key::X => 0x2D,
+        Key::C => 0x2E,
+        Key::V => 0x2F,
+        Key::B => 0x30,
+        Key::N => 0x31,
+        Key::M => 0x32,
+        Key::Comma => 0x33,
+        Key::Period => 0x34,
+        Key::Slash => 0x35,
+        Key::IntlBackslash => 0x56,
+        _ => return None,
+    })
+}
+
+/// VK_OEM_* codes: their printed character depends on the layout.
+fn is_oem_vk(vk: u32) -> bool {
+    matches!(vk, 0xBA..=0xC0 | 0xDB..=0xDF | 0xE2)
 }
 
 pub fn key_to_vk(key: egui::Key) -> Option<u32> {
@@ -131,6 +214,8 @@ pub fn key_to_vk(key: egui::Key) -> Option<u32> {
         Key::Period => 0xBE,
         Key::Slash => 0xBF,
         Key::Backtick => 0xC0,
+        // ISO key left of Z (`<>` on AZERTY): VK_OEM_102.
+        Key::IntlBackslash => 0xE2,
         _ => return None,
     })
 }
@@ -200,6 +285,7 @@ pub fn vk_to_label(vk: u32) -> String {
         0xBE => ".".into(),
         0xBF => "/".into(),
         0xC0 => "`".into(),
+        0xE2 => "<".into(),
         _ => format!("VK_0x{vk:02X}"),
     }
 }
@@ -261,6 +347,45 @@ mod tests {
     fn vk_label_unknown_falls_back_to_hex() {
         assert_eq!(vk_to_label(0xFE), "VK_0xFE");
         assert_eq!(vk_to_label(0x00), "VK_0x00");
+    }
+
+    #[test]
+    fn typing_scan_codes_are_distinct_and_have_a_fallback() {
+        // Two keys on one scan code would bind both to the same VK; a key
+        // missing from `key_to_vk` would be lost if the layout lookup fails.
+        let mut seen = std::collections::HashMap::new();
+        for key in egui::Key::ALL {
+            if let Some(sc) = typing_scan_code(*key) {
+                assert!(key_to_vk(*key).is_some(), "{key:?} has no fallback VK");
+                if let Some(other) = seen.insert(sc, *key) {
+                    panic!("{key:?} and {other:?} share scan code {sc:#04X}");
+                }
+            }
+        }
+        assert_eq!(seen.len(), 48);
+    }
+
+    #[test]
+    fn every_us_punctuation_vk_counts_as_oem() {
+        // Their label must come from the layout, not the US legend.
+        use egui::Key;
+        for key in [
+            Key::Minus,
+            Key::Equals,
+            Key::OpenBracket,
+            Key::CloseBracket,
+            Key::Backslash,
+            Key::Semicolon,
+            Key::Quote,
+            Key::Backtick,
+            Key::Comma,
+            Key::Period,
+            Key::Slash,
+            Key::IntlBackslash,
+        ] {
+            assert!(is_oem_vk(key_to_vk(key).unwrap()), "{key:?}");
+        }
+        assert!(!is_oem_vk(0x41) && !is_oem_vk(0x70) && !is_oem_vk(0x30));
     }
 
     #[test]

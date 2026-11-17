@@ -1,5 +1,6 @@
 pub mod enumerate;
 pub mod focus;
+pub mod keyboard_layout;
 pub mod process;
 pub mod watcher;
 

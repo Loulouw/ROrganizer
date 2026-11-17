@@ -4,7 +4,7 @@ use rust_i18n::t;
 
 use crate::app::App;
 use crate::theme::{self, Theme};
-use crate::triggers::{key_to_vk, BindingTarget, MouseBtn, Trigger, WheelDir};
+use crate::triggers::{event_to_vk, BindingTarget, MouseBtn, Trigger, WheelDir};
 
 pub fn draw(ctx: &egui::Context, app: &mut App) {
     let Some(target) = app.capture_state().cloned() else {
@@ -112,6 +112,7 @@ fn extract_first_trigger(events: &[egui::Event]) -> Option<Trigger> {
         match ev {
             egui::Event::Key {
                 key,
+                physical_key,
                 pressed: true,
                 repeat: false,
                 ..
@@ -119,7 +120,7 @@ fn extract_first_trigger(events: &[egui::Event]) -> Option<Trigger> {
                 if matches!(key, egui::Key::Escape) {
                     continue;
                 }
-                if let Some(vk) = key_to_vk(*key) {
+                if let Some(vk) = event_to_vk(*key, *physical_key) {
                     return Some(Trigger::Key(vk));
                 }
             }

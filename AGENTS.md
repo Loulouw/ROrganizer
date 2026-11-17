@@ -115,15 +115,13 @@ act through Win32 on `tray::MAIN_HWND`:
 ### LL hooks don't fire while our own window is foreground
 
 Measured: zero keyboard-hook calls when our window has focus. Binding
-capture therefore goes through egui events (`Event::Key` → `key_to_vk`).
+capture therefore goes through egui events (`Event::Key` → `event_to_vk`).
 Rejected: hook on the main thread (no fix, freezes), defocusing during
 capture (visible focus flicker). Accepted limits:
 
 - `key_to_vk` is the whitelist: F21+ don't exist in `egui::Key`, and the
   Pause/lock/media/browser keys egui 0.37 added are not mapped;
-- `Num0`–`Num9` conflate numpad and top row;
-- OEM keys on non-US layouts map by physical position (² → `Backtick` →
-  0xC0) while the hook receives the real VK (0xDE).
+- `Num0`–`Num9` conflate numpad and top row.
 
 ### Hook callbacks are on the global input path
 
