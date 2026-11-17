@@ -223,8 +223,10 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     }
 }
 
-const BUG_GLYPH: &str = "\u{26A0}"; // ⚠
-const FOLDER_GLYPH: &str = "\u{1F4C1}"; // 📁 — best-effort, font may fall back
+// WARNING SIGN and FILE FOLDER: only the bundled emoji fonts carry them
+// (egui feature `monochrome_emoji_fonts`).
+const BUG_GLYPH: &str = "\u{26A0}";
+const FOLDER_GLYPH: &str = "\u{1F4C1}";
 
 fn github_link(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     let height = 36.0;

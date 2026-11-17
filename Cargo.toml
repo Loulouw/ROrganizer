@@ -13,8 +13,9 @@ categories = ["gui"]
 
 [dependencies]
 eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts"] }
-# Les glyphes ⟳ ⚠ 📁 de l'UI n'existent que dans les polices emoji embarquées,
-# que default_fonts n'inclut pas : sans cette feature, tofu à l'écran.
+# Les glyphes refresh (U+27F3), warning (U+26A0) et dossier (U+1F4C1) de l'UI
+# n'existent que dans les polices emoji embarquées, que default_fonts n'inclut
+# pas : sans cette feature, tofu à l'écran.
 egui = { version = "0.37", features = ["monochrome_emoji_fonts"] }
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 egui_dnd = "0.18"
