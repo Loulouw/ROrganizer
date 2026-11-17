@@ -34,7 +34,7 @@ fn main() {
 
         // embed-resource 3.x returns a CompilationResult that must be
         // consumed. The shipped exe relies on the embedded icon resource
-        // (see CLAUDE.md: Explorer picks the lowest numeric ICON ID), so
+        // (Explorer picks the lowest numeric ICON ID, see above), so
         // an unattempted or failed compile must abort the build.
         embed_resource::compile(&rc_path, embed_resource::NONE)
             .manifest_required()

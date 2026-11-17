@@ -43,7 +43,7 @@ jobs:
       # the maintainer's home directory 92 times. These remaps strip them, and
       # /Brepro drops the PE timestamp so two runs at the same path match.
       # They do NOT buy third-party reproducibility - the MSVC linker orders
-      # its output by the absolute paths it is handed. See CLAUDE.md.
+      # its output by the absolute paths it is handed. See AGENTS.md.
       - name: Build
         id: build
         shell: pwsh

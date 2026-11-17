@@ -1,0 +1,203 @@
+# AGENTS.md
+
+ROrganizer: Windows window manager for multi-account Dofus (Unity and
+Rétro). Global keyboard/mouse shortcuts focus any running client. Rust,
+eframe/egui, Win32.
+
+This file holds only what the code does not tell you. Gotchas local to one
+function are documented as comments next to that code — read them before
+changing it.
+
+**Working on `site/`? Read `AGENTS.site.md` first.** It lives at the root
+because Pages publishes the whole `site/` directory.
+
+## Hard rules
+
+- `cargo test` green, `cargo build` with zero warnings.
+- No network: zero outbound sockets. No HTTP client in the tree
+  (`reqwest`, `hyper`, `tokio` absent from `Cargo.lock`). Native threads,
+  no async runtime.
+- No file logging, no temp files, never log keystrokes. The only file the
+  app writes is `%APPDATA%\rorganizer\config.json`.
+- Manifest stays `asInvoker`: LL hooks work from a user process as long as
+  Dofus runs as user. `requireAdministrator` would cost a UAC prompt per
+  launch for nothing.
+- Never build and upload a release exe by hand: a local binary has no
+  provenance attestation. See [Release](#release).
+
+## Build
+
+Toolchain `stable-x86_64-pc-windows-msvc`, PowerShell:
+
+```powershell
+$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+cargo build --release   # never distribute a debug build
+```
+
+Release builds set `windows_subsystem = "windows"`: no console,
+`eprintln!` is lost. Debug with a plain `cargo build` run from a terminal.
+
+Effective MSRV is 1.95, imposed by egui 0.36, and nothing pins it: an older
+toolchain fails inside a dependency, not in this code. No
+`rust-toolchain.toml` on purpose — it would force a rustc version on every
+contributor for a benefit limited to release verification.
+
+## Dependencies
+
+- `eframe`: `default-features = false, features = ["glow", "default_fonts"]`.
+  Don't strip further: `default-features = false` on `egui` breaks window
+  creation (font lookup).
+- `egui_extras`: `svg` only, no PNG loader compiled.
+  `Image::from_bytes("bytes://*.png")` renders the red error placeholder.
+  Decode with `image`, then `ctx.load_texture` (see `decode_about_icon`).
+- `egui_dnd` tracks egui's version exactly: bump them together.
+- egui drops every `#[deprecated]` API at the next minor (0.35 did it in one
+  go). Fix deprecation warnings when they appear; `#[allow(deprecated)]` is
+  a scheduled compile break.
+- URLs open through `webbrowser`: `cmd /C start` flashes a console.
+
+### Supply-chain audit before any bump
+
+crates.io was hit by real campaigns in 2026 (TrapDoor, Miasma worm). The
+vector is code run at build time — `build.rs` and proc-macros — not shipped
+code. No blind `cargo update`.
+
+```powershell
+cargo install cargo-audit cargo-deny --locked   # --locked mandatory
+cargo deny check advisories bans sources licenses
+cargo audit
+```
+
+`deny.toml` key settings: `[graph] targets = ["x86_64-pc-windows-msvc"]`
+scopes the audit to the ~245 crates compiled here instead of the ~390 in
+the lockfile (advisories for never-compiled crates bury real ones);
+`unknown-registry/unknown-git = "deny"` keeps every dependency on
+crates.io.
+
+By hand, on the lockfile diff:
+
+- Read every `build.rs` new or version-changed in the Windows graph.
+  Unchanged versions are checksum-verified by Cargo. Skip `tests/`,
+  `benches/`, `examples/`: never compiled for a dependency.
+- Grep those for IoCs: `std::net`, `TcpStream`, `reqwest`, `ureq`,
+  `Command::new`, `home_dir`, `.ssh`, `.env`, `keystore`, `wallet`, `AWS_`,
+  `GITHUB_TOKEN`, base64 blobs, writes outside `OUT_DIR`. Usual false
+  positive: the `Command::new(rustc) --version` probe.
+- Genuinely new crates: check `crates.io/api/v1/crates/<name>` and
+  `/owners` — owner, repo, age, downloads. Recent, low volume, name close
+  to a popular crate = typosquat.
+- Second database, nothing to install: POST the list from
+  `cargo tree --target x86_64-pc-windows-msvc` to
+  `https://api.osv.dev/v1/querybatch`.
+
+## Cross-cutting gotchas
+
+### eframe parks its loop while the viewport is hidden
+
+With `Visible(false)`, `request_repaint()` does not wake `App::ui`,
+viewport commands pile up unprocessed, and channels drained in `App::ui`
+are never drained. Tray handlers (run on the main thread) must therefore
+act through Win32 on `tray::MAIN_HWND`:
+
+- show: `ShowWindow(SW_SHOW)` + `SetForegroundWindow`;
+- close: `ShowWindow(SW_SHOW)` **then** `PostMessageW(WM_CLOSE)`, otherwise
+  `WM_CLOSE` waits in the queue until the next wake-up.
+
+### LL hooks don't fire while our own window is foreground
+
+Measured: zero keyboard-hook calls when our window has focus. Binding
+capture therefore goes through egui events (`Event::Key` → `key_to_vk`).
+Rejected: hook on the main thread (no fix, freezes), defocusing during
+capture (visible focus flicker). Accepted limits:
+
+- `egui::Key` is finite: no media keys, F21+, Pause;
+- `Num0`–`Num9` conflate numpad and top row;
+- OEM keys on non-US layouts map by physical position (² → `Backtick` →
+  0xC0) while the hook receives the real VK (0xDE).
+
+### Hook callbacks are on the global input path
+
+`kb_proc` / `mouse_proc` run for every input event on the machine. Any
+blocking there is input lag for the whole system.
+
+### Window height is computed, not measured
+
+`ctx.used_rect()` misses overflowing widgets, so `App::apply_dynamic_height`
+uses tuned constants. Any new conditional UI element (banner, modal…) must
+add its height there.
+
+### Bindings outlive characters, by design
+
+`bindings` is never purged: a shortcut set on a character that isn't running
+stays in `config.json`, so players who alternate keep it. Conflict detection
+must only count what `sync_state_to_hooks` actually wires (see
+`compute_conflicts`).
+
+### Detected clients
+
+| Client | Exe | Window title |
+|---|---|---|
+| Dofus / Expérimental | `Dofus.exe` | `Pseudo - Iop - 2.75.4.13 - Release` |
+| Dofus Rétro | `Dofus Retro.exe` | `Pseudo - Dofus Retro v1.48.21` |
+
+The exe filter runs before the title regex: a new client family needs both.
+Rétro titles carry no class (`class: None`). Rétro is Electron, ~8
+processes per client, a single visible titled window; before character
+selection its title has no ` - `, so no ghost row.
+
+## Testing
+
+Unit tests are inline `#[cfg(test)] mod tests` on pure functions.
+Programmatic end-to-end checks on Windows:
+
+- HWNDs: `EnumWindows` + `GetWindowThreadProcessId`. Tray hidden window
+  class `tray_icon_app`, main window title `ROrganizer`.
+- Keystrokes: `keybd_event` fires the LL hook; PowerShell
+  `SendKeys.SendWait` does not.
+- Screenshots: make the process DPI-aware before any graphics call
+  (`SetProcessDpiAwarenessContext(-4)`), then `SetWindowPos(HWND_TOPMOST)`
+  + `SetForegroundWindow` before `CopyFromScreen` — otherwise DWM renders
+  accelerated surfaces black.
+- Tray menu on Windows 11: no longer a `ToolbarWindow32`. Use UI
+  Automation: button `ROrganizer` in `Shell_TrayWnd`, right-click,
+  enumerate the `MenuItem`s. Compare labels with `-ceq`: `-like
+  "*Activer*"` also matches `Désactiver`.
+- Screenshot diffs: try several vertical offsets. An egui bump can shift
+  everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
+
+## Performance baseline
+
+| Metric | Stable value |
+|---|---|
+| Release binary | ~8.1 MiB |
+| RAM working set, idle | ~73 MB |
+| RAM private, idle | ~66-67 MB |
+| CPU, idle | 0 % (over 40 s) |
+| New Dofus window detection | ~150-200 ms |
+
+Measure RAM at least 15 s after launch: earlier, the font atlas and
+textures aren't realized yet (~60 MB), which looks like a regression at the
+next bump. Below ~30 MB is unreachable with eframe + glow + ICU.
+
+## Release
+
+`.github/workflows/release.yml` runs on a `v*` tag: tests, build,
+provenance attestation, **draft** release. The release body is the
+annotated tag message; the workflow inserts the SHA256/provenance block
+before the SmartScreen heading.
+
+- **Why a draft.** Defender flags the exe (`Wacatac`) until it is submitted
+  to Microsoft, and the submission clears one exact hash. One build,
+  submit, then `gh release edit <tag> --draft=false`. Never rebuild in
+  between. The attestation binds to the artifact hash, so it verifies while
+  still a draft.
+- **Tag with `git tag -a --cleanup=verbatim -F <notes>`.** The default
+  `strip` deletes every line starting with `#`: all `###` headings vanish,
+  including the SmartScreen anchor the insertion relies on.
+- **Reproducibility holds only at an identical path.** With the remaps in
+  `release.yml`, two builds at the same path are bit-identical, and CI
+  always builds in `D:\a\ROrganizer\ROrganizer` (verified across runs at
+  v1.3.0). At different paths they differ: `--remap-path-prefix` only
+  affects rustc, while the MSVC linker orders its output by the absolute
+  `.obj`/`.lib` paths it receives. Never tell users they can reproduce the
+  SHA256 — the guarantee is the provenance attestation.
