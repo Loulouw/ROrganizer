@@ -21,7 +21,8 @@ because Pages publishes the whole `site/` directory.
   test: it also resolves wasm-only deps, and winit's `wasm-bindgen-futures`
   pulls `tokio` in there. Native threads only.
 - No file logging, no temp files, never log keystrokes. The only file the
-  app writes is its `config.json`: `%APPDATA%\rorganizer\` on Windows,
+  app writes is its `config.json` (through a sibling `config.json.tmp`
+  renamed over it): `%APPDATA%\rorganizer\` on Windows,
   `~/Library/Application Support/rorganizer/` on macOS.
 - Manifest stays `asInvoker`: LL hooks work from a user process as long as
   Dofus runs as user. `requireAdministrator` would cost a UAC prompt per
@@ -152,7 +153,7 @@ capture therefore goes through egui events (`Event::Key` → `key_from_event`).
 Rejected: hook on the main thread (no fix, freezes), defocusing during
 capture (visible focus flicker). Accepted limits:
 
-- `key_to_vk` is the whitelist: F21+ don't exist in `egui::Key`, and the
+- `key_to_vk` is the whitelist: egui's F21–F35 and the
   Pause/lock/media/browser keys egui 0.37 added are not mapped;
 - `Num0`–`Num9` conflate numpad and top row.
 
@@ -194,7 +195,8 @@ signed with the same certificate; changing it costs every player the grant.
 While the grant is missing, the banner's button drops the always-on-top
 level (`App::request_input_permission`): the system prompt and System
 Settings are ordinary windows that ROrganizer would otherwise cover. The
-level comes back once the grant arrives.
+level comes back once the grant arrives, or once the user returns to
+ROrganizer without granting it.
 
 ### Detected clients
 
