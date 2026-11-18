@@ -160,6 +160,20 @@ stays in `config.json`, so players who alternate keep it. Conflict detection
 must only count what `sync_state_to_hooks` actually wires (see
 `compute_conflicts`).
 
+### The macOS Accessibility grant follows the code signature
+
+macOS ties the grant to the app's designated requirement. Ad-hoc signed
+(`codesign -s -`), that is the exact binary hash: every new build loses the
+grant while System Settings keeps showing the old entry as enabled, and
+nothing works. Signed with a certificate, it is the certificate: measured,
+the grant survives a binary swap. Shipped builds must therefore always be
+signed with the same certificate; changing it costs every player the grant.
+
+While the grant is missing, the banner's button drops the always-on-top
+level (`App::request_input_permission`): the system prompt and System
+Settings are ordinary windows that ROrganizer would otherwise cover. The
+level comes back once the grant arrives.
+
 ### Detected clients
 
 | Client | Exe | Window title |

@@ -34,7 +34,8 @@ pub struct StoredConfig {
     /// was before the option existed.
     #[serde(default = "default_true")]
     pub always_on_top: bool,
-    /// Top-left corner of the main window, physical screen pixels.
+    /// Top-left corner of the main window, in the screen coordinates of
+    /// `platform::placement` (Windows: physical pixels, macOS: points).
     #[serde(default)]
     pub window_pos: Option<(i32, i32)>,
 }

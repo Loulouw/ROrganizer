@@ -1,7 +1,6 @@
 //! macOS backend. Everything that reads or drives another app goes through
 //! the Accessibility API and the event tap, both gated by the Accessibility
-//! grant (`permission`). Window placement is still inert: the window opens
-//! centred.
+//! grant (`permission`).
 
 mod ax;
 mod focus;

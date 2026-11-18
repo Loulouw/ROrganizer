@@ -36,8 +36,8 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 .inner_margin(Margin::symmetric(12, 12)),
         )
         .show(ui, |ui| {
-            if !app.input_permission() {
-                draw_permission_banner(ui, theme);
+            if !app.input_permission() && draw_permission_banner(ui, theme) {
+                app.request_input_permission(ui.ctx());
             }
             draw_summary(
                 ui,
@@ -597,10 +597,11 @@ pub fn permission_banner_height(ctx: &egui::Context, theme: Theme) -> f32 {
         + PERMISSION_GAP_BELOW
 }
 
-fn draw_permission_banner(ui: &mut egui::Ui, theme: Theme) {
+/// True when its button was clicked.
+fn draw_permission_banner(ui: &mut egui::Ui, theme: Theme) -> bool {
     let (_row_bg, border, pill_bg, _pill_text) = theme::conflict_palette(theme);
     let text = permission_text(ui.ctx(), theme);
-    Frame::new()
+    let clicked = Frame::new()
         .fill(pill_bg)
         .corner_radius(CornerRadius::same(6))
         .stroke(Stroke::new(1.0, border))
@@ -609,11 +610,11 @@ fn draw_permission_banner(ui: &mut egui::Ui, theme: Theme) {
             ui.set_min_width(ui.available_width() - 22.0);
             ui.label(text);
             ui.add_space(6.0);
-            if open_settings_button(ui, theme).clicked() {
-                platform::request_input_permission();
-            }
-        });
+            open_settings_button(ui, theme).clicked()
+        })
+        .inner;
     ui.add_space(PERMISSION_GAP_BELOW);
+    clicked
 }
 
 fn open_settings_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {

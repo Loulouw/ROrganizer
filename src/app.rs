@@ -143,7 +143,7 @@ pub struct App {
     /// banner and the window height agree.
     input_permission: bool,
     main_window: Option<MainWindow>,
-    /// Last known top-left corner of the main window, physical pixels.
+    /// Last known top-left corner of the main window (`platform::placement`).
     window_pos: Option<(i32, i32)>,
     /// Decoded once at boot. egui_extras is built without the PNG loader
     /// (only `svg`), so `Image::from_bytes("bytes://*.png", ...)` would
@@ -285,6 +285,16 @@ impl App {
 
     pub fn input_permission(&self) -> bool {
         self.input_permission
+    }
+
+    /// The system prompt and the settings pane open as ordinary windows: an
+    /// always-on-top ROrganizer would cover them, so it steps down until
+    /// the permission arrives (see `ui`).
+    pub fn request_input_permission(&self, ctx: &egui::Context) {
+        if self.always_on_top {
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
+        }
+        platform::request_input_permission();
     }
 
     pub fn is_settings_open(&self) -> bool {
@@ -787,7 +797,13 @@ impl eframe::App for App {
             self.visuals_applied = true;
         }
 
-        self.input_permission = platform::input_permission_granted();
+        let input_permission = platform::input_permission_granted();
+        if input_permission && !self.input_permission && self.always_on_top {
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
+                egui::WindowLevel::AlwaysOnTop,
+            ));
+        }
+        self.input_permission = input_permission;
         self.ensure_cycle_order_covers_snapshot();
         self.sync_state_to_hooks(false);
         self.update_tray_status(false);
