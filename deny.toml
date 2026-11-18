@@ -2,10 +2,10 @@
 #   cargo deny check advisories bans sources licenses
 
 [graph]
-# L'app ne cible que Windows. Sans cette restriction, cargo-deny audite le
+# Les cibles réellement livrées. Sans cette restriction, cargo-deny audite le
 # lockfile entier et remonte les advisories gtk/quick-xml/anyhow/memmap2 qui
 # ne sont jamais compilées ici — du bruit qui masquerait un vrai problème.
-targets = ["x86_64-pc-windows-msvc"]
+targets = ["x86_64-pc-windows-msvc", "aarch64-apple-darwin", "x86_64-apple-darwin"]
 all-features = false
 
 [advisories]

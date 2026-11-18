@@ -15,20 +15,23 @@ because Pages publishes the whole `site/` directory.
 
 - `cargo test` green, `cargo build` with zero warnings.
 - No network: zero outbound sockets. No HTTP client or async runtime in
-  the Windows build: `cargo tree --target x86_64-pc-windows-msvc -i <crate>`
-  prints nothing for `reqwest`, `hyper`, `tokio`. `Cargo.lock` is not the
+  the shipped builds: `cargo tree --target <target> -i <crate>` prints
+  nothing for `reqwest`, `hyper`, `tokio`, for `x86_64-pc-windows-msvc`,
+  `aarch64-apple-darwin` and `x86_64-apple-darwin`. `Cargo.lock` is not the
   test: it also resolves wasm-only deps, and winit's `wasm-bindgen-futures`
   pulls `tokio` in there. Native threads only.
 - No file logging, no temp files, never log keystrokes. The only file the
-  app writes is `%APPDATA%\rorganizer\config.json`.
+  app writes is its `config.json`: `%APPDATA%\rorganizer\` on Windows,
+  `~/Library/Application Support/rorganizer/` on macOS.
 - Manifest stays `asInvoker`: LL hooks work from a user process as long as
   Dofus runs as user. `requireAdministrator` would cost a UAC prompt per
   launch for nothing.
-- Never build and upload a release exe by hand: a local binary has no
-  provenance attestation. See [Release](#release).
-- All OS code lives in `src/platform/` (Win32: `platform/win32/`), behind
-  the contract documented in `platform/mod.rs`. Elsewhere: no `windows::`,
-  no `#[cfg(windows)]`.
+- Never build and upload a release exe or dmg by hand: a local binary has
+  no provenance attestation. See [Release](#release).
+- All OS code lives in `src/platform/` (`platform/win32/`,
+  `platform/macos/`), behind the contract documented in `platform/mod.rs`.
+  Elsewhere: no `windows::`, no `objc2`, no `#[cfg(windows)]` or
+  `#[cfg(target_os = ...)]`.
 
 ## Build
 
@@ -41,6 +44,18 @@ cargo build --release   # never distribute a debug build
 
 Release builds set `windows_subsystem = "windows"`: no console,
 `eprintln!` is lost. Debug with a plain `cargo build` run from a terminal.
+
+macOS: rustup's `stable` plus both targets, and Xcode for the linker.
+`cargo build` gives a bare binary, enough to debug from a terminal (it
+inherits the terminal's Accessibility grant). The shipped `.app` and
+`.dmg` come from `scripts/package-macos.sh`: universal binary (`lipo` of
+`aarch64-apple-darwin` and `x86_64-apple-darwin`, macOS 11 minimum),
+`Info.plist`, `.icns` from `resources/icons/icon.png`, signature.
+
+```bash
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+MACOS_SIGN_IDENTITY=<sha1> MACOS_KEYCHAIN=<keychain> scripts/package-macos.sh
+```
 
 Effective MSRV is 1.95, imposed by egui 0.37, and nothing pins it: an older
 toolchain fails inside a dependency, not in this code. No
@@ -253,14 +268,16 @@ next bump. Below ~30 MB is unreachable with eframe + glow + ICU.
 macOS (Apple Silicon, arm64 only, 3 Unity clients, active and hidden):
 release binary ~7.1 MiB, physical footprint (`vmmap --summary`) ~32 MB,
 0.03 s of CPU over 30 s idle. A title change reaches the snapshot within
-~250 ms (AX notification, then the 150 ms coalescing).
+~250 ms (AX notification, then the 150 ms coalescing). Shipped universal
+binary ~15.5 MiB (both slices), `.dmg` ~8.5 MiB.
 
 ## Release
 
-`.github/workflows/release.yml` runs on a `v*` tag: tests, build,
-provenance attestation, **draft** release. The release body is the
-annotated tag message; the workflow inserts the SHA256/provenance block
-before the SmartScreen heading.
+`.github/workflows/release.yml` runs on a `v*` tag. Jobs `windows` (exe)
+and `macos` (universal dmg) each test, build, check for leaked paths and
+attest; `publish` gathers both into one **draft** release. The release
+body is the annotated tag message; the workflow inserts the
+SHA256/provenance block, both files, before the SmartScreen heading.
 
 - **Why a draft.** Defender flags the exe (`Wacatac`) until it is submitted
   to Microsoft, and the submission clears one exact hash. One build,
@@ -277,3 +294,13 @@ before the SmartScreen heading.
   affects rustc, while the MSVC linker orders its output by the absolute
   `.obj`/`.lib` paths it receives. Never tell users they can reproduce the
   SHA256 — the guarantee is the provenance attestation.
+- **The macOS signing certificate never changes.** Self-signed
+  `CN=ROrganizer`, SHA-1 `9005666D41DA362DEA45BB462FA8B658C8251A7B`, valid
+  until 2056, in the secrets `MACOS_CERT_P12` (base64) and
+  `MACOS_CERT_PASSWORD`; `release.yml` pins the SHA-1 and fails on any
+  other. The players' Accessibility grant is tied to it (see the gotcha
+  above): a new certificate means every player re-grants, a lost one means
+  the same, so the maintainer keeps an offline backup of the `.p12` and
+  its password. No Apple Developer ID: Gatekeeper blocks the first launch
+  of each downloaded version until "Open Anyway" in Privacy & Security.
+  Nothing to submit anywhere, unlike the exe.

@@ -10,8 +10,11 @@ permissions:
   attestations: write
 
 jobs:
-  release:
+  windows:
     runs-on: windows-latest
+    outputs:
+      asset: ${{ steps.version.outputs.asset }}
+      rustc: ${{ steps.build.outputs.rustc }}
 
     steps:
       - uses: actions/checkout@v7
@@ -88,16 +91,136 @@ jobs:
         with:
           subject-path: ${{ steps.version.outputs.asset }}
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: ${{ steps.version.outputs.asset }}
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    outputs:
+      asset: ${{ steps.version.outputs.asset }}
+      rustc: ${{ steps.build.outputs.rustc }}
+    env:
+      # SHA-1 of the self-signed ROrganizer certificate (valid until 2056).
+      # macOS ties the players' Accessibility grant to it: signing with
+      # another one (a rotated secret, a typo) would make every player grant
+      # it again, so a mismatch fails the build. See AGENTS.md first.
+      MACOS_CERT_SHA1: 9005666D41DA362DEA45BB462FA8B658C8251A7B
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          manifest=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          if [ "$version" != "$manifest" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $manifest" >&2
+            exit 1
+          fi
+          echo "asset=ROrganizer-$version-universal-macos.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Toolchain
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup default stable
+          rustup update stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Signing keychain
+        id: keychain
+        shell: bash
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(openssl rand -hex 24)
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
+          if ! security find-identity "$keychain" | grep -q "$MACOS_CERT_SHA1"; then
+            echo "Signing certificate is not the pinned one ($MACOS_CERT_SHA1)" >&2
+            exit 1
+          fi
+          echo "path=$keychain" >> "$GITHUB_OUTPUT"
+
+      # Same remaps as on Windows, for the same reason. The Mach-O linker
+      # has no /Brepro equivalent to pass.
+      - name: Build
+        id: build
+        shell: bash
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+          MACOS_KEYCHAIN: ${{ steps.keychain.outputs.path }}
+          MACOS_SIGN_IDENTITY: ${{ env.MACOS_CERT_SHA1 }}
+        run: |
+          export RUSTFLAGS="--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo --remap-path-prefix=${RUSTUP_HOME:-$HOME/.rustup}=/rustup --remap-path-prefix=$GITHUB_WORKSPACE=/src"
+          echo "rustc=$(rustc --version)" >> "$GITHUB_OUTPUT"
+
+          cargo test --release --locked
+          dmg=$(./scripts/package-macos.sh | tail -n 1)
+          cp "$dmg" "$ASSET"
+
+      - name: Fail on leaked absolute paths
+        shell: bash
+        run: |
+          binary=target/macos/ROrganizer.app/Contents/MacOS/rorganizer
+          for needle in /Users/ /.cargo/ /.rustup/ "$GITHUB_WORKSPACE"; do
+            if LC_ALL=C grep -aqF "$needle" "$binary"; then
+              echo "Build path '$needle' leaked into the binary - check the remap-path-prefix flags" >&2
+              exit 1
+            fi
+          done
+
+      - name: Remove signing keychain
+        if: always() && steps.keychain.outputs.path
+        shell: bash
+        env:
+          KEYCHAIN: ${{ steps.keychain.outputs.path }}
+        run: security delete-keychain "$KEYCHAIN"
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ steps.version.outputs.asset }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: ${{ steps.version.outputs.asset }}
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, macos]
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+
       - name: Publish release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RUSTC_VERSION: ${{ steps.build.outputs.rustc }}
           REPO: ${{ github.repository }}
-          ASSET: ${{ steps.version.outputs.asset }}
+          ASSET: ${{ needs.windows.outputs.asset }}
+          ASSET_MAC: ${{ needs.macos.outputs.asset }}
+          RUSTC_VERSION: ${{ needs.windows.outputs.rustc }}
+          RUSTC_VERSION_MAC: ${{ needs.macos.outputs.rustc }}
         run: |
           $tag = $env:GITHUB_REF_NAME
           $sha = (Get-FileHash $env:ASSET -Algorithm SHA256).Hash.ToLower()
+          $shaMac = (Get-FileHash $env:ASSET_MAC -Algorithm SHA256).Hash.ToLower()
 
           # The annotated tag message is the authored release body: written and
           # validated by the github-release skill before the tag is pushed.
@@ -124,24 +247,31 @@ jobs:
 
           ### 🔐 Provenance et intégrité
 
-          SHA256 : `@SHA@`
+          SHA256 :
 
-          Cet exécutable a été compilé par GitHub Actions depuis le code source de ce dépôt, et non sur une machine personnelle. Tu peux le vérifier avec le [GitHub CLI](https://cli.github.com) :
+          - Windows, `@ASSET@` : `@SHA@`
+          - macOS, `@ASSET_MAC@` : `@SHA_MAC@`
 
-          ```powershell
-          gh attestation verify .\@ASSET@ --repo @REPO@
+          Ces fichiers ont été compilés par GitHub Actions depuis le code source de ce dépôt, et non sur une machine personnelle. Tu peux le vérifier avec le [GitHub CLI](https://cli.github.com) :
+
+          ```
+          gh attestation verify @ASSET@ --repo @REPO@
+          gh attestation verify @ASSET_MAC@ --repo @REPO@
           ```
 
-          Compilé avec `@RUSTC@`. Voir [SECURITY.md](https://github.com/@REPO@/blob/main/SECURITY.md) pour la procédure de vérification.
+          Compilé avec `@RUSTC@` (Windows) et `@RUSTC_MAC@` (macOS). Voir [SECURITY.md](https://github.com/@REPO@/blob/main/SECURITY.md) pour la procédure de vérification.
 
           '@
 
-          $footer = $footer.Replace('@SHA@', $sha).
+          $footer = $footer.Replace('@SHA_MAC@', $shaMac).
+                            Replace('@SHA@', $sha).
+                            Replace('@ASSET_MAC@', $env:ASSET_MAC).
                             Replace('@ASSET@', $env:ASSET).
                             Replace('@REPO@', $env:REPO).
+                            Replace('@RUSTC_MAC@', $env:RUSTC_VERSION_MAC).
                             Replace('@RUSTC@', $env:RUSTC_VERSION)
 
-          # House style: positive sections first, Windows warnings last, Full
+          # House style: positive sections first, platform warnings last, Full
           # Changelog as the closing line. So the block goes in just before the
           # SmartScreen heading rather than at the end. Matched on the ASCII
           # part of the heading to stay independent of emoji encoding.
@@ -161,7 +291,7 @@ jobs:
           # Microsoft as a false positive before anyone downloads it, and the
           # submission binds to this exact hash. Rebuilding later would void
           # it, so the very bytes attested here are the ones published.
-          gh release create $tag --title $tag --notes-file release-body.md --draft $env:ASSET
+          gh release create $tag --repo $env:REPO --title $tag --notes-file release-body.md --draft $env:ASSET $env:ASSET_MAC
 
           @"
           ## Brouillon créé — pas encore public
@@ -169,14 +299,15 @@ jobs:
           | | |
           |---|---|
           | Version | ``$tag`` |
-          | SHA256 | ``$sha`` |
+          | SHA256 Windows | ``$sha`` |
+          | SHA256 macOS | ``$shaMac`` |
 
           ### Étapes restantes
 
-          1. Récupérer l'exécutable : ``gh release download $tag --repo $env:REPO``
+          1. Récupérer l'exécutable : ``gh release download $tag --repo $env:REPO --pattern '*.exe'``
           2. Le soumettre à Microsoft comme faux positif : https://www.microsoft.com/en-us/wdsi/filesubmission
           3. Attendre le verdict (24-72 h en général)
           4. Publier : ``gh release edit $tag --draft=false --repo $env:REPO``
 
-          L'attestation de provenance est déjà valide et vérifiable dès maintenant, sans attendre la publication.
+          Le ``.dmg`` macOS n'a rien à soumettre. L'attestation de provenance des deux fichiers est déjà valide et vérifiable dès maintenant, sans attendre la publication.
           "@ | Set-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8

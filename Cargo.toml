@@ -8,7 +8,7 @@ description = "Window manager for multiple Dofus Unity and Retro accounts"
 repository = "https://github.com/Loulouw/ROrganizer"
 homepage = "https://rorganizer.loulouw-labs.fr"
 readme = "README.md"
-keywords = ["dofus", "multibox", "window-manager", "tray", "windows"]
+keywords = ["dofus", "multibox", "window-manager", "windows", "macos"]
 categories = ["gui"]
 
 [dependencies]
