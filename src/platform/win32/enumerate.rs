@@ -92,22 +92,9 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL { unsafe
     }
     let title = String::from_utf16_lossy(&buf[..written as usize]);
 
-    let Some(caps) = ctx.re.captures(&title) else {
-        return BOOL(1);
-    };
-    let Some(name) = caps.name("name").map(|m| m.as_str().trim().to_string()) else {
-        return BOOL(1);
-    };
-    let class = caps
-        .name("class")
-        .map(|m| m.as_str().trim().to_string())
-        .filter(|s| !s.is_empty());
-
-    ctx.out.push(DetectedWindow {
-        hwnd: WindowId::from_hwnd(hwnd),
-        slot_key: name,
-        class,
-    });
+    if let Some(window) = DetectedWindow::from_title(ctx.re, &title, WindowId::from_hwnd(hwnd)) {
+        ctx.out.push(window);
+    }
     BOOL(1)
 }}
 

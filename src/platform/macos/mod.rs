@@ -1,11 +1,9 @@
-//! macOS backend.
-//!
-//! In place: the main window (Dock presence follows tray hiding), the input
-//! permission, the single instance, the system language and folders.
-//! Detection, global input, focus, keys and window placement are inert
-//! until their own step of the port: no account is listed, no shortcut
-//! fires, the window opens centred.
+//! macOS backend. Everything that reads or drives another app goes through
+//! the Accessibility API and the event tap, both gated by the Accessibility
+//! grant (`permission`). Window placement is still inert: the window opens
+//! centred.
 
+mod ax;
 mod focus;
 mod hooks;
 mod keys;

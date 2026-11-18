@@ -54,29 +54,45 @@ windows = { version = "0.62", features = [
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",
+    "libc",
     "NSApplication",
     "NSResponder",
+    "NSRunningApplication",
     "NSView",
     "NSWindow",
+    "NSWorkspace",
 ] }
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",
+    "block2",
     "NSArray",
     "NSDictionary",
     "NSGeometry",
     "NSLocale",
+    "NSNotification",
+    "NSOperation",
     "NSString",
+    "NSURL",
     "NSValue",
 ] }
 objc2-core-foundation = { version = "0.3", default-features = false, features = [
     "std",
+    "CFArray",
     "CFData",
     "CFDate",
+    "CFMachPort",
     "CFMessagePort",
+    "CFNumber",
     "CFRunLoop",
     "CFString",
 ] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = [
+    "std",
+    "CGEvent",
+    "CGEventTypes",
+] }
 dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
+block2 = "0.6"
 
 [build-dependencies]
 embed-resource = "3"

@@ -134,10 +134,18 @@ capture (visible focus flicker). Accepted limits:
   Pause/lock/media/browser keys egui 0.37 added are not mapped;
 - `Num0`–`Num9` conflate numpad and top row.
 
+The macOS event tap does see our own window's keys. It lets them through
+while ROrganizer is frontmost, which gives the same behaviour, and hands
+the key code to the binding modal: winit reports both ISO keys `0x0A`/`0x32`
+as `Backquote` and numpad digits as top-row ones, so egui alone would bind
+the wrong key.
+
 ### Hook callbacks are on the global input path
 
-`kb_proc` / `mouse_proc` run for every input event on the machine. Any
-blocking there is input lag for the whole system.
+`kb_proc` / `mouse_proc` (macOS: the event tap callback) run for every
+input event on the machine. Any blocking there is input lag for the whole
+system. macOS also disables a tap whose callback is slow: focusing a
+client (AX calls, up to a Dock animation) runs on a worker thread.
 
 ### Window height is computed, not measured
 
@@ -158,11 +166,15 @@ must only count what `sync_state_to_hooks` actually wires (see
 |---|---|---|
 | Dofus / Expérimental | `Dofus.exe` | `Pseudo - Iop - 2.75.4.13 - Release` |
 | Dofus Rétro | `Dofus Retro.exe` | `Pseudo - Dofus Retro v1.48.21` |
+| Dofus (macOS) | bundle `com.Ankama.Dofus`, exe `Dofus` | `Pseudo - Cra - 3.7.14.18 - Release` |
 
 The exe filter runs before the title regex: a new client family needs both.
 Rétro titles carry no class (`class: None`). Rétro is Electron, ~8
 processes per client, a single visible titled window; before character
-selection its title has no ` - `, so no ghost row.
+selection its title has no ` - `, so no ghost row. On macOS the login
+screen is titled `Dofus 3.7.14.18 - Release` (no ghost row either), titles
+are read through the Accessibility API, and Rétro was never observed: it is
+matched by its exe name `Dofus Retro` only.
 
 ## Testing
 
@@ -191,6 +203,20 @@ Programmatic end-to-end checks on Windows:
 - Screenshot diffs: try several vertical offsets. An egui bump can shift
   everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
 
+Programmatic end-to-end checks on macOS:
+
+- Grant Terminal both Accessibility (to post events, read AX) and Screen
+  Recording (`screencapture`). A binary launched from Terminal inherits
+  Terminal's grants: to see the permission banner, launch it from a
+  throwaway `.app` bundle with `open`.
+- Clicks and keys: `CGEventPost` at `.cghidEventTap`; synthetic keys reach
+  the event tap ~130 ms after posting, real ones much faster.
+- Did a key reach the game: a `listenOnly` tap at `tailAppendEventTap`
+  sees what the other taps let through.
+- Front window: first layer-0 entry of `CGWindowListCopyWindowInfo`.
+  Dofus doesn't answer `AXFocusedApplication` on the system-wide element.
+- Dock contents: AX children of the Dock process (the Dock may auto-hide).
+
 ## Performance baseline
 
 | Metric | Stable value |
@@ -209,6 +235,11 @@ compare two builds under the same setup rather than against the table.
 Measure RAM at least 15 s after launch: earlier, the font atlas and
 textures aren't realized yet (~60 MB), which looks like a regression at the
 next bump. Below ~30 MB is unreachable with eframe + glow + ICU.
+
+macOS (Apple Silicon, arm64 only, 3 Unity clients, active and hidden):
+release binary ~7.1 MiB, physical footprint (`vmmap --summary`) ~32 MB,
+0.03 s of CPU over 30 s idle. A title change reaches the snapshot within
+~250 ms (AX notification, then the 150 ms coalescing).
 
 ## Release
 

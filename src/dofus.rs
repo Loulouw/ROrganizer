@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use regex::Regex;
 
 use crate::platform::WindowId;
 
@@ -31,6 +32,20 @@ pub struct DetectedWindow {
     pub class: Option<String>,
 }
 
+impl DetectedWindow {
+    /// The account shown in `title`, when it matches the title regex `re`
+    /// (`name` group, plus `class` for Unity clients).
+    pub fn from_title(re: &Regex, title: &str, hwnd: WindowId) -> Option<Self> {
+        let caps = re.captures(title)?;
+        let slot_key = caps.name("name")?.as_str().trim().to_string();
+        let class = caps
+            .name("class")
+            .map(|m| m.as_str().trim().to_string())
+            .filter(|s| !s.is_empty());
+        Some(Self { hwnd, slot_key, class })
+    }
+}
+
 /// Lock-free snapshot of detected Dofus windows. Single writer (the watcher
 /// thread), many readers (UI / hook callbacks). Readers call `.load_full()`
 /// and get an `Arc<Vec<...>>` that's a stable view for the duration of the
@@ -39,20 +54,11 @@ pub type WindowsSnapshot = Arc<ArcSwap<Vec<DetectedWindow>>>;
 
 #[cfg(test)]
 mod tests {
-    use regex::Regex;
-
     use super::*;
 
-    /// Mirrors the extraction `enum_proc` performs on a matching title.
     fn parse(title: &str) -> Option<(String, Option<String>)> {
         let re = Regex::new(DEFAULT_TITLE_REGEX).expect("default regex compiles");
-        let caps = re.captures(title)?;
-        let name = caps.name("name")?.as_str().trim().to_string();
-        let class = caps
-            .name("class")
-            .map(|m| m.as_str().trim().to_string())
-            .filter(|s| !s.is_empty());
-        Some((name, class))
+        DetectedWindow::from_title(&re, title, WindowId::test(1)).map(|w| (w.slot_key, w.class))
     }
 
     #[test]
