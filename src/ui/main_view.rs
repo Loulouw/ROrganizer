@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use eframe::egui;
 use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2};
@@ -35,6 +36,9 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                 .inner_margin(Margin::symmetric(12, 12)),
         )
         .show(ui, |ui| {
+            if !app.input_permission() {
+                draw_permission_banner(ui, theme);
+            }
             draw_summary(
                 ui,
                 theme,
@@ -555,6 +559,78 @@ fn draw_conflict_banner(ui: &mut egui::Ui, theme: Theme, conflicts: &HashSet<Tri
                 );
             }
         });
+}
+
+/// Panel width 340 minus the panel margins (24) and the banner's margins
+/// and stroke (22).
+const PERMISSION_WRAP_WIDTH: f32 = 294.0;
+const PERMISSION_BUTTON_HEIGHT: f32 = 26.0;
+const PERMISSION_GAP_BELOW: f32 = 10.0;
+
+fn permission_text(ctx: &egui::Context, theme: Theme) -> Arc<egui::Galley> {
+    let (_row_bg, _border, _pill_bg, pill_text) = theme::conflict_palette(theme);
+    ctx.fonts_mut(|f| {
+        f.layout(
+            t!("permission.missing").to_string(),
+            egui::FontId::proportional(11.0),
+            pill_text,
+            PERMISSION_WRAP_WIDTH,
+        )
+    })
+}
+
+/// Height reserved by `App::apply_dynamic_height`. Measured rather than
+/// tuned like its other constants: the text wraps on a different number of
+/// lines in each language.
+pub fn permission_banner_height(ctx: &egui::Context, theme: Theme) -> f32 {
+    let text = permission_text(ctx, theme).size().y;
+    let item_spacing = ctx.global_style().spacing.item_spacing.y;
+    // Frame 16 inner margin + 2 stroke, then each item and its spacing.
+    18.0 + text
+        + item_spacing
+        + 6.0
+        + PERMISSION_BUTTON_HEIGHT
+        + item_spacing
+        + PERMISSION_GAP_BELOW
+}
+
+fn draw_permission_banner(ui: &mut egui::Ui, theme: Theme) {
+    let (_row_bg, border, pill_bg, _pill_text) = theme::conflict_palette(theme);
+    let text = permission_text(ui.ctx(), theme);
+    Frame::new()
+        .fill(pill_bg)
+        .corner_radius(CornerRadius::same(6))
+        .stroke(Stroke::new(1.0, border))
+        .inner_margin(Margin::symmetric(10, 8))
+        .show(ui, |ui| {
+            ui.set_min_width(ui.available_width() - 22.0);
+            ui.label(text);
+            ui.add_space(6.0);
+            if open_settings_button(ui, theme).clicked() {
+                platform::request_input_permission();
+            }
+        });
+    ui.add_space(PERMISSION_GAP_BELOW);
+}
+
+fn open_settings_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
+    let (bg, txt) = theme::button_primary(theme);
+    let label = ui.painter().layout_no_wrap(
+        t!("permission.open_settings").to_string(),
+        egui::FontId::proportional(12.0),
+        txt,
+    );
+    let size = Vec2::new(label.size().x + 24.0, PERMISSION_BUTTON_HEIGHT);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    let bg = if response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+        mix(bg, Color32::WHITE, 0.06)
+    } else {
+        bg
+    };
+    ui.painter().rect_filled(rect, 6.0, bg);
+    ui.painter().galley(rect.center() - label.size() / 2.0, label, txt);
+    response
 }
 
 fn pill_colors(theme: Theme, has_binding: bool, hovered: bool) -> (Color32, Color32, Color32) {

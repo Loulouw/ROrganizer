@@ -23,10 +23,28 @@
 //!   `key_from_event(egui::Key, Option<egui::Key>) -> Option<u32>` converts
 //!   an egui key press into it, `key_label(u32) -> String` displays it.
 //! - Main window: `register_main_window(MainWindow)` once at startup, then
-//!   `show_main_window()` / `close_main_window()` from the tray handlers,
-//!   which run while the eframe loop may be parked.
-//!   `placement::{position(MainWindow) -> Option<(i32, i32)>,
+//!   `show_main_window()` / `close_main_window()` from the tray handlers and
+//!   the second-launch waiter, which run while the eframe loop may be
+//!   parked. `placement::{position(MainWindow) -> Option<(i32, i32)>,
 //!   restore(MainWindow, (i32, i32))}` persist its position.
+//! - Tray presence: `main_window_hidden_to_tray()` is called when the main
+//!   window is hidden into the tray, never when it is minimized.
+//!   `main_window_restored()` is called before every path that shows it
+//!   again, including the `show_main_window()` callers; it can arrive
+//!   without a prior hide. Both may run off the main thread (the waiter
+//!   has its own), and before the window actually changes: viewport
+//!   commands apply at the end of the frame. The app starts restored;
+//!   `close_main_window()` needs neither, the app exits. Windows: no-ops,
+//!   the taskbar button already follows the window's visibility. macOS:
+//!   switch the activation policy, `.accessory` when hidden (no Dock icon,
+//!   out of Cmd-Tab), `.regular` when restored.
+//! - Input permission: `input_permission_granted() -> bool` is read every
+//!   frame, so it must stay cheap. While false, detection, global input and
+//!   focus can't work: the main view shows a banner whose button calls
+//!   `request_input_permission()`, which opens the system prompt. The
+//!   permission can change while the app runs; the backend then requests
+//!   a repaint (the watcher's `egui::Context`) so the banner follows.
+//!   Windows has no such gate: always true, and the request is never called.
 //! - `taskbar::is_sorting() -> bool`, `taskbar::reorder(Vec<WindowId>,
 //!   impl FnOnce() + Send + 'static)`.
 //! - Single instance: `single_instance::acquire_or_signal_existing() ->

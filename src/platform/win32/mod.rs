@@ -20,11 +20,22 @@ pub use focus::{focus_window, foreground_window};
 pub use hooks::spawn_hooks;
 pub use keys::{key_from_event, key_label};
 pub use locale::detect_system_lang;
-pub use main_window::{close_main_window, register_main_window, show_main_window};
+pub use main_window::{
+    close_main_window, main_window_hidden_to_tray, main_window_restored, register_main_window,
+    show_main_window,
+};
 pub use shell::open_folder;
 pub use watcher::{is_dofus_window, spawn_watcher};
 
 pub const HAS_TASKBAR_SORT: bool = true;
+
+/// Reading other windows and installing LL hooks need no per-app grant.
+pub fn input_permission_granted() -> bool {
+    true
+}
+
+/// Never called: the permission is always granted.
+pub fn request_input_permission() {}
 
 /// HWND, as an integer.
 pub(super) type RawWindowId = isize;

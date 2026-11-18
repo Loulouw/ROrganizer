@@ -139,6 +139,9 @@ pub struct App {
     shortcuts_only_in_dofus: bool,
     minimize_to_taskbar: bool,
     always_on_top: bool,
+    /// `platform::input_permission_granted`, read once per frame so the
+    /// banner and the window height agree.
+    input_permission: bool,
     main_window: Option<MainWindow>,
     /// Last known top-left corner of the main window, physical pixels.
     window_pos: Option<(i32, i32)>,
@@ -219,6 +222,7 @@ impl App {
         let waiter_ctx = cc.egui_ctx.clone();
         let waiter_tx = tray_tx;
         single_instance::spawn_waiter(instance, move || {
+            platform::main_window_restored();
             platform::show_main_window();
             let _ = waiter_tx.send(TrayEvent::ShowRequested);
             waiter_ctx.request_repaint();
@@ -259,6 +263,7 @@ impl App {
             shortcuts_only_in_dofus,
             minimize_to_taskbar,
             always_on_top,
+            input_permission: platform::input_permission_granted(),
             main_window,
             window_pos,
             about_icon,
@@ -276,6 +281,10 @@ impl App {
 
     pub fn is_active(&self) -> bool {
         self.is_active
+    }
+
+    pub fn input_permission(&self) -> bool {
+        self.input_permission
     }
 
     pub fn is_settings_open(&self) -> bool {
@@ -360,16 +369,17 @@ impl App {
     /// Takes the window off screen the way the user chose: minimized to the
     /// taskbar, or hidden in the system tray.
     fn put_away(&self, ctx: &egui::Context) {
-        let cmd = if self.minimize_to_taskbar {
-            egui::ViewportCommand::Minimized(true)
+        if self.minimize_to_taskbar {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
         } else {
-            egui::ViewportCommand::Visible(false)
-        };
-        ctx.send_viewport_cmd(cmd);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+            platform::main_window_hidden_to_tray();
+        }
     }
 
     /// Brings the window back, whichever way it was put away.
     fn bring_back(ctx: &egui::Context) {
+        platform::main_window_restored();
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
@@ -711,12 +721,18 @@ impl App {
             0.0
         };
         let toggle_h = TOGGLE_BUTTON + if self.is_active { 0.0 } else { TOGGLE_HINT };
+        let permission_h = if self.input_permission {
+            0.0
+        } else {
+            ui::main_view::permission_banner_height(ctx, self.theme)
+        };
         let desired_content = TITLE_BAR
             + PANEL_PAD
             + SUMMARY
             + SUMMARY_GAP
             + list_h
             + banner_h
+            + permission_h
             + CYCLE_HEAD
             + CYCLE_BLOCK
             + toggle_h
@@ -771,6 +787,7 @@ impl eframe::App for App {
             self.visuals_applied = true;
         }
 
+        self.input_permission = platform::input_permission_granted();
         self.ensure_cycle_order_covers_snapshot();
         self.sync_state_to_hooks(false);
         self.update_tray_status(false);

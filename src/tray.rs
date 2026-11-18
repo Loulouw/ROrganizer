@@ -5,7 +5,7 @@ use eframe::egui;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
-use crate::platform::{close_main_window, show_main_window};
+use crate::platform::{close_main_window, main_window_restored, show_main_window};
 
 #[derive(Debug, Clone, Copy)]
 pub enum TrayEvent {
@@ -101,6 +101,7 @@ pub fn install(
     let tx_menu = tx.clone();
     MenuEvent::set_event_handler(Some(move |ev: MenuEvent| {
         if ev.id == show_id {
+            main_window_restored();
             show_main_window();
             let _ = tx_menu.send(TrayEvent::ShowRequested);
             ctx_menu.request_repaint();
@@ -110,6 +111,7 @@ pub fn install(
             // Visible(false) right after — net effect = hide. If it's going
             // to "inactive" (show), this call wakes the parked eframe loop
             // so the ToggleRequested event can be drained.
+            main_window_restored();
             show_main_window();
             let _ = tx_menu.send(TrayEvent::ToggleRequested);
             ctx_menu.request_repaint();
@@ -132,6 +134,7 @@ pub fn install(
                 }
         );
         if is_show {
+            main_window_restored();
             show_main_window();
             let _ = tx_tray.send(TrayEvent::ShowRequested);
             ctx_tray.request_repaint();

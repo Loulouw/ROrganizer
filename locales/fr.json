@@ -60,5 +60,9 @@
     "section": "Cycle",
     "next": "Suivant",
     "prev": "Précédent"
+  },
+  "permission": {
+    "missing": "ROrganizer a besoin de l'autorisation Accessibilité pour détecter les fenêtres Dofus et capter tes raccourcis.",
+    "open_settings": "Ouvrir les réglages"
   }
 }

@@ -60,5 +60,9 @@
     "section": "Cycle",
     "next": "Next",
     "prev": "Previous"
+  },
+  "permission": {
+    "missing": "ROrganizer needs the Accessibility permission to detect Dofus windows and catch your shortcuts.",
+    "open_settings": "Open settings"
   }
 }

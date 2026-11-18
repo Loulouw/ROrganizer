@@ -60,5 +60,9 @@
     "section": "Ciclo",
     "next": "Siguiente",
     "prev": "Anterior"
+  },
+  "permission": {
+    "missing": "ROrganizer necesita el permiso de Accesibilidad para detectar las ventanas de Dofus y captar tus atajos.",
+    "open_settings": "Abrir ajustes"
   }
 }

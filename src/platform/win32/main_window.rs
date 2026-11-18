@@ -53,3 +53,8 @@ pub fn close_main_window() {
         }
     }
 }
+
+/// The taskbar button already follows the window's visibility.
+pub fn main_window_hidden_to_tray() {}
+
+pub fn main_window_restored() {}
