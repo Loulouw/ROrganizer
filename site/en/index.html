@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ROrganizer — Dofus 3 (Unity) &amp; Retro multi-account organizer</title>
-<meta name="description" content="Free and open-source multi-account organizer for Dofus 3 (Unity) and Dofus Retro. Switch between your accounts with a single key or mouse button. Offline, no telemetry, Windows 10 and 11.">
+<meta name="description" content="Free and open-source multi-account organizer for Dofus 3 (Unity) and Dofus Retro. Switch between your accounts with a single key or mouse button. Offline, no telemetry, Windows 10/11 and macOS 11+.">
 
 <link rel="canonical" href="https://rorganizer.loulouw-labs.fr/en/">
 <link rel="alternate" hreflang="fr" href="https://rorganizer.loulouw-labs.fr/fr/">
@@ -41,7 +41,7 @@
   "name": "ROrganizer",
   "url": "https://rorganizer.loulouw-labs.fr/en/",
   "applicationCategory": "UtilitiesApplication",
-  "operatingSystem": "Windows 10, Windows 11",
+  "operatingSystem": "Windows 10, Windows 11, macOS 11+",
   "inLanguage": "en",
   "isAccessibleForFree": true,
   "license": ["https://opensource.org/licenses/MIT", "https://www.apache.org/licenses/LICENSE-2.0"],
@@ -102,10 +102,10 @@
       <p class="hero__tagline">A free, open-source multi-account organizer for Dofus 3 (Unity) and Dofus Retro.</p>
       <p class="hero__body">Playing up to eight accounts at once? Give each one a key and move between them instantly. Without touching the game, without a network connection, without the bloat.</p>
       <div class="hero__actions">
-        <a class="btn btn--primary" href="https://github.com/Loulouw/ROrganizer/releases/latest">Download for Windows</a>
+        <a class="btn btn--primary" href="https://github.com/Loulouw/ROrganizer/releases/latest">Download</a>
         <a class="btn btn--ghost" href="https://github.com/Loulouw/ROrganizer">View the source code</a>
       </div>
-      <p class="hero__note">Free · Windows 10 and 11 · a single file, no installer</p>
+      <p class="hero__note">Free · Windows 10 and 11 · macOS 11+ · no installer</p>
       <p class="hero__demo">
         One key, one account:
         <span class="demo-keys" aria-hidden="true">
@@ -153,7 +153,7 @@
 
   <section class="wrap band band--tight">
     <p class="pull">It does not read the game, modify it, or send it anything.
-      <span>ROrganizer only listens for your shortcuts and brings the right window forward — exactly what Alt+Tab does in Windows.</span>
+      <span>ROrganizer only listens for your shortcuts and brings the right window forward — exactly what Alt+Tab does on Windows, or Cmd+Tab on a Mac.</span>
     </p>
   </section>
 
@@ -186,8 +186,8 @@
         <li><strong>Cycle through accounts</strong><span>A next shortcut, a previous one, and you cycle through your whole team.</span></li>
         <li><strong>Drag and drop</strong><span>Arrange your accounts in whatever order suits you.</span></li>
         <li><strong>Light or dark theme</strong><span>In French, English or Spanish.</span></li>
-        <li><strong>Quiet, where you want it</strong><span>Minimized to the system tray or to the taskbar, enabled with one click.</span></li>
-        <li><strong>A tidy taskbar</strong><span>One click puts the Dofus windows of the taskbar in the order of your accounts.</span></li>
+        <li><strong>Quiet, where you want it</strong><span>Minimized to the system tray or to the taskbar (on a Mac: the menu bar or the Dock), enabled with one click.</span></li>
+        <li><strong>A tidy taskbar</strong><span>On Windows, one click puts the Dofus windows of the taskbar in the order of your accounts.</span></li>
         <li><strong>Set up your way</strong><span>Shortcuts in Dofus only, window always on top or not, position remembered from one launch to the next.</span></li>
       </ul>
     </div>
@@ -203,11 +203,11 @@
     <dl class="metrics">
       <div>
         <dt>~8</dt>
-        <dd>MB<small>the executable</small></dd>
+        <dd>MB<small>the Windows executable</small></dd>
       </div>
       <div>
         <dt>~75</dt>
-        <dd>MB<small>of RAM in use</small></dd>
+        <dd>MB<small>of RAM (~30 on a Mac)</small></dd>
       </div>
       <div>
         <dt>0%</dt>
@@ -228,8 +228,8 @@
     </div>
     <div>
       <ol class="steps">
-        <li><strong>Download</strong><p>Grab the file from the releases page. No installer, no dependencies.</p></li>
-        <li><strong>Run</strong><p>Double-click it. ROrganizer detects accounts that are already open on its own.</p></li>
+        <li><strong>Download</strong><p>Grab the file for your system from the releases page: the <code>.exe</code> for Windows, the <code>.dmg</code> for Mac. No installer, no dependencies.</p></li>
+        <li><strong>Run</strong><p>On Windows, double-click it. On a Mac, open the <code>.dmg</code> and drag ROrganizer into Applications. ROrganizer detects accounts that are already open on its own.</p></li>
         <li><strong>Configure</strong><p>Click “set” next to an account, then press the key you want to give it.</p></li>
       </ol>
     </div>
@@ -241,10 +241,12 @@
       <h2>Two commands to be sure of what you are running.</h2>
     </div>
     <div>
-      <p class="lede">GitHub shows the checksum of every published file next to its name. Compare it with yours:</p>
-      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> Get-FileHash .\ROrganizer-&lt;version&gt;-x86_64-windows.exe -Algorithm SHA256</pre>
+      <p class="lede">GitHub shows the checksum of every published file next to its name. Compare it with yours, on Windows (PowerShell) or on a Mac (Terminal):</p>
+      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> Get-FileHash .\ROrganizer-&lt;version&gt;-x86_64-windows.exe -Algorithm SHA256
+<span class="prompt">$</span> shasum -a 256 ROrganizer-&lt;version&gt;-universal-macos.dmg</pre>
       <p class="lede" style="margin-top:1.75rem">And from version 1.3.0 onwards, every file carries a proof of origin signed by GitHub, binding it to the public source and the published tag:</p>
-      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> gh attestation verify .\ROrganizer-&lt;version&gt;-x86_64-windows.exe --repo Loulouw/ROrganizer</pre>
+      <pre class="term" style="margin-top:1.25rem"><span class="prompt">&gt;</span> gh attestation verify .\ROrganizer-&lt;version&gt;-x86_64-windows.exe --repo Loulouw/ROrganizer
+<span class="prompt">$</span> gh attestation verify ROrganizer-&lt;version&gt;-universal-macos.dmg --repo Loulouw/ROrganizer</pre>
       <p style="margin-top:1.25rem;color:var(--ink-soft);font-size:var(--fs-sm)">The full procedure is documented in <a href="https://github.com/Loulouw/ROrganizer/blob/main/SECURITY.md#security-english">the project's security policy</a>.</p>
     </div>
   </section>
@@ -257,19 +259,24 @@
     <div class="faq">
       <div>
         <h3>Do I have to configure each account one by one?</h3>
-        <p>No. ROrganizer automatically detects all your accounts as soon as they launch, on the standard client as well as Dofus Retro and Dofus Experimental. You only assign a shortcut to each one, and it is remembered. Retro accounts appear without a class icon: their window does not state the class.</p>
+        <p>No. ROrganizer automatically detects all your accounts as soon as they launch, on the standard client as well as Dofus Retro and Dofus Experimental. You only assign a shortcut to each one, and it is remembered. Retro accounts appear without a class icon: their window does not state the class. On a Mac, Dofus Retro has not been tested yet.</p>
       </div>
       <div>
         <h3>Could I get banned for using it?</h3>
-        <p>ROrganizer does not interact with Dofus. It does not read the game, modify it, or send it any command. It brings a window to the front — exactly what Alt+Tab does in Windows. That said, using third-party tools remains at your own risk under Ankama's terms of service.</p>
+        <p>ROrganizer does not interact with Dofus. It does not read the game, modify it, or send it any command. It brings a window to the front — exactly what Alt+Tab does on Windows, or Cmd+Tab on a Mac. That said, using third-party tools remains at your own risk under Ankama's terms of service.</p>
       </div>
       <div>
         <h3>Do my shortcuts work while I'm in game?</h3>
-        <p>Yes. They are system-wide hotkeys, so they work whichever window is in the foreground. If you'd rather have them work in Dofus only, tick the option in the settings (the gear). One caveat: if Dofus runs as administrator, run ROrganizer as administrator too.</p>
+        <p>Yes. They are system-wide hotkeys, so they work whichever window is in the foreground. If you'd rather have them work in Dofus only, tick the option in the settings (the gear). One caveat on Windows: if Dofus runs as administrator, run ROrganizer as administrator too.</p>
       </div>
       <div>
         <h3>Windows shows a blue warning on first launch — is that normal?</h3>
         <p>Yes. ROrganizer is not signed with a code-signing certificate, which costs several hundred euros a year and is not justifiable for a free project. Windows SmartScreen warns as a precaution about any program it rarely sees. Click “More info”, then “Run anyway”.</p>
+      </div>
+      <div>
+        <h3>On a Mac, macOS refuses to open the app — is that normal?</h3>
+        <p>Yes. ROrganizer is not signed by Apple, which requires a paid developer subscription. On the first launch of each downloaded version, open System Settings → Privacy &amp; Security, scroll down to the message about ROrganizer and click “Open Anyway”.</p>
+        <p>ROrganizer then shows a banner asking for the Accessibility permission: it is what lets it see the Dofus windows, listen for your shortcuts and bring the right window forward. Click “Open settings”, then enable ROrganizer in the list. You grant it once; it stays valid for later versions.</p>
       </div>
       <div>
         <h3>My antivirus flags a “trojan” — is the app dangerous?</h3>
@@ -278,7 +285,7 @@
       </div>
       <div>
         <h3>How do I uninstall it?</h3>
-        <p>Delete the file. Your preferences live in <code>%APPDATA%\rorganizer\</code> — delete that folder for a full clean-up. No registry key modified, no service installed.</p>
+        <p>On Windows, delete the file. Your preferences live in <code>%APPDATA%\rorganizer\</code> — delete that folder for a full clean-up. No registry key modified, no service installed. On a Mac, move ROrganizer to the Trash from Applications, then delete <code>~/Library/Application Support/rorganizer/</code> if you want to erase your preferences.</p>
       </div>
     </div>
   </section>
@@ -286,7 +293,7 @@
   <section class="bleed bleed--dark">
     <div class="wrap band warn">
       <h2>Beware of fake downloads</h2>
-      <p>ROrganizer is available <strong>only</strong> from <a href="https://github.com/Loulouw/ROrganizer/releases">the releases page of the GitHub repository</a>, as a single executable file.</p>
+      <p>ROrganizer is available <strong>only</strong> from <a href="https://github.com/Loulouw/ROrganizer/releases">the releases page of the GitHub repository</a>, as a single file per system: an <code>.exe</code> for Windows, a <code>.dmg</code> for macOS. A <code>.dmg</code> is legitimate only if it comes from that page.</p>
       <p><strong>This website hosts no files.</strong> The download button sends you to GitHub — that is expected, and it is the only legitimate behaviour.</p>
       <p>It is never distributed:</p>
       <ul>

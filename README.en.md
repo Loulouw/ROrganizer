@@ -13,7 +13,7 @@ Website: [rorganizer.loulouw-labs.fr](https://rorganizer.loulouw-labs.fr/en/)
 [![Site](https://img.shields.io/badge/site-rorganizer.loulouw--labs.fr-97c459?labelColor=1c1c1a)](https://rorganizer.loulouw-labs.fr/en/)
 [![Version](https://img.shields.io/github/v/release/Loulouw/ROrganizer?display_name=tag&label=version&color=97c459)](https://github.com/Loulouw/ROrganizer/releases)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-0078D6?logo=windows)](https://github.com/Loulouw/ROrganizer/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2B%20%C2%B7%20macOS%2011%2B-0078D6)](https://github.com/Loulouw/ROrganizer/releases)
 [![Rust](https://img.shields.io/badge/rust-stable-orange?logo=rust)](https://www.rust-lang.org/)
 [![100% offline](https://img.shields.io/badge/100%25-offline-2ea44f)](#-your-privacy)
 
@@ -25,9 +25,10 @@ Website: [rorganizer.loulouw-labs.fr](https://rorganizer.loulouw-labs.fr/en/)
 
 > ⚠️ **Beware of impostors.** ROrganizer is downloaded **only** from the
 > [Releases page of this GitHub repo](https://github.com/Loulouw/ROrganizer/releases),
-> as **a single executable**. Never inside an archive, never as a script,
-> never from a file host or a link shared elsewhere. Any file carrying my
-> name that does not match this description did not come from me — see
+> as **a single file per system**: a `.exe` for Windows, a `.dmg` for
+> macOS. Never inside an archive, never as a script, never from a file
+> host or a link shared elsewhere. Any file carrying my name that does
+> not match this description did not come from me — see
 > [SECURITY.md](SECURITY.md) to verify your download.
 
 ## Preview
@@ -63,7 +64,8 @@ changes everything.
 - **No keystrokes are logged**. Shortcuts are matched on the fly and
   immediately forgotten.
 - The only file the app writes is **its own settings** (your
-  shortcuts, language and theme) in the Windows AppData folder.
+  shortcuts, language and theme) in the Windows AppData folder, or in
+  `~/Library/Application Support` on Mac.
 
 ## ⚡ Performance
 
@@ -80,9 +82,9 @@ changes everything.
 - ✋ **Drag-and-drop** to reorder accounts however you want
 - 🌓 **Light or dark theme**, in FR / EN / ES
 - 📍 **Quiet, where you want it**: minimized to the system tray or to the
-  taskbar, enabled with one click
-- 🗂️ **A tidy taskbar**: one click puts the Dofus windows in the order of
-  your accounts
+  taskbar (on Mac: the menu bar or the Dock), enabled with one click
+- 🗂️ **A tidy taskbar** (Windows): one click puts the Dofus windows in the
+  order of your accounts
 - ⚙️ **Set up your way**: shortcuts in Dofus only, window always on top or
   not, position remembered from one launch to the next
 
@@ -92,13 +94,26 @@ changes everything.
 
 | 1️⃣ &nbsp; **Download** | 2️⃣ &nbsp; **Run** | 3️⃣ &nbsp; **Configure** |
 |:--|:--|:--|
-| Grab the `.exe` from [Releases](https://github.com/Loulouw/ROrganizer/releases). No installer, no dependencies. | Double-click the `.exe`. That's it. ROrganizer auto-detects any Dofus accounts you've already launched. | Click **"set"** next to an account, then press the key or mouse button you want to bind. |
+| Grab the `.exe` (Windows) or the `.dmg` (Mac) from [Releases](https://github.com/Loulouw/ROrganizer/releases). No installer, no dependencies. | Windows: double-click the `.exe`. Mac: open the `.dmg` and drag ROrganizer into Applications. ROrganizer auto-detects any Dofus accounts you've already launched. | Click **"set"** next to an account, then press the key or mouse button you want to bind. |
 
 [![Download ROrganizer](https://img.shields.io/badge/%E2%AC%87%EF%B8%8F_Download_ROrganizer-97c459?style=for-the-badge&labelColor=1c1c1a)](https://github.com/Loulouw/ROrganizer/releases/latest)
 
 </div>
 
-Works on Windows 10 and Windows 11.
+Works on Windows 10 and 11, and on macOS 11 or later (both Apple
+Silicon and Intel Macs).
+
+**On Mac, two permissions at first launch:**
+
+1. macOS blocks the app because it isn't signed by Apple (that
+   requires a paid subscription). Open **System Settings → Privacy &
+   Security**, scroll down to the message about ROrganizer and click
+   **"Open Anyway"**. You'll need to do this again for each new
+   version you download.
+2. ROrganizer shows a banner asking for the **Accessibility**
+   permission: without it, it can't see the Dofus windows or catch
+   your shortcuts. Click **"Open settings"**, then enable ROrganizer in
+   the list. The permission is kept from one version to the next.
 
 > 💡 **Prefer to build from source?**
 > With the `stable-x86_64-pc-windows-msvc` Rust toolchain (via [rustup](https://rustup.rs)):
@@ -106,6 +121,9 @@ Works on Windows 10 and Windows 11.
 > cargo build --release
 > .\target\release\rorganizer.exe
 > ```
+> On Mac, with the `stable` toolchain and Xcode: `cargo build --release`,
+> then `./target/release/rorganizer` from a terminal allowed in
+> **Accessibility**.
 
 ## FAQ
 
@@ -115,24 +133,26 @@ launches, on the regular client as well as **Dofus Retro** and
 **Dofus Experimental**. You just bind a shortcut once by clicking
 "set" next to each account — it's remembered for next time. Retro
 accounts show no class icon: their window title doesn't carry it.
+Dofus Retro hasn't been tested on Mac yet.
 
 **What does it consume while I'm playing?**
-Very little: **~75 MB of RAM and 0% CPU at idle**. The app stays
-silent in the background until you press one of your shortcuts.
+Very little: **~75 MB of RAM on Windows, ~30 MB on Mac, and 0% CPU at
+idle**. The app stays silent in the background until you press one of
+your shortcuts.
 
 **Could I get banned for using this?**
 ROrganizer **does not interact with Dofus**. It doesn't read the
 game, doesn't modify it, doesn't send any command to it. It just
-brings a window to the front — exactly like `Alt+Tab` does in
-Windows. That said, using third-party tools is at your own risk
-regarding Ankama's terms of service.
+brings a window to the front — exactly like `Alt+Tab` on Windows or
+`Cmd+Tab` on Mac. That said, using third-party tools is at your own
+risk regarding Ankama's terms of service.
 
 **Do shortcuts work while I'm in-game?**
-Yes. Shortcuts are listened to **at the Windows system level**, so
+Yes. Shortcuts are listened to **at the system level**, so
 they work no matter which window is in front (Dofus, your browser,
 another app…). If you'd rather have them work in Dofus only, tick the
-option in the settings (the gear). One caveat: if Dofus runs as
-**administrator**, run ROrganizer as administrator too.
+option in the settings (the gear). On Windows, one caveat: if Dofus
+runs as **administrator**, run ROrganizer as administrator too.
 
 **Windows shows a blue warning at first launch, is this normal?**
 Yes. ROrganizer isn't signed with a **code-signing certificate**
@@ -143,6 +163,15 @@ executable it doesn't recognize yet. Click **"More info"** then
 procedure is in [SECURITY.md](SECURITY.md): comparing the **SHA256**
 GitHub shows on the release page, and a **provenance attestation**
 you can check in one command from 1.3.0 onwards.
+
+**On Mac, macOS refuses to open the app, is this normal?**
+Yes. ROrganizer isn't signed by Apple, which requires a paid developer
+subscription. On the first launch of each version you download, open
+**System Settings → Privacy & Security**, scroll down to the message
+about ROrganizer and click **"Open Anyway"**. ROrganizer then asks for
+the **Accessibility** permission: that's what lets it see the Dofus
+windows, listen to your shortcuts and bring the right window to the
+front. You grant it once, and it stays valid for later versions.
 
 **My antivirus flags a "trojan", is the app dangerous?**
 No, it's a **false positive**. To fire your shortcuts even while Dofus
@@ -161,9 +190,12 @@ days to propagate. Until then, you can add the `.exe` as an exclusion
 in your antivirus, after checking its SHA256.
 
 **How do I uninstall it?**
-Just delete the `.exe`. Your preferences are stored in
+On Windows, just delete the `.exe`. Your preferences are stored in
 `%APPDATA%\rorganizer\` — delete that folder for a full clean-up.
-**No Windows registry changes, no service installed.**
+**No Windows registry changes, no service installed.** On Mac, move
+ROrganizer to the Trash from Applications, then delete
+`~/Library/Application Support/rorganizer/` if you want to erase your
+preferences.
 
 ## Disclaimer
 

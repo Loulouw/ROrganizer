@@ -13,7 +13,7 @@ Sitio web: [rorganizer.loulouw-labs.fr](https://rorganizer.loulouw-labs.fr/es/)
 [![Site](https://img.shields.io/badge/site-rorganizer.loulouw--labs.fr-97c459?labelColor=1c1c1a)](https://rorganizer.loulouw-labs.fr/es/)
 [![Version](https://img.shields.io/github/v/release/Loulouw/ROrganizer?display_name=tag&label=version&color=97c459)](https://github.com/Loulouw/ROrganizer/releases)
 [![License](https://img.shields.io/badge/licencia-MIT%20OR%20Apache--2.0-blue)](#licencia)
-[![Platform](https://img.shields.io/badge/plataforma-Windows%2010%2B-0078D6?logo=windows)](https://github.com/Loulouw/ROrganizer/releases)
+[![Platform](https://img.shields.io/badge/plataforma-Windows%2010%2B%20%C2%B7%20macOS%2011%2B-0078D6)](https://github.com/Loulouw/ROrganizer/releases)
 [![Rust](https://img.shields.io/badge/rust-stable-orange?logo=rust)](https://www.rust-lang.org/)
 [![100% offline](https://img.shields.io/badge/100%25-sin%20conexi%C3%B3n-2ea44f)](#-respeto-a-tu-privacidad)
 
@@ -26,8 +26,9 @@ Sitio web: [rorganizer.loulouw-labs.fr](https://rorganizer.loulouw-labs.fr/es/)
 > ⚠️ **Cuidado con las falsificaciones.** ROrganizer se descarga
 > **únicamente** desde la
 > [página de Releases de este repositorio GitHub](https://github.com/Loulouw/ROrganizer/releases),
-> como **un solo ejecutable**. Nunca dentro de un archivo comprimido, nunca
-> como script, nunca desde un alojamiento de archivos o un enlace
+> como **un solo archivo por sistema**: un `.exe` para Windows, un
+> `.dmg` para macOS. Nunca dentro de un archivo comprimido, nunca como
+> script, nunca desde un alojamiento de archivos o un enlace
 > compartido en otro sitio. Cualquier archivo que lleve mi nombre y no
 > corresponda a esta descripción no proviene de mí — consulta
 > [SECURITY.md](SECURITY.md) para verificar tu descarga.
@@ -64,7 +65,8 @@ ventanas Dofus, eso lo cambia todo.
 - **No se registra ninguna pulsación de tecla**. Los atajos se
   identifican al vuelo y se olvidan al instante.
 - El único archivo que la app escribe es **su propia configuración**
-  (tus atajos, tu idioma, tu tema) en la carpeta AppData de Windows.
+  (tus atajos, tu idioma, tu tema) en la carpeta AppData de Windows, o
+  en `~/Library/Application Support` en Mac.
 
 ## ⚡ Rendimiento
 
@@ -81,9 +83,10 @@ ventanas Dofus, eso lo cambia todo.
 - ✋ **Arrastrar y soltar** para ordenar tus cuentas a tu gusto
 - 🌓 **Tema claro u oscuro**, en FR / EN / ES
 - 📍 **Discreto, donde quieras**: se minimiza a la bandeja del sistema o a
-  la barra de tareas, activable con un clic
-- 🗂️ **Barra de tareas ordenada**: un clic ordena las ventanas de Dofus
-  según el orden de tus cuentas
+  la barra de tareas (en Mac: la barra de menús o el Dock), activable con
+  un clic
+- 🗂️ **Barra de tareas ordenada** (Windows): un clic ordena las ventanas
+  de Dofus según el orden de tus cuentas
 - ⚙️ **A tu manera**: atajos solo en Dofus, ventana siempre visible o no,
   posición recordada de un inicio a otro
 
@@ -93,13 +96,26 @@ ventanas Dofus, eso lo cambia todo.
 
 | 1️⃣ &nbsp; **Descarga** | 2️⃣ &nbsp; **Lanza** | 3️⃣ &nbsp; **Configura** |
 |:--|:--|:--|
-| Descarga el `.exe` desde [Releases](https://github.com/Loulouw/ROrganizer/releases). Sin instalador, sin dependencias. | Doble clic en el `.exe`. Eso es todo. ROrganizer detecta automáticamente tus cuentas Dofus ya abiertas. | Haz clic en **«definir»** junto a una cuenta y pulsa la tecla o el botón del ratón que quieras asignarle. |
+| Descarga el `.exe` (Windows) o el `.dmg` (Mac) desde [Releases](https://github.com/Loulouw/ROrganizer/releases). Sin instalador, sin dependencias. | Windows: doble clic en el `.exe`. Mac: abre el `.dmg` y arrastra ROrganizer a Aplicaciones. ROrganizer detecta automáticamente tus cuentas Dofus ya abiertas. | Haz clic en **«definir»** junto a una cuenta y pulsa la tecla o el botón del ratón que quieras asignarle. |
 
 [![Descargar ROrganizer](https://img.shields.io/badge/%E2%AC%87%EF%B8%8F_Descargar_ROrganizer-97c459?style=for-the-badge&labelColor=1c1c1a)](https://github.com/Loulouw/ROrganizer/releases/latest)
 
 </div>
 
-Compatible con Windows 10 y Windows 11.
+Compatible con Windows 10 y 11, y con macOS 11 o posterior (Mac con
+Apple Silicon o Intel).
+
+**En Mac, dos permisos en el primer arranque:**
+
+1. macOS bloquea la app, que no está firmada por Apple (eso requiere
+   una suscripción de pago). Abre **Ajustes del Sistema → Privacidad y
+   seguridad**, baja hasta el mensaje sobre ROrganizer y haz clic en
+   **«Abrir igualmente»**. Hay que repetirlo con cada nueva versión
+   descargada.
+2. ROrganizer muestra un aviso que pide el permiso de
+   **Accesibilidad**: sin él, no ve las ventanas de Dofus ni capta tus
+   atajos. Haz clic en **«Abrir ajustes»** y activa ROrganizer en la
+   lista. El permiso se conserva de una versión a otra.
 
 > 💡 **¿Prefieres compilar desde el código fuente?**
 > Con el toolchain Rust `stable-x86_64-pc-windows-msvc` (vía [rustup](https://rustup.rs)):
@@ -107,6 +123,9 @@ Compatible con Windows 10 y Windows 11.
 > cargo build --release
 > .\target\release\rorganizer.exe
 > ```
+> En Mac, con el toolchain `stable` y Xcode: `cargo build --release`,
+> luego `./target/release/rorganizer` desde un terminal autorizado en
+> **Accesibilidad**.
 
 ## FAQ
 
@@ -115,25 +134,27 @@ No. ROrganizer **detecta automáticamente** todas tus cuentas Dofus
 en cuanto se inician, tanto en el cliente clásico como en **Dofus
 Retro** y **Dofus Experimental**. Solo tienes que asignar un atajo a
 cada una haciendo clic en «definir» — y queda guardado. Las cuentas
-de Retro se muestran sin icono de clase: su ventana no lo indica.
+de Retro se muestran sin icono de clase: su ventana no lo indica. En
+Mac, Dofus Retro todavía no se ha podido probar.
 
 **¿Cuánto consume mientras juego?**
-Muy poco: **~75 MB de RAM y 0 % de CPU en reposo**. La app se queda
-silenciosa en segundo plano hasta que pulsas un atajo.
+Muy poco: **~75 MB de RAM en Windows, ~30 MB en Mac, y 0 % de CPU en
+reposo**. La app se queda silenciosa en segundo plano hasta que pulsas
+un atajo.
 
 **¿Puedo ser baneado por usarla?**
 ROrganizer **no interactúa con Dofus**. No lo lee, no lo modifica, no
 le envía ningún comando. Solo trae una ventana al frente — exactamente
-lo mismo que hace `Alt+Tab` en Windows. Dicho esto, el uso de
-herramientas de terceros es bajo tu propia responsabilidad respecto a
-las condiciones de uso de Ankama.
+lo mismo que hace `Alt+Tab` en Windows o `Cmd+Tab` en Mac. Dicho esto,
+el uso de herramientas de terceros es bajo tu propia responsabilidad
+respecto a las condiciones de uso de Ankama.
 
 **¿Funcionan los atajos cuando estoy en el juego?**
-Sí. Los atajos se escuchan **a nivel global de Windows**, así que
+Sí. Los atajos se escuchan **a nivel global del sistema**, así que
 funcionan independientemente de la ventana en primer plano (Dofus,
 navegador, otra app…). Si prefieres que solo funcionen en Dofus, marca
-la opción en los ajustes (el engranaje). Una salvedad: si Dofus se
-ejecuta como **administrador**, lanza ROrganizer también como
+la opción en los ajustes (el engranaje). En Windows, una salvedad: si
+Dofus se ejecuta como **administrador**, lanza ROrganizer también como
 administrador.
 
 **Windows muestra una advertencia azul al primer arranque, ¿es normal?**
@@ -147,6 +168,16 @@ procedimiento está detallado en [SECURITY.md](SECURITY.md):
 comparación del **SHA256** que GitHub muestra en la página de la
 release, y **atestación de procedencia** verificable con un solo
 comando a partir de la 1.3.0.
+
+**En Mac, macOS se niega a abrir la app, ¿es normal?**
+Sí. ROrganizer no está firmado por Apple, lo que requiere una
+suscripción de desarrollador de pago. En el primer arranque de cada
+versión descargada, abre **Ajustes del Sistema → Privacidad y
+seguridad**, baja hasta el mensaje sobre ROrganizer y haz clic en
+**«Abrir igualmente»**. Después, ROrganizer pide el permiso de
+**Accesibilidad**: es lo que le permite ver las ventanas de Dofus,
+escuchar tus atajos y traer la ventana correcta al frente. Lo concedes
+una vez y sigue siendo válido para las versiones siguientes.
 
 **Mi antivirus detecta un «troyano», ¿la app es peligrosa?**
 No, es un **falso positivo**. Para activar tus atajos incluso cuando
@@ -166,10 +197,12 @@ puedes añadir el `.exe` como exclusión en tu antivirus, después de
 comprobar su SHA256.
 
 **¿Cómo desinstalo la aplicación?**
-Simplemente borra el `.exe`. Tus preferencias se guardan en
-`%APPDATA%\rorganizer\` — puedes borrar esa carpeta para una limpieza
-completa. **Sin cambios en el registro de Windows, sin servicio
-instalado.**
+En Windows, simplemente borra el `.exe`. Tus preferencias se guardan
+en `%APPDATA%\rorganizer\` — puedes borrar esa carpeta para una
+limpieza completa. **Sin cambios en el registro de Windows, sin
+servicio instalado.** En Mac, mueve ROrganizer a la papelera desde
+Aplicaciones y luego borra `~/Library/Application Support/rorganizer/`
+si quieres eliminar tus preferencias.
 
 ## Aviso legal
 

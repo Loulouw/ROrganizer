@@ -9,8 +9,10 @@ dépôt :
 
 **https://github.com/Loulouw/ROrganizer/releases**
 
-Une release officielle contient **un seul fichier** : un exécutable
-nommé `ROrganizer-<version>-x86_64-windows.exe`.
+Une release officielle contient **un fichier par système** : un
+exécutable nommé `ROrganizer-<version>-x86_64-windows.exe` pour Windows,
+et une image disque nommée `ROrganizer-<version>-universal-macos.dmg`
+pour macOS.
 
 Il n'existe **aucune** distribution officielle sous une autre forme.
 En particulier, ROrganizer n'est jamais distribué :
@@ -18,7 +20,7 @@ En particulier, ROrganizer n'est jamais distribué :
 - dans une **archive** (`.zip`, `.rar`, `.7z`), et encore moins dans une
   archive protégée par mot de passe ;
 - sous forme de **script** (`.bat`, `.cmd`, `.ps1`, `.vbs`) ;
-- via un **installeur** ou un `setup.exe` ;
+- via un **installeur** (`setup.exe`, `.msi`, `.pkg`) ;
 - depuis un hébergeur de fichiers (Google Drive, MediaFire, Mega,
   Dropbox…), un lien Discord, un forum ou un site miroir.
 
@@ -50,16 +52,24 @@ son nom sur la page de la release. Compare-le au tien :
 Get-FileHash .\ROrganizer-1.3.0-x86_64-windows.exe -Algorithm SHA256
 ```
 
-Si les deux ne correspondent pas, le binaire que tu as n'est pas celui
+Sur Mac :
+
+```bash
+shasum -a 256 ROrganizer-<version>-universal-macos.dmg
+```
+
+Si les deux ne correspondent pas, le fichier que tu as n'est pas celui
 publié ici — supprime-le.
 
-**À partir de la version 1.3.0**, chaque exécutable est accompagné d'une
-**attestation de provenance** GitHub, qui le relie de façon
+**À partir de la version 1.3.0**, chaque fichier publié est accompagné
+d'une **attestation de provenance** GitHub, qui le relie de façon
 cryptographique à ce dépôt, au tag publié et au workflow qui l'a
-compilé. Avec le [GitHub CLI](https://cli.github.com) :
+compilé. Les `.dmg` macOS en ont une dès la première version Mac. Avec
+le [GitHub CLI](https://cli.github.com) :
 
 ```powershell
 gh attestation verify .\ROrganizer-1.3.0-x86_64-windows.exe --repo Loulouw/ROrganizer
+gh attestation verify ROrganizer-<version>-universal-macos.dmg --repo Loulouw/ROrganizer
 ```
 
 Une attestation valide prouve que le fichier a été compilé par GitHub
@@ -75,6 +85,18 @@ avec `gh auth login`.
 > attendu, ce n'est pas le signe d'une falsification. Leur seul moyen de
 > contrôle est le SHA256 affiché par GitHub.
 
+Sur Mac, l'app est en plus signée avec le certificat de ROrganizer (pas
+avec un certificat Apple : macOS te demande donc « Ouvrir quand même »
+au premier lancement). Ce certificat ne change jamais, et c'est lui qui
+te permet de garder l'autorisation Accessibilité d'une version à
+l'autre. Pour vérifier qu'une app installée le porte, son empreinte
+SHA-1 doit être `9005666d41da362dea45bb462fa8b658c8251a7b` :
+
+```bash
+codesign -d --extract-certificates=/tmp/rorganizer-cert /Applications/ROrganizer.app
+shasum /tmp/rorganizer-cert0
+```
+
 ## Et une recompilation depuis les sources ?
 
 Tu peux évidemment compiler ROrganizer toi-même — c'est décrit dans le
@@ -87,7 +109,8 @@ selon les chemins absolus des fichiers intermédiaires. Compiler dans
 l'intégration continue décale la mise en page du binaire — même code,
 mêmes données, adresses différentes, donc hash différent. Ça se corrige
 pour les chemins que le compilateur Rust enregistre, mais pas pour ceux
-que l'éditeur de liens utilise.
+que l'éditeur de liens utilise. Sur Mac, la signature et l'image disque
+ajoutent leurs propres différences.
 
 Autrement dit : une différence de hash entre ta recompilation et la
 release ne prouve rien, ni dans un sens ni dans l'autre. **Le moyen de
@@ -102,11 +125,15 @@ apparaissent, tu n'exécutes pas ROrganizer :
 
 - désactiver l'antivirus ou ajouter une exclusion Windows Defender ;
 - demander une élévation en administrateur au lancement ;
+- demander sur Mac une autre autorisation que l'**Accessibilité**
+  (enregistrement de l'écran, accès complet au disque…) ;
 - établir de lui-même une connexion réseau (les liens de la fenêtre
   « À propos » ouvrent ton navigateur, sur ton clic — c'est le seul cas
   où quelque chose s'ouvre vers l'extérieur) ;
-- écrire ailleurs que dans `%APPDATA%\rorganizer\` ;
-- installer un service, une tâche planifiée ou une clé de registre.
+- écrire ailleurs que dans `%APPDATA%\rorganizer\` (Windows) ou
+  `~/Library/Application Support/rorganizer/` (Mac) ;
+- installer un service, une tâche planifiée, une clé de registre ou un
+  agent de démarrage.
 
 ## Signaler une distribution frauduleuse
 
@@ -131,14 +158,16 @@ repository:
 
 **https://github.com/Loulouw/ROrganizer/releases**
 
-An official release contains **a single file**: an executable named
-`ROrganizer-<version>-x86_64-windows.exe`.
+An official release contains **one file per system**: an executable
+named `ROrganizer-<version>-x86_64-windows.exe` for Windows, and a disk
+image named `ROrganizer-<version>-universal-macos.dmg` for macOS.
 
 No other distribution channel or packaging is official. ROrganizer is
 never distributed as an archive (`.zip`, `.rar`, `.7z` — least of all a
 password-protected one), as a script (`.bat`, `.cmd`, `.ps1`, `.vbs`),
-as an installer, or from a file host (Google Drive, MediaFire, Mega,
-Dropbox…), a Discord link, a forum or a mirror site.
+as an installer (`setup.exe`, `.msi`, `.pkg`), or from a file host
+(Google Drive, MediaFire, Mega, Dropbox…), a Discord link, a forum or a
+mirror site.
 
 Any file carrying the ROrganizer name that does not match the above
 **did not come from me**, whatever the source offering it.
@@ -166,16 +195,24 @@ on the release page. Compare it with yours:
 Get-FileHash .\ROrganizer-1.3.0-x86_64-windows.exe -Algorithm SHA256
 ```
 
-If they differ, the binary you have is not the one published here —
+On a Mac:
+
+```bash
+shasum -a 256 ROrganizer-<version>-universal-macos.dmg
+```
+
+If they differ, the file you have is not the one published here —
 delete it.
 
-**From version 1.3.0 onwards**, every executable ships with a GitHub
+**From version 1.3.0 onwards**, every published file ships with a GitHub
 **build provenance attestation**, cryptographically binding it to this
-repository, the published tag and the workflow that compiled it. Using
-the [GitHub CLI](https://cli.github.com):
+repository, the published tag and the workflow that compiled it. macOS
+`.dmg` files have one from the first Mac release. Using the
+[GitHub CLI](https://cli.github.com):
 
 ```powershell
 gh attestation verify .\ROrganizer-1.3.0-x86_64-windows.exe --repo Loulouw/ROrganizer
+gh attestation verify ROrganizer-<version>-universal-macos.dmg --repo Loulouw/ROrganizer
 ```
 
 A valid attestation proves the file was built by GitHub from this
@@ -188,6 +225,18 @@ If `gh` returns an authentication error, run `gh auth login` first.
 > answers `HTTP 404` on them — that is expected, not a sign of
 > tampering. Their only check is the SHA256 shown by GitHub.
 
+On a Mac, the app is also signed with ROrganizer's own certificate (not
+an Apple one, which is why macOS asks for "Open Anyway" on first
+launch). That certificate never changes, and it is what lets you keep
+the Accessibility permission from one version to the next. To check an
+installed app carries it, its SHA-1 fingerprint must be
+`9005666d41da362dea45bb462fa8b658c8251a7b`:
+
+```bash
+codesign -d --extract-certificates=/tmp/rorganizer-cert /Applications/ROrganizer.app
+shasum /tmp/rorganizer-cert0
+```
+
 ## What about rebuilding from source?
 
 You can of course build ROrganizer yourself — the README explains how —
@@ -195,7 +244,8 @@ but **the resulting binary will not have the same SHA256 as the
 release**, and that is normal. The Windows linker lays the file out
 according to the absolute paths of the intermediate files, so building
 in a different directory shifts the layout: same code, same data,
-different addresses, different hash.
+different addresses, different hash. On a Mac, the signature and the
+disk image add differences of their own.
 
 A hash mismatch between your own build and the release therefore proves
 nothing either way. **The reliable check is the provenance attestation**
@@ -206,11 +256,13 @@ and nobody outside this repository can produce one.
 
 If you observe any of these, you are not running ROrganizer: disabling
 antivirus or adding a Windows Defender exclusion; requesting
-administrator elevation at startup; opening a network connection of its
-own accord (the links in the About window open your browser, on your
-click — that is the only outbound action); writing outside
-`%APPDATA%\rorganizer\`; installing a service, a scheduled task or a
-registry key.
+administrator elevation at startup; asking on a Mac for any permission
+other than **Accessibility** (screen recording, full disk access…);
+opening a network connection of its own accord (the
+links in the About window open your browser, on your click — that is
+the only outbound action); writing outside `%APPDATA%\rorganizer\`
+(Windows) or `~/Library/Application Support/rorganizer/` (Mac);
+installing a service, a scheduled task, a registry key or a login item.
 
 ## Reporting a fraudulent distribution
 
