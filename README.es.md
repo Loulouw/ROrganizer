@@ -134,8 +134,7 @@ No. ROrganizer **detecta automáticamente** todas tus cuentas Dofus
 en cuanto se inician, tanto en el cliente clásico como en **Dofus
 Retro** y **Dofus Experimental**. Solo tienes que asignar un atajo a
 cada una haciendo clic en «definir» — y queda guardado. Las cuentas
-de Retro se muestran sin icono de clase: su ventana no lo indica. En
-Mac, Dofus Retro todavía no se ha podido probar.
+de Retro se muestran sin icono de clase: su ventana no lo indica.
 
 **¿Cuánto consume mientras juego?**
 Muy poco: **~75 MB de RAM en Windows, ~30 MB en Mac, y 0 % de CPU en

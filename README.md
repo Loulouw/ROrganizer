@@ -138,8 +138,7 @@ dès qu'ils sont lancés, sur le client classique comme sur **Dofus
 Rétro** et **Dofus Expérimental**. Tu n'as qu'à leur attribuer un
 raccourci en cliquant sur « définir » à côté de chacun — et c'est
 mémorisé. Les comptes Rétro s'affichent sans icône de classe : leur
-fenêtre ne l'indique pas. Sur Mac, Dofus Rétro n'a pas encore pu être
-testé.
+fenêtre ne l'indique pas.
 
 **Ça consomme quoi quand je joue ?**
 Très peu : **~75 Mo de RAM sous Windows, ~30 Mo sur Mac, et 0 % de CPU

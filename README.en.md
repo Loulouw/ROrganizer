@@ -133,7 +133,6 @@ launches, on the regular client as well as **Dofus Retro** and
 **Dofus Experimental**. You just bind a shortcut once by clicking
 "set" next to each account — it's remembered for next time. Retro
 accounts show no class icon: their window title doesn't carry it.
-Dofus Retro hasn't been tested on Mac yet.
 
 **What does it consume while I'm playing?**
 Very little: **~75 MB of RAM on Windows, ~30 MB on Mac, and 0% CPU at
