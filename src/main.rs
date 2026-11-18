@@ -6,31 +6,27 @@ mod app;
 mod assets;
 mod class_icon;
 mod config;
+mod dofus;
 mod hooks;
 mod i18n;
-#[cfg(windows)]
-mod single_instance;
+mod platform;
 mod theme;
 mod tray;
 mod triggers;
 mod ui;
-mod win;
 
 use std::sync::Arc;
 
 use eframe::egui;
 
+use platform::single_instance::{self, AcquireResult};
+
 fn main() -> eframe::Result<()> {
-    #[cfg(windows)]
-    let waiter_event = match single_instance::acquire_or_signal_existing() {
-        single_instance::AcquireResult::SignalledExisting => {
+    let instance = match single_instance::acquire_or_signal_existing() {
+        AcquireResult::SignalledExisting => {
             std::process::exit(0);
         }
-        single_instance::AcquireResult::First(guard) => {
-            let event = guard.event_handle();
-            single_instance::store_guard(guard);
-            event
-        }
+        AcquireResult::First(guard) => guard,
     };
 
     let icon_data = decode_window_icon();
@@ -53,13 +49,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "ROrganizer",
         options,
-        Box::new(move |cc| {
-            #[cfg(windows)]
-            let app = app::App::new(cc, waiter_event);
-            #[cfg(not(windows))]
-            let app = app::App::new(cc);
-            Ok(Box::new(app))
-        }),
+        Box::new(move |cc| Ok(Box::new(app::App::new(cc, instance)))),
     )
 }
 

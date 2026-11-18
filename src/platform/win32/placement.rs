@@ -1,6 +1,6 @@
 //! Position of the main window across launches, in physical screen pixels.
 
-use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MonitorFromRect, MONITORINFO, MONITOR_DEFAULTTONULL,
 };
@@ -9,14 +9,16 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SWP_NOZORDER,
 };
 
+use crate::platform::MainWindow;
+
 /// Height of the strip, from the top edge, that must stay on a screen so
 /// the window can still be dragged by its title bar.
 const TITLE_STRIP: i32 = 36;
 
 /// Top-left corner of `hwnd`. None while it is minimized or hidden: Windows
 /// then reports a parking spot, not where the user left it.
-pub fn position(hwnd: isize) -> Option<(i32, i32)> {
-    let hwnd = HWND(hwnd as *mut _);
+pub fn position(hwnd: MainWindow) -> Option<(i32, i32)> {
+    let hwnd = hwnd.hwnd();
     unsafe {
         if IsIconic(hwnd).as_bool() || !IsWindowVisible(hwnd).as_bool() {
             return None;
@@ -30,8 +32,8 @@ pub fn position(hwnd: isize) -> Option<(i32, i32)> {
 /// Moves `hwnd` to `pos`, pulled inside the work area of the screen showing
 /// its title bar. Nothing happens when no screen shows it (screen unplugged
 /// since the last launch): the window keeps its default, centred spot.
-pub fn restore(hwnd: isize, pos: (i32, i32)) {
-    let hwnd = HWND(hwnd as *mut _);
+pub fn restore(hwnd: MainWindow, pos: (i32, i32)) {
+    let hwnd = hwnd.hwnd();
     unsafe {
         let mut r = RECT::default();
         if GetWindowRect(hwnd, &mut r).is_err() {

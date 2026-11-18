@@ -5,9 +5,10 @@ use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2
 use rust_i18n::t;
 
 use crate::app::App;
+use crate::dofus::DetectedWindow;
+use crate::platform::{self, WindowId};
 use crate::theme::{self, Theme};
 use crate::triggers::{BindingTarget, SlotKey, Trigger};
-use crate::win::{self, DetectedWindow};
 
 pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     let theme = app.theme();
@@ -140,8 +141,8 @@ fn draw_summary(
                 on_refresh();
             }
             // Ordering means something from two windows on.
-            if count >= 2 {
-                let busy = win::taskbar::is_sorting();
+            if platform::HAS_TASKBAR_SORT && count >= 2 {
+                let busy = platform::taskbar::is_sorting();
                 if sort_taskbar_button(ui, theme, busy).clicked() && !busy {
                     on_sort_taskbar();
                 }
@@ -244,7 +245,7 @@ fn draw_account_list(
         match action {
             RowAction::PillClicked(slot) => app.bind_target(BindingTarget::Account(slot)),
             RowAction::RowClicked { slot, hwnd } => {
-                win::focus_window(hwnd);
+                platform::focus_window(hwnd);
                 app.set_cycle_current(slot);
             }
         }
@@ -254,7 +255,7 @@ fn draw_account_list(
 #[derive(Debug)]
 enum RowAction {
     PillClicked(SlotKey),
-    RowClicked { slot: SlotKey, hwnd: isize },
+    RowClicked { slot: SlotKey, hwnd: WindowId },
 }
 
 fn draw_account_row(

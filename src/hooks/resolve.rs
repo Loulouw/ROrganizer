@@ -1,50 +1,8 @@
-use std::sync::atomic::Ordering;
-
-use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, KBDLLHOOKSTRUCT, WM_KEYDOWN, WM_SYSKEYDOWN,
-};
-
-use super::state::{BindingAction, HOOK_ENABLED, HOOK_STATE};
+use super::state::{BindingAction, HookState};
+use crate::platform::WindowId;
 use crate::triggers::Trigger;
 
-pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT { unsafe {
-    if code < 0 {
-        return CallNextHookEx(None, code, wparam, lparam);
-    }
-
-    // Hot-path early-out: lock-free atomic check before touching the mutex.
-    if !HOOK_ENABLED.load(Ordering::Relaxed) {
-        return CallNextHookEx(None, code, wparam, lparam);
-    }
-
-    let msg = wparam.0 as u32;
-    if msg != WM_KEYDOWN && msg != WM_SYSKEYDOWN {
-        return CallNextHookEx(None, code, wparam, lparam);
-    }
-
-    let info = &*(lparam.0 as *const KBDLLHOOKSTRUCT);
-    let vk = info.vkCode;
-
-    let focus_target = HOOK_STATE.get().and_then(|m| {
-        let mut state = m.lock().ok()?;
-        resolve_action(
-            &mut state,
-            Trigger::Key(vk),
-            crate::win::foreground_window,
-            crate::win::is_dofus_window,
-        )
-    });
-
-    if let Some(hwnd) = focus_target {
-        crate::win::focus_window(hwnd);
-        return LRESULT(1);
-    }
-
-    CallNextHookEx(None, code, wparam, lparam)
-}}
-
-/// Looks up the trigger against the binding table and returns the HWND to
+/// Looks up the trigger against the binding table and returns the window to
 /// focus, advancing the cycler cursor as needed. Caller still holds the lock.
 ///
 /// `foreground` is only called once a binding matched, and only when needed:
@@ -56,11 +14,11 @@ pub unsafe extern "system" fn kb_proc(code: i32, wparam: WPARAM, lparam: LPARAM)
 ///   mouse (taskbar, click in game) since our last focus, and Next / Prev
 ///   must continue from where they actually are.
 pub(super) fn resolve_action(
-    state: &mut super::state::HookState,
+    state: &mut HookState,
     trigger: Trigger,
-    foreground: impl FnOnce() -> Option<isize>,
-    is_dofus: impl FnOnce(isize) -> bool,
-) -> Option<isize> {
+    foreground: impl FnOnce() -> Option<WindowId>,
+    is_dofus: impl FnOnce(WindowId) -> bool,
+) -> Option<WindowId> {
     let action = state
         .bindings
         .iter()
@@ -104,15 +62,18 @@ pub(super) fn resolve_action(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::triggers::Trigger;
+
+    fn w(n: i16) -> WindowId {
+        WindowId::test(n)
+    }
 
     fn make_state(
         bindings: Vec<(Trigger, BindingAction)>,
-        cycle_hwnds: Vec<isize>,
-    ) -> super::super::state::HookState {
-        super::super::state::HookState {
+        cycle_hwnds: &[i16],
+    ) -> HookState {
+        HookState {
             bindings,
-            cycle_hwnds,
+            cycle_hwnds: cycle_hwnds.iter().map(|&n| w(n)).collect(),
             cycle_index: 0,
             cycle_current_hwnd: None,
             dofus_only: false,
@@ -121,25 +82,21 @@ mod tests {
 
     /// `resolve_action` with the window in front fixed and no Dofus window
     /// outside the cycle.
-    fn resolve(
-        st: &mut super::super::state::HookState,
-        trigger: Trigger,
-        fg: Option<isize>,
-    ) -> Option<isize> {
-        resolve_action(st, trigger, move || fg, |_| false)
+    fn resolve(st: &mut HookState, trigger: Trigger, fg: Option<i16>) -> Option<WindowId> {
+        resolve_action(st, trigger, move || fg.map(w), |_| false)
     }
 
     #[test]
     fn empty_bindings_resolves_to_none() {
-        let mut st = make_state(Vec::new(), vec![100, 200]);
+        let mut st = make_state(Vec::new(), &[100, 200]);
         assert!(resolve(&mut st, Trigger::Key(0x70), None).is_none());
     }
 
     #[test]
     fn unmatched_trigger_resolves_to_none() {
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(100))],
-            vec![100],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(100)))],
+            &[100],
         );
         assert!(resolve(&mut st, Trigger::Key(0x71), None).is_none());
     }
@@ -147,8 +104,8 @@ mod tests {
     #[test]
     fn focus_aligns_cycle_index_to_target() {
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(300))],
-            vec![100, 200, 300, 400],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(300)))],
+            &[100, 200, 300, 400],
         );
         st.cycle_index = 0; // start away from 300
         let r = resolve_action(
@@ -157,45 +114,45 @@ mod tests {
             || panic!("focus needs no foreground"),
             |_| panic!("focus needs no process lookup"),
         );
-        assert_eq!(r, Some(300));
+        assert_eq!(r, Some(w(300)));
         assert_eq!(st.cycle_index, 2);
-        assert_eq!(st.cycle_current_hwnd, Some(300));
+        assert_eq!(st.cycle_current_hwnd, Some(w(300)));
     }
 
     #[test]
     fn focus_does_not_move_cursor_if_target_not_in_cycle() {
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(999))],
-            vec![100, 200],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(999)))],
+            &[100, 200],
         );
         st.cycle_index = 1;
         resolve(&mut st, Trigger::Key(0x70), None);
         assert_eq!(st.cycle_index, 1, "untouched when target outside cycle");
-        assert_eq!(st.cycle_current_hwnd, Some(999));
+        assert_eq!(st.cycle_current_hwnd, Some(w(999)));
     }
 
     #[test]
     fn cycle_next_wraps_last_to_first() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CycleNext)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.cycle_index = 2;
         let r = resolve(&mut st, Trigger::Key(0x70), None);
-        assert_eq!(r, Some(100));
+        assert_eq!(r, Some(w(100)));
         assert_eq!(st.cycle_index, 0);
-        assert_eq!(st.cycle_current_hwnd, Some(100));
+        assert_eq!(st.cycle_current_hwnd, Some(w(100)));
     }
 
     #[test]
     fn cycle_next_advances_when_not_at_end() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CycleNext)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.cycle_index = 0;
         let r = resolve(&mut st, Trigger::Key(0x70), None);
-        assert_eq!(r, Some(200));
+        assert_eq!(r, Some(w(200)));
         assert_eq!(st.cycle_index, 1);
     }
 
@@ -203,11 +160,11 @@ mod tests {
     fn cycle_prev_wraps_first_to_last() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CyclePrev)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.cycle_index = 0;
         let r = resolve(&mut st, Trigger::Key(0x70), None);
-        assert_eq!(r, Some(300));
+        assert_eq!(r, Some(w(300)));
         assert_eq!(st.cycle_index, 2);
     }
 
@@ -215,11 +172,11 @@ mod tests {
     fn cycle_prev_decrements_when_not_at_start() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CyclePrev)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.cycle_index = 2;
         let r = resolve(&mut st, Trigger::Key(0x70), None);
-        assert_eq!(r, Some(200));
+        assert_eq!(r, Some(w(200)));
         assert_eq!(st.cycle_index, 1);
     }
 
@@ -231,14 +188,14 @@ mod tests {
                 (Trigger::Key(0x70), BindingAction::CycleNext),
                 (Trigger::Key(0x71), BindingAction::CyclePrev),
             ],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         let r = resolve(&mut st, Trigger::Key(0x70), Some(300));
-        assert_eq!(r, Some(100), "Next from 300 wraps to 100");
+        assert_eq!(r, Some(w(100)), "Next from 300 wraps to 100");
         assert_eq!(st.cycle_index, 0);
         let r = resolve(&mut st, Trigger::Key(0x71), Some(300));
-        assert_eq!(r, Some(200), "Prev from 300 is 200");
-        assert_eq!(st.cycle_current_hwnd, Some(200));
+        assert_eq!(r, Some(w(200)), "Prev from 300 is 200");
+        assert_eq!(st.cycle_current_hwnd, Some(w(200)));
     }
 
     #[test]
@@ -246,18 +203,18 @@ mod tests {
         // Browser, ROrganizer itself or an excluded account in front.
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CycleNext)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.cycle_index = 1;
         let r = resolve(&mut st, Trigger::Key(0x70), Some(999));
-        assert_eq!(r, Some(300));
+        assert_eq!(r, Some(w(300)));
     }
 
     #[test]
     fn cycle_next_on_empty_list_returns_none() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CycleNext)],
-            Vec::new(),
+            &[],
         );
         assert!(resolve(&mut st, Trigger::Key(0x70), None).is_none());
         assert_eq!(st.cycle_current_hwnd, None);
@@ -267,7 +224,7 @@ mod tests {
     fn cycle_prev_on_empty_list_returns_none() {
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CyclePrev)],
-            Vec::new(),
+            &[],
         );
         assert!(resolve(&mut st, Trigger::Key(0x70), None).is_none());
     }
@@ -277,13 +234,13 @@ mod tests {
         // App pushes Account focus actions BEFORE Cycle ones, so Account wins.
         let mut st = make_state(
             vec![
-                (Trigger::Key(0x70), BindingAction::Focus(500)),
+                (Trigger::Key(0x70), BindingAction::Focus(w(500))),
                 (Trigger::Key(0x70), BindingAction::CycleNext),
             ],
-            vec![100, 200],
+            &[100, 200],
         );
         let r = resolve(&mut st, Trigger::Key(0x70), None);
-        assert_eq!(r, Some(500));
+        assert_eq!(r, Some(w(500)));
     }
 
     #[test]
@@ -291,7 +248,7 @@ mod tests {
         // Browser in front: no focus, and the cycle cursor does not move.
         let mut st = make_state(
             vec![(Trigger::Key(0x70), BindingAction::CycleNext)],
-            vec![100, 200, 300],
+            &[100, 200, 300],
         );
         st.dofus_only = true;
         assert_eq!(resolve(&mut st, Trigger::Key(0x70), Some(999)), None);
@@ -303,36 +260,36 @@ mod tests {
     #[test]
     fn dofus_only_acts_from_an_account_without_process_lookup() {
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(300))],
-            vec![100, 200, 300],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(300)))],
+            &[100, 200, 300],
         );
         st.dofus_only = true;
         let r = resolve_action(
             &mut st,
             Trigger::Key(0x70),
-            || Some(100),
+            || Some(w(100)),
             |_| panic!("an account of the cycle is Dofus"),
         );
-        assert_eq!(r, Some(300));
+        assert_eq!(r, Some(w(300)));
     }
 
     #[test]
     fn dofus_only_acts_from_a_dofus_window_outside_the_cycle() {
         // Login screen of another client: not an account, still Dofus.
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(300))],
-            vec![100, 200, 300],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(300)))],
+            &[100, 200, 300],
         );
         st.dofus_only = true;
-        let r = resolve_action(&mut st, Trigger::Key(0x70), || Some(777), |h| h == 777);
-        assert_eq!(r, Some(300));
+        let r = resolve_action(&mut st, Trigger::Key(0x70), || Some(w(777)), |h| h == w(777));
+        assert_eq!(r, Some(w(300)));
     }
 
     #[test]
     fn dofus_only_does_not_query_anything_for_unbound_keys() {
         let mut st = make_state(
-            vec![(Trigger::Key(0x70), BindingAction::Focus(300))],
-            vec![300],
+            vec![(Trigger::Key(0x70), BindingAction::Focus(w(300)))],
+            &[300],
         );
         st.dofus_only = true;
         let r = resolve_action(

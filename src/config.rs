@@ -18,7 +18,7 @@ pub struct StoredConfig {
     pub theme: Theme,
     /// Title-matching regex used by the watcher to identify Dofus windows.
     /// `None` (or missing in older JSONs) → fall back to
-    /// `crate::win::DEFAULT_TITLE_REGEX`. Lets users adapt to future Dofus
+    /// `crate::dofus::DEFAULT_TITLE_REGEX`. Lets users adapt to future Dofus
     /// title format changes without rebuilding.
     #[serde(default)]
     pub title_regex: Option<String>,
@@ -123,6 +123,54 @@ mod tests {
             always_on_top: false,
             window_pos: Some((-1200, 340)),
         }
+    }
+
+    /// A config.json as ROrganizer 1.4.0 writes it.
+    const CONFIG_1_4_0: &str = r#"{
+  "version": 1,
+  "bindings": [
+    [{ "Account": "Dowoop" }, { "Mouse": "X1" }],
+    [{ "Account": "Dowoup" }, { "Key": 112 }],
+    [{ "Account": "Dowoap" }, { "Mouse": "Middle" }],
+    [{ "Account": "Dosac" }, { "Key": 222 }],
+    ["CycleNext", { "Wheel": "Up" }],
+    ["CyclePrev", { "Key": 9 }]
+  ],
+  "cycle_order": ["Dowoop", "Dowoup", "Dowoap", "Dosac"],
+  "lang": "Fr",
+  "theme": "Dark",
+  "title_regex": null,
+  "shortcuts_only_in_dofus": false,
+  "minimize_to_taskbar": false,
+  "always_on_top": true,
+  "window_pos": [1124, 450]
+}"#;
+
+    #[test]
+    fn existing_config_loads_and_saves_unchanged() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        std::fs::write(&path, CONFIG_1_4_0).unwrap();
+        let cfg = load(&path).expect("1.4.0 config loads");
+        assert_eq!(
+            cfg.bindings,
+            vec![
+                (BindingTarget::Account("Dowoop".into()), Trigger::Mouse(MouseBtn::X1)),
+                (BindingTarget::Account("Dowoup".into()), Trigger::Key(112)),
+                (BindingTarget::Account("Dowoap".into()), Trigger::Mouse(MouseBtn::Middle)),
+                (BindingTarget::Account("Dosac".into()), Trigger::Key(222)),
+                (BindingTarget::CycleNext, Trigger::Wheel(WheelDir::Up)),
+                (BindingTarget::CyclePrev, Trigger::Key(9)),
+            ]
+        );
+        assert_eq!(cfg.cycle_order, ["Dowoop", "Dowoup", "Dowoap", "Dosac"]);
+        assert_eq!(cfg.window_pos, Some((1124, 450)));
+
+        save_atomic(&path, &cfg).unwrap();
+        let saved: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let original: serde_json::Value = serde_json::from_str(CONFIG_1_4_0).unwrap();
+        assert_eq!(saved, original);
     }
 
     #[test]

@@ -1,4 +1,3 @@
-use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -6,24 +5,26 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetForegroundWindow, ShowWindow, SW_RESTORE,
 };
 
-/// HWND of the window currently in front, if any.
-pub fn foreground_window() -> Option<isize> {
+use crate::platform::WindowId;
+
+/// The window currently in front, if any.
+pub fn foreground_window() -> Option<WindowId> {
     let hwnd = unsafe { GetForegroundWindow() };
-    (!hwnd.0.is_null()).then_some(hwnd.0 as isize)
+    (!hwnd.0.is_null()).then_some(WindowId::from_hwnd(hwnd))
 }
 
-/// Bring the Win32 window owning `hwnd_raw` to the foreground.
+/// Bring the Win32 window `id` to the foreground.
 ///
 /// Uses the AttachThreadInput dance because a non-foreground process is otherwise
 /// blocked from calling `SetForegroundWindow`. Best-effort: silently does nothing
 /// if the HWND is no longer valid. Must be called on a thread whose process is
 /// either foreground or recently received user input — invocations from a global
 /// LL hook context may silently no-op due to the Windows foreground lock-out.
-pub fn focus_window(hwnd_raw: isize) {
-    if hwnd_raw == 0 {
+pub fn focus_window(id: WindowId) {
+    if id.0 == 0 {
         return;
     }
-    let hwnd = HWND(hwnd_raw as *mut _);
+    let hwnd = id.hwnd();
     unsafe {
         if IsIconic(hwnd).as_bool() {
             let _ = ShowWindow(hwnd, SW_RESTORE);

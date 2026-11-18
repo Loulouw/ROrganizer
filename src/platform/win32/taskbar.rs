@@ -8,12 +8,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
     COINIT_APARTMENTTHREADED,
 };
 use windows::Win32::UI::Shell::{ITaskbarList, TaskbarList};
+
+use crate::platform::WindowId;
 
 /// Pause after each `DeleteTab` and each `AddTab`. Explorer applies them
 /// asynchronously: a Delete immediately followed by its Add can collapse
@@ -31,7 +32,7 @@ pub fn is_sorting() -> bool {
 /// Re-adds the taskbar button of each window of `hwnds`, in that order, on
 /// a short-lived thread with its own COM apartment. Ignored while a
 /// previous reorder runs. `on_done` runs once finished, failed or not.
-pub fn reorder(hwnds: Vec<isize>, on_done: impl FnOnce() + Send + 'static) {
+pub fn reorder(hwnds: Vec<WindowId>, on_done: impl FnOnce() + Send + 'static) {
     if hwnds.len() < 2
         || SORTING
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -46,7 +47,7 @@ pub fn reorder(hwnds: Vec<isize>, on_done: impl FnOnce() + Send + 'static) {
     });
 }
 
-unsafe fn readd_tabs(hwnds: &[isize]) {
+unsafe fn readd_tabs(hwnds: &[WindowId]) {
     unsafe {
         if CoInitializeEx(None, COINIT_APARTMENTTHREADED).is_err() {
             return;
@@ -56,7 +57,7 @@ unsafe fn readd_tabs(hwnds: &[isize]) {
             && list.HrInit().is_ok()
         {
             for &h in hwnds {
-                let hwnd = HWND(h as *mut _);
+                let hwnd = h.hwnd();
                 let _ = list.DeleteTab(hwnd);
                 thread::sleep(STEP_DELAY);
                 let _ = list.AddTab(hwnd);

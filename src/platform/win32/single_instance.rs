@@ -14,8 +14,6 @@
 //! mais en pratique il vit jusqu'à la fin du process et le Kernel s'en
 //! occuperait de toute façon — c'est juste plus auto-documentant.
 
-#![cfg(windows)]
-
 use std::sync::OnceLock;
 use std::thread;
 
@@ -41,14 +39,6 @@ pub struct SingleInstanceGuard {
 unsafe impl Send for SingleInstanceGuard {}
 unsafe impl Sync for SingleInstanceGuard {}
 
-impl SingleInstanceGuard {
-    /// Returns a copy of the event handle for the waiter thread. The waiter
-    /// must NOT close it — the guard owns the lifetime.
-    pub fn event_handle(&self) -> HANDLE {
-        self.event
-    }
-}
-
 impl Drop for SingleInstanceGuard {
     fn drop(&mut self) {
         unsafe {
@@ -72,7 +62,7 @@ pub enum AcquireResult {
 
 static GUARD: OnceLock<SingleInstanceGuard> = OnceLock::new();
 
-pub fn store_guard(g: SingleInstanceGuard) {
+fn store_guard(g: SingleInstanceGuard) {
     let _ = GUARD.set(g);
 }
 
@@ -126,12 +116,14 @@ unsafe fn signal_existing() { unsafe {
 }}
 
 /// Spawns a thread that waits on the guard's event and invokes `on_signal`
-/// each time it fires. The handle is owned by the guard — this thread only
-/// reads from it. We pass the handle as `isize` to sidestep `HANDLE: !Send`
-/// and Rust 2021's disjoint-capture inference (which would otherwise
-/// pick up just the inner `*mut c_void` field of any wrapper struct).
-pub fn spawn_waiter<F: Fn() + Send + 'static>(event: HANDLE, on_signal: F) {
-    let event_raw: isize = event.0 as isize;
+/// each time it fires. The guard is kept for the rest of the process and
+/// owns the handle — this thread only reads from it. We pass the handle as
+/// `isize` to sidestep `HANDLE: !Send` and Rust 2021's disjoint-capture
+/// inference (which would otherwise pick up just the inner `*mut c_void`
+/// field of any wrapper struct).
+pub fn spawn_waiter<F: Fn() + Send + 'static>(guard: SingleInstanceGuard, on_signal: F) {
+    let event_raw: isize = guard.event.0 as isize;
+    store_guard(guard);
     thread::Builder::new()
         .name("rorg-singleton-waiter".into())
         .spawn(move || loop {

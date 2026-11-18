@@ -6,13 +6,12 @@
 //! `crate::theme`) and stays inside the main viewport — no second OS
 //! window, no second tray icon, nothing to clean up on close.
 
-use std::path::Path;
-
 use eframe::egui;
 use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2};
 use rust_i18n::t;
 
 use crate::app::App;
+use crate::platform;
 use crate::theme::{self, Theme};
 
 const GITHUB_URL: &str = "https://github.com/Loulouw/ROrganizer";
@@ -142,7 +141,7 @@ pub fn draw(ctx: &egui::Context, app: &mut App) {
     if clicks.config_dir
         && let Some(dir) = app.config_dir()
     {
-        open_folder(dir);
+        platform::open_folder(dir);
     }
     if clicks.close {
         app.close_settings();
@@ -466,16 +465,3 @@ fn close_button(ui: &mut egui::Ui, theme: Theme) -> egui::Response {
     }
     response
 }
-
-#[cfg(windows)]
-fn open_folder(path: &Path) {
-    // `explorer.exe <path>` is the lightest way to open a folder in
-    // Explorer without pulling in `Win32_UI_Shell` just for this.
-    // Failure is silent — the user can't act on it anyway.
-    let _ = std::process::Command::new("explorer.exe")
-        .arg(path)
-        .spawn();
-}
-
-#[cfg(not(windows))]
-fn open_folder(_path: &Path) {}

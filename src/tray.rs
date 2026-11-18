@@ -5,63 +5,12 @@ use eframe::egui;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
-#[cfg(windows)]
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-#[cfg(windows)]
-use windows::Win32::UI::WindowsAndMessaging::{
-    IsIconic, PostMessageW, SetForegroundWindow, ShowWindow, SW_RESTORE, SW_SHOW, WM_CLOSE,
-};
+use crate::platform::{close_main_window, show_main_window};
 
 #[derive(Debug, Clone, Copy)]
 pub enum TrayEvent {
     ShowRequested,
     ToggleRequested,
-}
-
-/// Main window HWND, captured during App::new so the tray handlers can
-/// directly drive ShowWindow / WM_CLOSE while the eframe loop is parked
-/// (which happens whenever the viewport is set to Visible(false) — at that
-/// point Context::request_repaint() does not wake update()).
-static MAIN_HWND: OnceLock<isize> = OnceLock::new();
-
-pub fn register_main_hwnd(hwnd: isize) {
-    let _ = MAIN_HWND.set(hwnd);
-}
-
-#[cfg(windows)]
-fn show_main_window() {
-    if let Some(&raw) = MAIN_HWND.get() {
-        let hwnd = HWND(raw as *mut _);
-        unsafe {
-            // Minimized to the taskbar (option): SW_SHOW would leave it
-            // iconic.
-            let cmd = if IsIconic(hwnd).as_bool() { SW_RESTORE } else { SW_SHOW };
-            let _ = ShowWindow(hwnd, cmd);
-            let _ = SetForegroundWindow(hwnd);
-        }
-    }
-}
-
-#[cfg(windows)]
-fn close_main_window() {
-    if let Some(&raw) = MAIN_HWND.get() {
-        let hwnd = HWND(raw as *mut _);
-        unsafe {
-            let _ = ShowWindow(hwnd, SW_SHOW);
-            let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
-        }
-    }
-}
-
-#[cfg(not(windows))]
-fn show_main_window() {}
-#[cfg(not(windows))]
-fn close_main_window() {}
-
-/// Public entry point used by `single_instance` to wake the existing
-/// instance when a second launch is detected.
-pub fn show_main_window_external() {
-    show_main_window();
 }
 
 /// Holds the live tray icon plus mutable handles on every item whose label

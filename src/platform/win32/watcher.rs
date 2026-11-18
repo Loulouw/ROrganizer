@@ -21,14 +21,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
 };
 
-use super::enumerate::{enumerate_dofus_windows, DetectedWindow};
+use super::enumerate::enumerate_dofus_windows;
 use super::process::ExeCache;
-
-/// Lock-free snapshot of detected Dofus windows. Single writer (the watcher
-/// thread), many readers (UI / hook callbacks). Readers call `.load_full()`
-/// and get an `Arc<Vec<...>>` that's a stable view for the duration of the
-/// borrow — even if the watcher publishes a new snapshot mid-read.
-pub type WindowsSnapshot = Arc<ArcSwap<Vec<DetectedWindow>>>;
+use crate::dofus::{DetectedWindow, WindowsSnapshot};
+use crate::platform::WindowId;
 
 /// Every Dofus process owning a visible window at the last rescan, logged
 /// in or not. Read by the LL hooks, which must not query processes.
@@ -37,9 +33,9 @@ static DOFUS_PIDS: LazyLock<ArcSwap<Vec<u32>>> =
 
 /// Whether `hwnd` belongs to a running Dofus client, whatever its title
 /// (login screen, character selection).
-pub fn is_dofus_window(hwnd: isize) -> bool {
+pub fn is_dofus_window(hwnd: WindowId) -> bool {
     let mut pid = 0u32;
-    unsafe { GetWindowThreadProcessId(HWND(hwnd as *mut _), Some(&mut pid)) };
+    unsafe { GetWindowThreadProcessId(hwnd.hwnd(), Some(&mut pid)) };
     pid != 0 && DOFUS_PIDS.load().contains(&pid)
 }
 

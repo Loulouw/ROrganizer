@@ -6,16 +6,17 @@ use std::time::{Duration, Instant};
 
 use arc_swap::ArcSwap;
 use eframe::egui;
-use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use raw_window_handle::HasWindowHandle;
 
 use crate::config::{self, StoredConfig};
+use crate::dofus::{WindowsSnapshot, DEFAULT_TITLE_REGEX};
 use crate::hooks::{BindingAction, HookHandle};
 use crate::i18n::{self, Lang};
+use crate::platform::{self, single_instance, MainWindow, WindowId};
 use crate::theme::{self, Theme};
 use crate::tray::{self, TrayController, TrayEvent};
 use crate::triggers::{BindingTarget, SlotKey, Trigger};
 use crate::ui;
-use crate::win::{self, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 
 const SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
@@ -138,7 +139,7 @@ pub struct App {
     shortcuts_only_in_dofus: bool,
     minimize_to_taskbar: bool,
     always_on_top: bool,
-    main_hwnd: Option<isize>,
+    main_window: Option<MainWindow>,
     /// Last known top-left corner of the main window, physical pixels.
     window_pos: Option<(i32, i32)>,
     /// Decoded once at boot. egui_extras is built without the PNG loader
@@ -153,21 +154,21 @@ pub struct App {
 
 #[derive(Default, PartialEq, Eq)]
 struct SyncSnapshot {
-    accounts: Vec<(SlotKey, isize)>,
-    cycle_hwnds: Vec<isize>,
+    accounts: Vec<(SlotKey, WindowId)>,
+    cycle_hwnds: Vec<WindowId>,
 }
 
 impl App {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
-        #[cfg(windows)] waiter_event: windows::Win32::Foundation::HANDLE,
+        instance: single_instance::SingleInstanceGuard,
     ) -> Self {
-        let main_hwnd = match cc.window_handle().map(|h| h.as_raw()) {
-            Ok(RawWindowHandle::Win32(h)) => Some(h.hwnd.get()),
-            _ => None,
-        };
-        if let Some(hwnd) = main_hwnd {
-            tray::register_main_hwnd(hwnd);
+        let main_window = cc
+            .window_handle()
+            .ok()
+            .and_then(|h| MainWindow::from_raw_handle(h.as_raw()));
+        if let Some(window) = main_window {
+            platform::register_main_window(window);
         }
 
         egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -186,8 +187,8 @@ impl App {
                 egui::WindowLevel::AlwaysOnTop,
             ));
         }
-        if let (Some(hwnd), Some(pos)) = (main_hwnd, window_pos) {
-            win::placement::restore(hwnd, pos);
+        if let (Some(window), Some(pos)) = (main_window, window_pos) {
+            platform::placement::restore(window, pos);
         }
 
         let (theme, lang, bindings, cycle_order, title_regex) = match stored {
@@ -203,7 +204,7 @@ impl App {
             ),
             None => (
                 Theme::Dark,
-                i18n::detect_system_lang(),
+                platform::detect_system_lang(),
                 HashMap::new(),
                 Vec::new(),
                 None,
@@ -215,23 +216,20 @@ impl App {
         let tray = tray::install(cc.egui_ctx.clone(), tray_tx.clone())
             .expect("failed to install tray icon");
 
-        #[cfg(windows)]
-        {
-            let waiter_ctx = cc.egui_ctx.clone();
-            let waiter_tx = tray_tx;
-            crate::single_instance::spawn_waiter(waiter_event, move || {
-                tray::show_main_window_external();
-                let _ = waiter_tx.send(TrayEvent::ShowRequested);
-                waiter_ctx.request_repaint();
-            });
-        }
+        let waiter_ctx = cc.egui_ctx.clone();
+        let waiter_tx = tray_tx;
+        single_instance::spawn_waiter(instance, move || {
+            platform::show_main_window();
+            let _ = waiter_tx.send(TrayEvent::ShowRequested);
+            waiter_ctx.request_repaint();
+        });
 
         let windows: WindowsSnapshot = Arc::new(ArcSwap::from_pointee(Vec::new()));
         let regex_src = title_regex
             .clone()
             .unwrap_or_else(|| DEFAULT_TITLE_REGEX.to_string());
         let (refresh_tx, refresh_rx) = channel();
-        win::spawn_watcher(windows.clone(), cc.egui_ctx.clone(), regex_src, refresh_rx);
+        platform::spawn_watcher(windows.clone(), cc.egui_ctx.clone(), regex_src, refresh_rx);
 
         let hooks = crate::hooks::install(shortcuts_only_in_dofus);
 
@@ -261,7 +259,7 @@ impl App {
             shortcuts_only_in_dofus,
             minimize_to_taskbar,
             always_on_top,
-            main_hwnd,
+            main_window,
             window_pos,
             about_icon,
             class_icons,
@@ -438,19 +436,19 @@ impl App {
     /// greyed-out button comes back.
     pub fn sort_taskbar(&self, ctx: &egui::Context) {
         let snap = self.windows.load();
-        let hwnds: Vec<isize> = self
+        let hwnds: Vec<WindowId> = self
             .cycle_order
             .iter()
             .filter_map(|slot| snap.iter().find(|w| &w.slot_key == slot).map(|w| w.hwnd))
             .collect();
         let ctx = ctx.clone();
-        win::taskbar::reorder(hwnds, move || ctx.request_repaint());
+        platform::taskbar::reorder(hwnds, move || ctx.request_repaint());
     }
 
     /// Records where the user left the window. Skipped while it is minimized
     /// or hidden, where Windows reports a parking spot.
     fn track_window_pos(&mut self) {
-        let pos = self.main_hwnd.and_then(win::placement::position);
+        let pos = self.main_window.and_then(platform::placement::position);
         if pos.is_some() && pos != self.window_pos {
             self.window_pos = pos;
             self.mark_dirty();
@@ -627,14 +625,14 @@ impl App {
     /// `cycle_index` — that lives independently. Skipped when nothing has
     /// changed unless `force` is true.
     fn sync_state_to_hooks(&mut self, force: bool) {
-        let accounts: Vec<(SlotKey, isize)> = self
+        let accounts: Vec<(SlotKey, WindowId)> = self
             .windows
             .load()
             .iter()
             .map(|w| (w.slot_key.clone(), w.hwnd))
             .collect();
 
-        let cycle_hwnds: Vec<isize> = self
+        let cycle_hwnds: Vec<WindowId> = self
             .cycle_order
             .iter()
             .filter_map(|slot| accounts.iter().find(|(s, _)| s == slot).map(|(_, h)| *h))
@@ -938,8 +936,8 @@ mod tests {
         // The built-in default must always be considered valid — sanity check
         // against future drift between the constant and the validator.
         assert_eq!(
-            validate_title_regex(Some(crate::win::DEFAULT_TITLE_REGEX.to_string())),
-            Some(crate::win::DEFAULT_TITLE_REGEX.to_string()),
+            validate_title_regex(Some(DEFAULT_TITLE_REGEX.to_string())),
+            Some(DEFAULT_TITLE_REGEX.to_string()),
         );
     }
 

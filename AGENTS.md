@@ -26,6 +26,9 @@ because Pages publishes the whole `site/` directory.
   launch for nothing.
 - Never build and upload a release exe by hand: a local binary has no
   provenance attestation. See [Release](#release).
+- All OS code lives in `src/platform/` (Win32: `platform/win32/`), behind
+  the contract documented in `platform/mod.rs`. Elsewhere: no `windows::`,
+  no `#[cfg(windows)]`.
 
 ## Build
 
@@ -106,7 +109,7 @@ By hand, on the lockfile diff:
 With `Visible(false)`, `request_repaint()` does not wake `App::ui`,
 viewport commands pile up unprocessed, and channels drained in `App::ui`
 are never drained. Tray handlers (run on the main thread) must therefore
-act through Win32 on `tray::MAIN_HWND`:
+act through Win32 on `MAIN_HWND` (`platform/win32/main_window.rs`):
 
 - show: `ShowWindow(SW_SHOW)`, or `SW_RESTORE` when minimized to the
   taskbar, + `SetForegroundWindow`;
@@ -116,7 +119,7 @@ act through Win32 on `tray::MAIN_HWND`:
 ### LL hooks don't fire while our own window is foreground
 
 Measured: zero keyboard-hook calls when our window has focus. Binding
-capture therefore goes through egui events (`Event::Key` → `event_to_vk`).
+capture therefore goes through egui events (`Event::Key` → `key_from_event`).
 Rejected: hook on the main thread (no fix, freezes), defocusing during
 capture (visible focus flicker). Accepted limits:
 
