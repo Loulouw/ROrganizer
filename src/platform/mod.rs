@@ -12,6 +12,8 @@
 //!   `taskbar::{is_sorting, reorder}` must exist either way.
 //! - `TRAY_IS_MENU_BAR: bool`: the tray is the macOS menu bar and the
 //!   taskbar is the Dock; the UI labels name them accordingly.
+//! - `WINDOW_ICON_PNG: &[u8]`, `WINDOW_ICON_SIZE: u32`: the window icon,
+//!   decoded and scaled to that side at startup.
 //! - Detection: `spawn_watcher(WindowsSnapshot, egui::Context, String,
 //!   Receiver<()>)` publishes the windows matching the title regex;
 //!   `is_dofus_window(WindowId) -> bool` also accepts a client that is not

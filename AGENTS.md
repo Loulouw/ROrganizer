@@ -50,7 +50,12 @@ macOS: rustup's `stable` plus both targets, and Xcode for the linker.
 inherits the terminal's Accessibility grant). The shipped `.app` and
 `.dmg` come from `scripts/package-macos.sh`: universal binary (`lipo` of
 `aarch64-apple-darwin` and `x86_64-apple-darwin`, macOS 11 minimum),
-`Info.plist`, `.icns` from `resources/icons/icon.png`, signature.
+`Info.plist`, `.icns`, signature. The macOS icon is
+`resources/icons/icon-macos.png`, drawn from `icon.png` by
+`scripts/macos-icon.swift` in Apple's rounded-square grid (macOS 26 puts
+any other shape in a grey tile): regenerate it when `icon.png` changes.
+It is also the runtime window icon on macOS, which eframe pushes to the
+Dock (`platform::WINDOW_ICON_PNG`).
 
 ```bash
 rustup target add aarch64-apple-darwin x86_64-apple-darwin

@@ -29,6 +29,8 @@ pub use watcher::{is_dofus_window, spawn_watcher};
 
 pub const HAS_TASKBAR_SORT: bool = true;
 pub const TRAY_IS_MENU_BAR: bool = false;
+pub const WINDOW_ICON_PNG: &[u8] = crate::assets::ICON_PNG;
+pub const WINDOW_ICON_SIZE: u32 = 64;
 
 /// Reading other windows and installing LL hooks need no per-app grant.
 pub fn input_permission_granted() -> bool {

@@ -30,16 +30,14 @@ lipo -create -output "$APP/Contents/MacOS/rorganizer" \
     target/aarch64-apple-darwin/release/rorganizer \
     target/x86_64-apple-darwin/release/rorganizer
 
-# The source icon is 256 px: the set stops at 128@2x, which covers the
-# Finder and the Dock.
+# Every size of the Apple-shaped icon (scripts/macos-icon.swift draws it).
+ICON=resources/icons/icon-macos.png
 ICONSET="$OUT/ROrganizer.iconset"
 mkdir -p "$ICONSET"
-for size in 16 32 128 256; do
-    sips -z "$size" "$size" resources/icons/icon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
-done
-for size in 16 32 128; do
+for size in 16 32 128 256 512; do
     double=$((size * 2))
-    sips -z "$double" "$double" resources/icons/icon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+    sips -z "$size" "$size" "$ICON" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z "$double" "$double" "$ICON" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/ROrganizer.icns"
 rm -rf "$ICONSET"

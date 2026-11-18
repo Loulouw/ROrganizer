@@ -54,8 +54,9 @@ fn main() -> eframe::Result<()> {
 }
 
 fn decode_window_icon() -> egui::IconData {
-    let img = image::load_from_memory(assets::ICON_PNG).expect("decode resources/icons/icon.png");
-    let resized = img.resize_exact(64, 64, image::imageops::FilterType::Lanczos3);
+    let img = image::load_from_memory(platform::WINDOW_ICON_PNG).expect("decode the window icon");
+    let side = platform::WINDOW_ICON_SIZE;
+    let resized = img.resize_exact(side, side, image::imageops::FilterType::Lanczos3);
     let rgba = resized.to_rgba8();
     let (w, h) = (rgba.width(), rgba.height());
     egui::IconData {

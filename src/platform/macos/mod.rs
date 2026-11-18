@@ -31,6 +31,13 @@ pub use watcher::{is_dofus_window, spawn_watcher};
 pub const HAS_TASKBAR_SORT: bool = false;
 pub const TRAY_IS_MENU_BAR: bool = true;
 
+/// eframe hands the window icon to the Dock while the app runs
+/// (`setApplicationIconImage`), over the bundle's: it must be the
+/// Apple-shaped one too, at Dock size, or the running app shows the bare
+/// boar.
+pub const WINDOW_ICON_PNG: &[u8] = include_bytes!("../../../resources/icons/icon-macos.png");
+pub const WINDOW_ICON_SIZE: u32 = 256;
+
 /// Process id of the Dofus client: one client, one game window.
 pub(super) type RawWindowId = i32;
 /// Address of the `NSView` winit hosts the main window in.
