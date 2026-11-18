@@ -44,8 +44,9 @@ fn default_true() -> bool {
     true
 }
 
-/// `%APPDATA%\rorganizer\config.json` on Windows. Returns None on platforms
-/// where no usable config dir is reported (extremely rare on Windows).
+/// `%APPDATA%\rorganizer\config.json` on Windows,
+/// `~/Library/Application Support/rorganizer/config.json` on macOS. None
+/// when the system reports no usable config dir.
 pub fn default_path() -> Option<PathBuf> {
     use directories::BaseDirs;
     let base = BaseDirs::new()?;

@@ -18,8 +18,8 @@ pub fn input_permission_granted() -> bool {
 }
 
 /// Shows the system prompt that leads to the Accessibility settings pane.
-/// macOS shows it once per app; afterwards the grant is only changed from
-/// the settings.
+/// It comes back on every call while the grant is missing, refused or not
+/// (measured on macOS 27).
 pub fn request_input_permission() {
     // SAFETY: a constant CFString, toll-free bridged to NSString.
     let key = unsafe { &*kAXTrustedCheckOptionPrompt };

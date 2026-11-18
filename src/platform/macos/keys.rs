@@ -16,11 +16,33 @@ use super::hooks::take_own_key;
 /// top-row ones. Without a fresh tap reading (no Accessibility grant yet),
 /// the key is looked up by its US-QWERTY position.
 pub fn key_from_event(key: egui::Key, physical_key: Option<egui::Key>) -> Option<u32> {
-    take_own_key()
-        .or_else(|| code_of(physical_key.unwrap_or(key)))
-        .or_else(|| code_of(key))
-        .map(u32::from)
+    let egui_code = code_of(physical_key.unwrap_or(key)).or_else(|| code_of(key));
+    pick(take_own_key(), egui_code).map(u32::from)
 }
+
+/// The tap holds only the latest press: with two keys down in the same
+/// frame, it already reads the second while egui reports the first. Its
+/// code is kept only when it is the key egui names, or one egui confuses
+/// with it.
+fn pick(own: Option<u16>, egui_code: Option<u16>) -> Option<u16> {
+    let same_key = |own: u16| {
+        egui_code.is_none_or(|e| e == own || CONFUSED.contains(&(own, e)))
+    };
+    own.filter(|&c| same_key(c)).or(egui_code)
+}
+
+/// Keys egui reports under another key's name: (code of the key, code of
+/// the key egui names instead).
+const CONFUSED: &[(u16, u16)] = &[
+    // ISO key left of `Z`, named `Backtick`.
+    (0x0A, 0x32),
+    // Numpad digits, named as the top-row ones.
+    (0x52, 0x1D), (0x53, 0x12), (0x54, 0x13), (0x55, 0x14), (0x56, 0x15),
+    (0x57, 0x17), (0x58, 0x16), (0x59, 0x1A), (0x5B, 0x1C), (0x5C, 0x19),
+    // Numpad `-`, `/`, Enter, `=`; the decimal key by the character it
+    // prints, `.` or `,` depending on the layout.
+    (0x4E, 0x1B), (0x4B, 0x2C), (0x4C, 0x24), (0x51, 0x18), (0x41, 0x2F), (0x41, 0x2B),
+];
 
 pub fn key_label(code: u32) -> String {
     let Ok(code) = u16::try_from(code) else { return format!("0x{code:X}") };
@@ -212,6 +234,19 @@ mod tests {
         assert_eq!(key_from_event(egui::Key::F1, None), Some(0x7A));
         assert_eq!(key_from_event(egui::Key::Backtick, Some(egui::Key::Backtick)), Some(0x32));
         assert_eq!(key_from_event(egui::Key::F21, None), None);
+    }
+
+    #[test]
+    fn tap_reading_wins_only_for_the_key_egui_reports() {
+        // ISO key left of `Z` and numpad 1: egui names them wrongly.
+        assert_eq!(pick(Some(0x0A), Some(0x32)), Some(0x0A));
+        assert_eq!(pick(Some(0x53), Some(0x12)), Some(0x53));
+        // Two keys in one frame: the tap already holds the second (`S`)
+        // while egui reports the first (`A`).
+        assert_eq!(pick(Some(0x01), Some(0x00)), Some(0x00));
+        // A key missing from the table: only the tap knows it.
+        assert_eq!(pick(Some(0x5F), None), Some(0x5F));
+        assert_eq!(pick(None, Some(0x00)), Some(0x00));
     }
 
     #[test]

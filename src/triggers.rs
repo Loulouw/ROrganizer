@@ -16,7 +16,7 @@ pub enum BindingTarget {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Trigger {
     /// Platform-native key code: Win32 virtual-key on Windows (VK_F1 = 0x70,
-    /// VK_A = 0x41, …).
+    /// VK_A = 0x41, …), virtual key code `kVK_*` on macOS (F1 = 0x7A).
     Key(u32),
     Mouse(MouseBtn),
     Wheel(WheelDir),

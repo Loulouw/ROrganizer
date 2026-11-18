@@ -142,6 +142,8 @@ pub struct App {
     /// `platform::input_permission_granted`, read once per frame so the
     /// banner and the window height agree.
     input_permission: bool,
+    /// Where the always-on-top level stands after `request_input_permission`.
+    level_drop: LevelDrop,
     main_window: Option<MainWindow>,
     /// Last known top-left corner of the main window (`platform::placement`).
     window_pos: Option<(i32, i32)>,
@@ -159,6 +161,18 @@ pub struct App {
 struct SyncSnapshot {
     accounts: Vec<(SlotKey, WindowId)>,
     cycle_hwnds: Vec<WindowId>,
+}
+
+/// Always-on-top level while the Accessibility permission is requested.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum LevelDrop {
+    /// The level is the user's setting.
+    Kept,
+    /// Dropped by `request_input_permission`; the prompt takes focus next.
+    Dropped,
+    /// The prompt or System Settings took focus: the level comes back when
+    /// the user returns to ROrganizer, granted or not.
+    AwayForPrompt,
 }
 
 impl App {
@@ -264,6 +278,7 @@ impl App {
             minimize_to_taskbar,
             always_on_top,
             input_permission: platform::input_permission_granted(),
+            level_drop: LevelDrop::Kept,
             main_window,
             window_pos,
             about_icon,
@@ -289,12 +304,34 @@ impl App {
 
     /// The system prompt and the settings pane open as ordinary windows: an
     /// always-on-top ROrganizer would cover them, so it steps down until
-    /// the permission arrives (see `ui`).
-    pub fn request_input_permission(&self, ctx: &egui::Context) {
+    /// the permission arrives or the user comes back to it
+    /// (`restore_level_after_prompt`).
+    pub fn request_input_permission(&mut self, ctx: &egui::Context) {
         if self.always_on_top {
             ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
+            self.level_drop = LevelDrop::Dropped;
         }
         platform::request_input_permission();
+    }
+
+    /// Puts the always-on-top level back once the permission is granted, or
+    /// once the user returns to ROrganizer from the prompt without granting
+    /// it: the setting would otherwise stay ticked with no effect until the
+    /// next launch.
+    fn restore_level_after_prompt(&mut self, ctx: &egui::Context, granted: bool) {
+        let focused = ctx.input(|i| i.viewport().focused);
+        if self.level_drop == LevelDrop::Dropped && focused == Some(false) {
+            self.level_drop = LevelDrop::AwayForPrompt;
+        }
+        let back = self.level_drop == LevelDrop::AwayForPrompt && focused == Some(true);
+        if (back || (granted && !self.input_permission)) && self.always_on_top {
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
+                egui::WindowLevel::AlwaysOnTop,
+            ));
+        }
+        if back || granted {
+            self.level_drop = LevelDrop::Kept;
+        }
     }
 
     pub fn is_settings_open(&self) -> bool {
@@ -350,6 +387,7 @@ impl App {
     pub fn set_always_on_top(&mut self, ctx: &egui::Context, on: bool) {
         if self.always_on_top != on {
             self.always_on_top = on;
+            self.level_drop = LevelDrop::Kept;
             let level = if on {
                 egui::WindowLevel::AlwaysOnTop
             } else {
@@ -361,8 +399,8 @@ impl App {
     }
 
     /// Parent of the persisted config file, used by the settings modal to
-    /// open the directory in Explorer. None when no usable config dir
-    /// could be detected (extremely rare on Windows).
+    /// open the directory in Explorer or the Finder. None when no usable
+    /// config dir could be detected.
     pub fn config_dir(&self) -> Option<&std::path::Path> {
         self.config_path.as_ref().and_then(|p| p.parent())
     }
@@ -798,11 +836,7 @@ impl eframe::App for App {
         }
 
         let input_permission = platform::input_permission_granted();
-        if input_permission && !self.input_permission && self.always_on_top {
-            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
-                egui::WindowLevel::AlwaysOnTop,
-            ));
-        }
+        self.restore_level_after_prompt(ctx, input_permission);
         self.input_permission = input_permission;
         self.ensure_cycle_order_covers_snapshot();
         self.sync_state_to_hooks(false);

@@ -100,15 +100,17 @@ cargo deny check advisories bans sources licenses
 cargo audit
 ```
 
-`deny.toml` key settings: `[graph] targets = ["x86_64-pc-windows-msvc"]`
-scopes the audit to the ~240 crates compiled here instead of the ~390 in
-the lockfile (advisories for never-compiled crates bury real ones);
-`unknown-registry/unknown-git = "deny"` keeps every dependency on
-crates.io.
+`deny.toml` key settings: `[graph] targets` lists the three shipped
+targets (`x86_64-pc-windows-msvc`, `aarch64-apple-darwin`,
+`x86_64-apple-darwin`), which scopes the audit to the ~260 crates compiled
+for them instead of the ~350 in the lockfile (advisories for
+never-compiled crates bury real ones); `unknown-registry/unknown-git =
+"deny"` keeps every dependency on crates.io.
 
 By hand, on the lockfile diff:
 
-- Read every `build.rs` new or version-changed in the Windows graph.
+- Read every `build.rs` new or version-changed in the graph of any
+  shipped target.
   Unchanged versions are checksum-verified by Cargo. Skip `tests/`,
   `benches/`, `examples/`: never compiled for a dependency.
 - Grep those for IoCs: `std::net`, `TcpStream`, `reqwest`, `ureq`,
@@ -119,7 +121,7 @@ By hand, on the lockfile diff:
   `/owners` — owner, repo, age, downloads. Recent, low volume, name close
   to a popular crate = typosquat.
 - Second database, nothing to install: POST the list from
-  `cargo tree --target x86_64-pc-windows-msvc` to
+  `cargo tree --target <target>`, for each shipped target, to
   `https://api.osv.dev/v1/querybatch`.
 
 ## Cross-cutting gotchas

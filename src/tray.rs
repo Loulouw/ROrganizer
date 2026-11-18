@@ -38,8 +38,8 @@ impl TrayController {
             rust_i18n::t!("tray.activate")
         };
         self.toggle_item.set_text(label.as_ref());
-        // Both icons are built once at install — `Icon` is cheap to clone
-        // (it's an Arc-wrapped Win32 HICON internally).
+        // Both icons are built once at install. A clone is an Arc bump of the
+        // HICON on Windows, a copy of the 32×32 RGBA buffer on macOS.
         let icon = if active {
             self.icon_active.clone()
         } else {

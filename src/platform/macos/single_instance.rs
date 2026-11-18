@@ -1,12 +1,21 @@
 //! Single instance through a named Mach service (`CFMessagePort`): the first
 //! launch registers the name, a later one finds it, sends one message and
 //! exits. No file and no socket are involved.
+//!
+//! Opening the app again from the Finder, the Dock or Spotlight starts no
+//! second process: LaunchServices sends the running one a reopen Apple
+//! event, which winit leaves to AppKit (deminiaturize only, nothing for a
+//! window hidden in the menu bar). That event is turned into the same
+//! message, so every path shows the window.
 
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::ptr;
 use std::thread;
 
+use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, NSObject};
+use objc2::{class, define_class, msg_send, sel, ClassType, MainThreadMarker};
 use objc2_core_foundation::{
     kCFRunLoopDefaultMode, CFData, CFMessagePort, CFMessagePortContext, CFRetained, CFRunLoop,
     CFString,
@@ -95,8 +104,10 @@ unsafe extern "C-unwind" fn on_message(
 }
 
 /// Calls `on_signal` each time another launch asks to be shown. A message
-/// sent before this runs waits in the port's queue.
+/// sent before this runs waits in the port's queue. Must be called on the
+/// main thread (from `App::new`): the reopen handler is registered there.
 pub fn spawn_waiter<F: Fn() + Send + 'static>(guard: SingleInstanceGuard, on_signal: F) {
+    handle_reopen_event(MainThreadMarker::new().expect("spawn_waiter runs on the main thread"));
     thread::Builder::new()
         .name("rorg-singleton-waiter".into())
         .spawn(move || {
@@ -111,4 +122,44 @@ pub fn spawn_waiter<F: Fn() + Send + 'static>(guard: SingleInstanceGuard, on_sig
             CFRunLoop::run();
         })
         .expect("spawn singleton waiter");
+}
+
+/// `kCoreEventClass` / `kAEReopenApplication`.
+const AE_CORE_EVENT_CLASS: u32 = u32::from_be_bytes(*b"aevt");
+const AE_REOPEN_APPLICATION: u32 = u32::from_be_bytes(*b"rapp");
+
+define_class!(
+    // SAFETY: NSObject has no subclassing requirements, and this class has
+    // no ivars and no Drop.
+    #[unsafe(super(NSObject))]
+    #[name = "RorgReopenHandler"]
+    struct ReopenHandler;
+
+    impl ReopenHandler {
+        #[unsafe(method(handleReopen:withReplyEvent:))]
+        fn handle_reopen(&self, _event: *mut AnyObject, _reply: *mut AnyObject) {
+            // One-way message to our own port: the waiter shows the window.
+            signal_existing(&CFString::from_str(PORT_NAME));
+        }
+    }
+);
+
+/// Replaces AppKit's reopen handler. It only deminiaturized the window;
+/// `on_signal` restores it from the Dock as well.
+fn handle_reopen_event(_mtm: MainThreadMarker) {
+    let handler: Retained<ReopenHandler> = unsafe { msg_send![ReopenHandler::class(), new] };
+    let manager: Retained<AnyObject> =
+        unsafe { msg_send![class!(NSAppleEventManager), sharedAppleEventManager] };
+    let () = unsafe {
+        msg_send![
+            &manager,
+            setEventHandler: &*handler,
+            andSelector: sel!(handleReopen:withReplyEvent:),
+            forEventClass: AE_CORE_EVENT_CLASS,
+            andEventID: AE_REOPEN_APPLICATION
+        ]
+    };
+    // The event manager does not retain its handlers: it lives as long as
+    // the process.
+    std::mem::forget(handler);
 }

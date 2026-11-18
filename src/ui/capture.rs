@@ -134,7 +134,16 @@ fn extract_first_trigger(events: &[egui::Event]) -> Option<Trigger> {
                 egui::PointerButton::Extra2 => return Some(Trigger::Mouse(MouseBtn::X2)),
                 _ => {}
             },
-            egui::Event::MouseWheel { delta, .. } => {
+            // Line deltas only: a notched wheel. Trackpads and smoothed mice
+            // scroll in points, which the macOS hook never turns into a
+            // trigger (`ScrollWheelEventIsContinuous`): binding one would
+            // record a shortcut that can't fire. Windows reports every wheel
+            // in lines.
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Line,
+                delta,
+                ..
+            } => {
                 if delta.y > 0.5 {
                     return Some(Trigger::Wheel(WheelDir::Up));
                 }
