@@ -148,6 +148,11 @@ jobs:
           security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
           rm "$RUNNER_TEMP/cert.p12"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
+          # codesign only finds an identity in a keychain on the user's search
+          # list, --keychain or not (measured on the runner: "no identity
+          # found" otherwise). delete-keychain takes it off the list again.
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
           if ! security find-identity "$keychain" | grep -q "$MACOS_CERT_SHA1"; then
             echo "Signing certificate is not the pinned one ($MACOS_CERT_SHA1)" >&2
             exit 1
