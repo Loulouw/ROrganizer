@@ -16,7 +16,9 @@ target
 # IDE / editor state
 .idea/
 .vscode/
-.claude/
+.claude/*
+# Project skills (release procedure) are shared across machines.
+!.claude/skills/
 
 # Claude Code per-developer notes (preferences, local paths, dev habits)
 CLAUDE.local.md
