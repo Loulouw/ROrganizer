@@ -8,11 +8,15 @@
     "activate": "Activar",
     "deactivate": "Desactivar",
     "activate_hint": "se minimiza a la bandeja del sistema",
-    "activate_hint_taskbar": "se minimiza a la barra de tareas"
+    "activate_hint_taskbar": "se minimiza a la barra de tareas",
+    "activate_hint_menu_bar": "se oculta en la barra de menús",
+    "activate_hint_dock": "se minimiza al Dock"
   },
   "header": {
     "tooltip_minimize": "Minimizar a la bandeja",
     "tooltip_minimize_taskbar": "Minimizar a la barra de tareas",
+    "tooltip_minimize_menu_bar": "Ocultar en la barra de menús",
+    "tooltip_minimize_dock": "Minimizar al Dock",
     "tooltip_close": "Cerrar",
     "tooltip_theme": "Cambiar tema",
     "tooltip_lang": "Idioma",
@@ -27,6 +31,8 @@
     "dofus_only_hint": "En otras aplicaciones, la tecla o el botón funciona con normalidad.",
     "minimize_to_taskbar": "Minimizar a la barra de tareas",
     "minimize_to_taskbar_hint": "«–» y «Activar» minimizan la ventana a la barra de tareas en lugar de la bandeja del sistema.",
+    "minimize_to_dock": "Minimizar al Dock",
+    "minimize_to_dock_hint": "«–» y «Activar» minimizan la ventana al Dock en lugar de la barra de menús.",
     "always_on_top": "Siempre visible",
     "always_on_top_hint": "La ventana se mantiene encima de Dofus y de las demás ventanas.",
     "close": "Cerrar",

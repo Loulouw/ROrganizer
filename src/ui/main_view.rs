@@ -102,11 +102,14 @@ fn draw_active_toggle(ui: &mut egui::Ui, ctx: &egui::Context, theme: Theme, app:
         ui.add_space(4.0);
         ui.vertical_centered(|ui| {
             ui.label(
-                egui::RichText::new(if app.minimize_to_taskbar() {
-                    t!("main.activate_hint_taskbar")
-                } else {
-                    t!("main.activate_hint")
-                })
+                egui::RichText::new(
+                    match (platform::TRAY_IS_MENU_BAR, app.minimize_to_taskbar()) {
+                        (false, true) => t!("main.activate_hint_taskbar"),
+                        (false, false) => t!("main.activate_hint"),
+                        (true, true) => t!("main.activate_hint_dock"),
+                        (true, false) => t!("main.activate_hint_menu_bar"),
+                    },
+                )
                     .size(11.0)
                     .color(theme::text_tertiary(theme)),
             );

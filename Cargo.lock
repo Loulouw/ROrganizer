@@ -2148,6 +2148,7 @@ version = "1.4.0"
 dependencies = [
  "arc-swap",
  "directories",
+ "dispatch2",
  "eframe",
  "egui",
  "egui_dnd",
@@ -2155,6 +2156,10 @@ dependencies = [
  "embed-resource",
  "ico",
  "image",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
  "raw-window-handle",
  "regex",
  "rust-i18n",

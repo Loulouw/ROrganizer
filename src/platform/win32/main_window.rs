@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use eframe::egui;
 use raw_window_handle::RawWindowHandle;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -52,6 +53,10 @@ pub fn close_main_window() {
             let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
         }
     }
+}
+
+pub fn minimize_main_window(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
 }
 
 /// The taskbar button already follows the window's visibility.

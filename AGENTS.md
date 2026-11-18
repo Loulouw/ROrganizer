@@ -109,12 +109,19 @@ By hand, on the lockfile diff:
 With `Visible(false)`, `request_repaint()` does not wake `App::ui`,
 viewport commands pile up unprocessed, and channels drained in `App::ui`
 are never drained. Tray handlers (run on the main thread) must therefore
-act through Win32 on `MAIN_HWND` (`platform/win32/main_window.rs`):
+act through the backend on the registered main window
+(`platform/*/main_window.rs`). Windows:
 
 - show: `ShowWindow(SW_SHOW)`, or `SW_RESTORE` when minimized to the
   taskbar, + `SetForegroundWindow`;
 - close: `ShowWindow(SW_SHOW)` **then** `PostMessageW(WM_CLOSE)`, otherwise
   `WM_CLOSE` waits in the queue until the next wake-up.
+
+macOS has the same parking (a hidden window is occluded), plus: egui-winit
+never re-reads the minimized state there (deadlock workaround, egui#3494).
+After `ViewportCommand::Minimized(true)`, a restore from the Dock leaves egui
+believing the window is minimized and `App::ui` stops running for good.
+Common code minimizes only through `platform::minimize_main_window`.
 
 ### LL hooks don't fire while our own window is foreground
 

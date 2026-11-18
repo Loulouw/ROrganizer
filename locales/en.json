@@ -8,11 +8,15 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "activate_hint": "minimizes to the system tray",
-    "activate_hint_taskbar": "minimizes to the taskbar"
+    "activate_hint_taskbar": "minimizes to the taskbar",
+    "activate_hint_menu_bar": "hides in the menu bar",
+    "activate_hint_dock": "minimizes to the Dock"
   },
   "header": {
     "tooltip_minimize": "Minimize to system tray",
     "tooltip_minimize_taskbar": "Minimize to taskbar",
+    "tooltip_minimize_menu_bar": "Hide in the menu bar",
+    "tooltip_minimize_dock": "Minimize to the Dock",
     "tooltip_close": "Close",
     "tooltip_theme": "Toggle theme",
     "tooltip_lang": "Language",
@@ -27,6 +31,8 @@
     "dofus_only_hint": "In other applications, the key or button works as usual.",
     "minimize_to_taskbar": "Minimize to the taskbar",
     "minimize_to_taskbar_hint": "“–” and “Activate” minimize the window to the taskbar instead of the system tray.",
+    "minimize_to_dock": "Minimize to the Dock",
+    "minimize_to_dock_hint": "“–” and “Activate” minimize the window to the Dock instead of the menu bar.",
     "always_on_top": "Always on top",
     "always_on_top_hint": "The window stays above Dofus and every other window.",
     "close": "Close",

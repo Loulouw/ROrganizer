@@ -10,6 +10,8 @@
 //!   Option<MainWindow>`.
 //! - `HAS_TASKBAR_SORT: bool`: the sort button is shown only when true.
 //!   `taskbar::{is_sorting, reorder}` must exist either way.
+//! - `TRAY_IS_MENU_BAR: bool`: the tray is the macOS menu bar and the
+//!   taskbar is the Dock; the UI labels name them accordingly.
 //! - Detection: `spawn_watcher(WindowsSnapshot, egui::Context, String,
 //!   Receiver<()>)` publishes the windows matching the title regex;
 //!   `is_dofus_window(WindowId) -> bool` also accepts a client that is not
@@ -27,6 +29,7 @@
 //!   the second-launch waiter, which run while the eframe loop may be
 //!   parked. `placement::{position(MainWindow) -> Option<(i32, i32)>,
 //!   restore(MainWindow, (i32, i32))}` persist its position.
+//!   `minimize_main_window(&egui::Context)` minimizes it to the taskbar.
 //! - Tray presence: `main_window_hidden_to_tray()` is called when the main
 //!   window is hidden into the tray, never when it is minimized.
 //!   `main_window_restored()` is called before every path that shows it
@@ -58,7 +61,12 @@ mod win32;
 #[cfg(windows)]
 pub use win32::*;
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::*;
+
+#[cfg(not(any(windows, target_os = "macos")))]
 compile_error!("plateforme non supportée");
 
 /// A Dofus client window. Opaque outside `platform`: the raw value only

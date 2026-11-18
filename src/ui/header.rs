@@ -4,6 +4,7 @@ use rust_i18n::t;
 
 use crate::app::App;
 use crate::i18n::Lang;
+use crate::platform;
 use crate::theme::{self, Theme};
 
 const HEIGHT: f32 = 36.0;
@@ -57,10 +58,11 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
                                 app.request_close(ctx);
                             }
                             let mini = titlebar_button(ui, "\u{2013}", theme).on_hover_text(
-                                if app.minimize_to_taskbar() {
-                                    t!("header.tooltip_minimize_taskbar")
-                                } else {
-                                    t!("header.tooltip_minimize")
+                                match (platform::TRAY_IS_MENU_BAR, app.minimize_to_taskbar()) {
+                                    (false, true) => t!("header.tooltip_minimize_taskbar"),
+                                    (false, false) => t!("header.tooltip_minimize"),
+                                    (true, true) => t!("header.tooltip_minimize_dock"),
+                                    (true, false) => t!("header.tooltip_minimize_menu_bar"),
                                 }
                                 .to_string(),
                             );

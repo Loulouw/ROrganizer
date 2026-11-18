@@ -370,7 +370,7 @@ impl App {
     /// taskbar, or hidden in the system tray.
     fn put_away(&self, ctx: &egui::Context) {
         if self.minimize_to_taskbar {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+            platform::minimize_main_window(ctx);
         } else {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             platform::main_window_hidden_to_tray();

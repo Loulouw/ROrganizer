@@ -8,11 +8,15 @@
     "activate": "Activer",
     "deactivate": "Désactiver",
     "activate_hint": "se réduit dans la barre système",
-    "activate_hint_taskbar": "se réduit dans la barre des tâches"
+    "activate_hint_taskbar": "se réduit dans la barre des tâches",
+    "activate_hint_menu_bar": "se masque dans la barre des menus",
+    "activate_hint_dock": "se réduit dans le Dock"
   },
   "header": {
     "tooltip_minimize": "Réduire dans la barre système",
     "tooltip_minimize_taskbar": "Réduire dans la barre des tâches",
+    "tooltip_minimize_menu_bar": "Masquer dans la barre des menus",
+    "tooltip_minimize_dock": "Réduire dans le Dock",
     "tooltip_close": "Fermer",
     "tooltip_theme": "Changer de thème",
     "tooltip_lang": "Langue",
@@ -27,6 +31,8 @@
     "dofus_only_hint": "Dans une autre application, la touche ou le bouton fonctionne normalement.",
     "minimize_to_taskbar": "Réduire dans la barre des tâches",
     "minimize_to_taskbar_hint": "« – » et « Activer » réduisent la fenêtre en bas de l'écran au lieu de la barre système.",
+    "minimize_to_dock": "Réduire dans le Dock",
+    "minimize_to_dock_hint": "« – » et « Activer » réduisent la fenêtre dans le Dock au lieu de la barre des menus.",
     "always_on_top": "Toujours au premier plan",
     "always_on_top_hint": "La fenêtre reste au-dessus de Dofus et des autres fenêtres.",
     "close": "Fermer",

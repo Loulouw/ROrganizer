@@ -218,13 +218,12 @@ fn draw_options(ui: &mut egui::Ui, ctx: &egui::Context, theme: Theme, app: &mut 
     }
     ui.add_space(12.0);
     let mut to_taskbar = app.minimize_to_taskbar();
-    if option_row(
-        ui,
-        theme,
-        &mut to_taskbar,
-        &t!("settings.minimize_to_taskbar"),
-        &t!("settings.minimize_to_taskbar_hint"),
-    ) {
+    let (to_taskbar_label, to_taskbar_hint) = if platform::TRAY_IS_MENU_BAR {
+        (t!("settings.minimize_to_dock"), t!("settings.minimize_to_dock_hint"))
+    } else {
+        (t!("settings.minimize_to_taskbar"), t!("settings.minimize_to_taskbar_hint"))
+    };
+    if option_row(ui, theme, &mut to_taskbar, &to_taskbar_label, &to_taskbar_hint) {
         app.set_minimize_to_taskbar(to_taskbar);
     }
     ui.add_space(12.0);
