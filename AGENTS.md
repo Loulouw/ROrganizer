@@ -200,11 +200,8 @@ second, click-through one for the tooltip) with AppKit, driven from
 - `setHidesOnDeactivate(false)` is mandatory: the app is `.accessory`,
   hence inactive, whenever the main window is hidden in the menu bar.
 - `CanJoinAllSpaces | FullScreenAuxiliary` keeps the bar over a
-  fullscreen client. Not solved, in the watcher: `AXWindows` only lists
-  the windows of the Space in front, so a rescan made from a fullscreen
-  client's Space drops every other client from the bar and the main
-  list, and nothing rescans on a Space change (measured: back on the
-  desktop, the bar stayed hidden over a client it no longer knew).
+  fullscreen client. Its heads stay complete thanks to the watcher (see
+  Detected clients).
 - `NSCursor::set` from an inactive app is ignored: the bar has no cursor
   shapes there.
 - The window server hands a click on a fully transparent pixel to the
@@ -290,6 +287,17 @@ selection its title has no ` - `, so no ghost row. On macOS the login
 screen is titled `Dofus 3.7.14.18 - Release` (no ghost row either), titles
 are read through the Accessibility API, and Rétro was never observed: it is
 matched by its exe name `Dofus Retro` only.
+
+macOS `AXWindows` only lists the windows of the Space in front: from the
+desktop, a client in its own fullscreen Space reads as windowless, and
+the reverse, and a rescan would drop every client of the other side from
+the main list and the overlay. The watcher therefore keeps each client's
+game window as last seen and asks it directly when `AXWindows` comes back
+empty: a window element answers from any Space, title changes included,
+and fails once the window is closed (measured on macOS 27). A Space
+change also triggers a rescan, for a client first seen in a fullscreen
+Space. Still out of reach: a client already fullscreen in a Space never
+visited since ROrganizer started.
 
 ## Testing
 

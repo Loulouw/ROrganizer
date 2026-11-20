@@ -1,10 +1,16 @@
 //! Event-driven Dofus window watcher.
 //!
-//! App launches, terminations and activations come from NSWorkspace
-//! notifications (main thread); window creations and title changes inside
-//! a Dofus client from an `AXObserver` per client, scheduled on the watcher
-//! thread. Every event only raises a flag: bursts are coalesced into one
-//! rescan, as on Windows.
+//! App launches, terminations, activations and Space changes come from
+//! NSWorkspace notifications (main thread); window creations and title
+//! changes inside a Dofus client from an `AXObserver` per client, scheduled
+//! on the watcher thread. Every event only raises a flag: bursts are
+//! coalesced into one rescan, as on Windows.
+//!
+//! `AXWindows` only lists the windows of the Space in front: a client in a
+//! fullscreen Space of its own reads as windowless from anywhere else. The
+//! watcher keeps the game window it saw last for each client and asks that
+//! one instead, which answers from any Space (title changes included) until
+//! the window is gone (measured on macOS 27).
 
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -19,8 +25,9 @@ use block2::RcBlock;
 use eframe::egui;
 use objc2::MainThreadMarker;
 use objc2_app_kit::{
-    NSRunningApplication, NSWorkspace, NSWorkspaceDidActivateApplicationNotification,
-    NSWorkspaceDidLaunchApplicationNotification, NSWorkspaceDidTerminateApplicationNotification,
+    NSRunningApplication, NSWorkspace, NSWorkspaceActiveSpaceDidChangeNotification,
+    NSWorkspaceDidActivateApplicationNotification, NSWorkspaceDidLaunchApplicationNotification,
+    NSWorkspaceDidTerminateApplicationNotification,
 };
 use objc2_core_foundation::{kCFRunLoopDefaultMode, CFRunLoop, CFRunLoopRunResult, CFString};
 use objc2_foundation::{NSNotification, NSNotificationName};
@@ -113,6 +120,9 @@ fn observe_workspace(_mtm: MainThreadMarker, ctx: egui::Context) {
     let changed = || RcBlock::new(|_| EVENT_PENDING.store(true, Ordering::Relaxed));
     observe(unsafe { NSWorkspaceDidLaunchApplicationNotification }, changed());
     observe(unsafe { NSWorkspaceDidTerminateApplicationNotification }, changed());
+    // A client seen for the first time in a fullscreen Space, or a client
+    // that left the one it was seen in, only reads right from the new one.
+    observe(unsafe { NSWorkspaceActiveSpaceDidChangeNotification }, changed());
     observe(
         unsafe { NSWorkspaceDidActivateApplicationNotification },
         RcBlock::new(move |_| {
@@ -130,11 +140,20 @@ struct Watcher {
     regex: Regex,
     /// One per running Dofus client, keyed by pid.
     observers: HashMap<i32, Observer>,
+    /// Game window of each client, as last seen in `AXWindows`.
+    game_windows: HashMap<i32, Element>,
     retry_at: Option<Instant>,
 }
 
 fn run(snapshot: WindowsSnapshot, ctx: egui::Context, regex: Regex, refresh_rx: Receiver<()>) {
-    let mut w = Watcher { snapshot, ctx, regex, observers: HashMap::new(), retry_at: None };
+    let mut w = Watcher {
+        snapshot,
+        ctx,
+        regex,
+        observers: HashMap::new(),
+        game_windows: HashMap::new(),
+        retry_at: None,
+    };
     let mut trusted = input_permission_granted();
     w.rescan();
 
@@ -192,24 +211,31 @@ impl Watcher {
             self.observe(pid, &element);
 
             let windows = element.windows();
-            if windows.is_empty() {
-                continue;
-            }
-            dofus_pids.push(pid);
-            for window in &windows {
-                // Character selection renames the window it already has.
-                if let Some(observer) = self.observers.get(&pid) {
-                    observer.watch(window, "AXTitleChanged");
+            let game_window = if windows.is_empty() {
+                // On another Space, or closed: the window seen last answers
+                // only in the first case.
+                self.game_windows.remove(&pid).filter(|w| w.string("AXTitle").is_some())
+            } else {
+                for window in &windows {
+                    // Character selection renames the window it already has.
+                    if let Some(observer) = self.observers.get(&pid) {
+                        observer.watch(window, "AXTitleChanged");
+                    }
                 }
-            }
-            if let Some(title) = element.game_window().and_then(|w| w.string("AXTitle"))
+                element.game_window()
+            };
+            let Some(game_window) = game_window else { continue };
+            dofus_pids.push(pid);
+            if let Some(title) = game_window.string("AXTitle")
                 && let Some(window) = DetectedWindow::from_title(&self.regex, &title, WindowId(pid))
             {
                 found.push(window);
             }
+            self.game_windows.insert(pid, game_window);
         }
 
         self.observers.retain(|pid, _| running.contains(pid));
+        self.game_windows.retain(|pid, _| running.contains(pid));
         dofus_pids.sort_unstable();
         found.sort_by_key(|w| w.hwnd.0);
         if **DOFUS_PIDS.load() != dofus_pids {
