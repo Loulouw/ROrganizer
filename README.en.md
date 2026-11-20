@@ -87,8 +87,8 @@ changes everything.
   order of your accounts
 - 👥 **Character overlay** (Windows and Mac): a small bar above the game
   with each character's head, the current one highlighted. Click a head to
-  switch; horizontal or vertical, class heads or initials, at the size and
-  place you want
+  switch; horizontal or vertical, class heads or initials, shown with
+  Dofus or all the time, at the size and place you want
 - ⚙️ **Set up your way**: shortcuts in Dofus only, window always on top or
   not, position remembered from one launch to the next
 

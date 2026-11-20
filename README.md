@@ -92,7 +92,8 @@ tout.
 - 👥 **Overlay des personnages** (Windows et Mac) : une petite barre
   au-dessus du jeu avec la tête de chaque perso, celui en cours surligné.
   Un clic sur une tête et tu y es ; horizontale ou verticale, tête de
-  classe ou initiales, à la taille et à la place que tu veux
+  classe ou initiales, affichée avec Dofus ou en permanence, à la taille
+  et à la place que tu veux
 - ⚙️ **Réglé à ta façon** : raccourcis seulement dans Dofus, fenêtre
   toujours au premier plan ou non, position retenue d'un lancement à l'autre
 

@@ -90,7 +90,8 @@ ventanas Dofus, eso lo cambia todo.
 - 👥 **Overlay de personajes** (Windows y Mac): una pequeña barra encima
   del juego con la cabeza de cada personaje, el actual resaltado. Un clic
   en una cabeza y cambias; horizontal o vertical, cabeza de clase o
-  iniciales, del tamaño y en el lugar que quieras
+  iniciales, visible con Dofus o siempre, del tamaño y en el lugar que
+  quieras
 - ⚙️ **A tu manera**: atajos solo en Dofus, ventana siempre visible o no,
   posición recordada de un inicio a otro
 
