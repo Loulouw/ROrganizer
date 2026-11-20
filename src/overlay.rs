@@ -954,4 +954,96 @@ mod tests {
         assert_eq!(gate.decide(t0, true, Front::Own, false), (true, None));
         assert_eq!(gate.decide(t0, false, Front::Dofus, true), (false, None));
     }
+
+    #[test]
+    fn tooltip_goes_below_or_above_a_horizontal_bar() {
+        let g = Geometry { layout: Layout::Horizontal, head: 40.0, count: 3 };
+        let (w, h) = physical(g.size(), 1.0);
+        let bar = (100, 100, 100 + w, 100 + h);
+        // Head 0 is centred at x = 39: the tooltip is centred under it.
+        let work = (0, 0, 1000, 800);
+        assert_eq!(tip_position(bar, work, &g, 0, (80, 20), 1.0), (99, 100 + h + 6));
+        // No room below: above.
+        let short = (0, 0, 1000, 100 + h + 20);
+        assert_eq!(tip_position(bar, short, &g, 0, (80, 20), 1.0), (99, 100 - 6 - 20));
+        // At the screen's left edge, pulled back inside.
+        let left = (0, 100, w, 100 + h);
+        assert_eq!(tip_position(left, work, &g, 0, (80, 20), 1.0).0, 0);
+    }
+
+    #[test]
+    fn tooltip_goes_right_or_left_of_a_vertical_bar() {
+        let g = Geometry { layout: Layout::Vertical, head: 40.0, count: 3 };
+        let (w, h) = physical(g.size(), 1.0);
+        let bar = (100, 100, 100 + w, 100 + h);
+        let work = (0, 0, 1000, 800);
+        assert_eq!(tip_position(bar, work, &g, 0, (80, 20), 1.0), (100 + w + 6, 100 + 39 - 10));
+        let narrow = (0, 0, 100 + w + 40, 800);
+        assert_eq!(tip_position(bar, narrow, &g, 0, (80, 20), 1.0).0, 100 - 6 - 80);
+    }
+
+    #[test]
+    fn tooltip_scales_with_the_screen() {
+        // Windows at 200 %: geometry in points, screen in pixels.
+        let g = Geometry { layout: Layout::Horizontal, head: 40.0, count: 3 };
+        let (w, h) = physical(g.size(), 2.0);
+        let bar = (0, 0, w, h);
+        let work = (0, 0, 2000, 1000);
+        assert_eq!(tip_position(bar, work, &g, 0, (80, 20), 2.0), (78 - 40, h + 12));
+    }
+
+    fn state_with_slot() -> State {
+        let mut st = State::default();
+        st.slots.push(Slot {
+            key: "Kiwi".into(),
+            window: WindowId::test(1),
+            icon: None,
+            initials: "Ki".into(),
+            class: Some("Cra".into()),
+            binding: Some("F1".into()),
+        });
+        st
+    }
+
+    #[test]
+    fn tooltip_waits_for_the_hover_delay() {
+        let mut st = state_with_slot();
+        let (tip, again) = wanted_tip(&mut st, Some(0));
+        assert_eq!(tip, None);
+        assert!(again.is_some_and(|d| d <= TIP_DELAY));
+
+        st.hover = Some((0, Instant::now() - TIP_DELAY));
+        let (tip, again) = wanted_tip(&mut st, Some(0));
+        assert_eq!(again, None);
+        let tip = tip.expect("delay elapsed");
+        assert_eq!((tip.name.as_str(), tip.detail.as_deref()), ("Kiwi", Some("Cra")));
+        assert_eq!(tip.binding.as_deref(), Some("F1"));
+
+        // Leaving the head drops the hover: the delay starts over.
+        assert_eq!(wanted_tip(&mut st, None), (None, None));
+        assert!(st.hover.is_none());
+    }
+
+    #[test]
+    fn menu_pick_applies_and_gives_the_foreground_back() {
+        let mut st = State::default();
+        let dofus = Some(WindowId::test(7));
+        let back = pick(&mut st, MenuAction::Layout(Layout::Vertical), dofus);
+        assert_eq!(st.layout, Layout::Vertical);
+        assert_eq!(back, dofus);
+        assert_eq!(pick(&mut st, MenuAction::Display(Display::Initials), dofus), dofus);
+        assert_eq!(st.display, Display::Initials);
+        assert_eq!(pick(&mut st, MenuAction::Disable, dofus), dofus);
+        // "Open ROrganizer" brings the main window instead.
+        assert_eq!(pick(&mut st, MenuAction::OpenMain, dofus), None);
+        assert_eq!(
+            st.events,
+            [
+                Event::Menu(MenuAction::Layout(Layout::Vertical)),
+                Event::Menu(MenuAction::Display(Display::Initials)),
+                Event::Menu(MenuAction::Disable),
+                Event::Menu(MenuAction::OpenMain),
+            ]
+        );
+    }
 }
