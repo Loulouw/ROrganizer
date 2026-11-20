@@ -149,7 +149,12 @@ After `ViewportCommand::Minimized(true)`, a restore from the Dock leaves egui
 believing the window is minimized and `App::ui` stops running for good.
 Common code minimizes only through `platform::minimize_main_window`.
 
-### The character overlay is three egui viewports on Windows
+### The character overlay: egui viewports on Windows, native panels on macOS
+
+`platform::OVERLAY_IS_EGUI` picks the renderer. Both draw from
+`crate::overlay` (state, geometry, palette, gestures, menu model) and App
+alone decides whether the bar shows (`ShowGate`) and persists its events.
+Windows:
 
 `ui::overlay` registers three deferred viewports (bar, tooltip,
 right-click menu) on every root `ui` pass while the overlay is on and
@@ -185,12 +190,38 @@ ROrganizer active; `App::logic` owns the bar's visibility through
   front (`FOCUS_GRACE`): the switch takes a few frames, and reading the
   foreground meanwhile gives the previous client back.
 
-macOS can't use this (spike, 2026-11): a click on any winit window
-activates the app (only an `NSPanel` with `NonactivatingPanel` doesn't),
-it never shows over another app's fullscreen Space, and `Visible(true)`
-from another thread never reaches a hidden viewport. `HAS_OVERLAY` is
-false there until the `NSPanel` version, driven by the same
-`crate::overlay::State`.
+macOS can't use egui (spike, 2026-11): a click on any winit window
+activates the app, it never shows over another app's fullscreen Space,
+and `Visible(true)` from another thread never reaches a hidden viewport.
+`platform/macos/overlay/` draws a borderless `NonactivatingPanel` (and a
+second, click-through one for the tooltip) with AppKit, driven from
+`App::logic` through `overlay::{show, hide, close}`. Measured traps:
+
+- `setHidesOnDeactivate(false)` is mandatory: the app is `.accessory`,
+  hence inactive, whenever the main window is hidden in the menu bar.
+- `CanJoinAllSpaces | FullScreenAuxiliary` keeps the bar over a
+  fullscreen client. Not solved, in the watcher: `AXWindows` only lists
+  the windows of the Space in front, so a rescan made from a fullscreen
+  client's Space drops every other client from the bar and the main
+  list, and nothing rescans on a Space change (measured: back on the
+  desktop, the bar stayed hidden over a client it no longer knew).
+- `NSCursor::set` from an inactive app is ignored: the bar has no cursor
+  shapes there.
+- The window server hands a click on a fully transparent pixel to the
+  window below (measured on a stand-in client: the bar's rounded corners
+  clicked into it). `paint` fills the whole rectangle at alpha 1/255 first.
+- The context menu is a real `NSMenu` with `darkAqua`/`aqua` set from the
+  app's theme. Popped from the inactive app, it never activates it; it
+  spins a nested run loop, during which `App::logic` may run: nothing
+  holds the state lock across `popUpMenuPositioningItem`, nor across
+  `orderFrontRegardless` (which can paint at once, and `drawRect:` locks
+  the state). The menu swallows the bar's `mouseExited:`: the pointer is
+  read back afterwards.
+- The default panel animation kept a hidden bar on screen ~200 ms:
+  `NSWindowAnimationBehavior::None`.
+- While the main window is hidden, `logic` runs at most every 100 ms: the
+  watcher's activation callback refreshes the lit head directly, and a
+  menu pick applies its layout at once.
 
 ### LL hooks don't fire while our own window is foreground
 
@@ -310,6 +341,18 @@ Programmatic end-to-end checks on macOS:
 - Front window: first layer-0 entry of `CGWindowListCopyWindowInfo`.
   Dofus doesn't answer `AXFocusedApplication` on the system-wide element.
 - Dock contents: AX children of the Dock process (the Dock may auto-hide).
+- Overlay: owner `rorganizer`, layer 3 (`NSFloatingWindowLevel`), no
+  title; the bar is the larger of the two, the tooltip the other. The
+  `NSMenu` is a layer-101 window of ours while open, positioned by AppKit:
+  screenshot it to find its items. `NSWorkspace.frontmostApplication`
+  goes stale in a process without a run loop: read the front from the
+  window list. Clicks on the bar's heads land on the panel, never on the
+  game under it; anything else on a Dofus window is a blind click.
+- Stand-in clients: a Swift app whose executable is named `Dofus` (or
+  `Dofus Retro`) and whose window carries a client title is detected like
+  one. Build it with `-target arm64-apple-macos11`: by default `swiftc`
+  targets the SDK's macOS (28 here, on a 27 system), and LaunchServices
+  then refuses to `open` it.
 
 ## Performance baseline
 
@@ -337,6 +380,12 @@ release binary ~7.1 MiB, physical footprint (`vmmap --summary`) ~32 MB,
 0.03 s of CPU over 30 s idle. A title change reaches the snapshot within
 ~250 ms (AX notification, then the 150 ms coalescing). Shipped universal
 binary ~15.5 MiB (both slices), `.dmg` ~8.5 MiB.
+
+The overlay on macOS (release arm64 binary ~7.5 MiB, 2 Unity clients,
+main window hidden, bar shown over Dofus vs overlay off, same binary,
+measured 2026-11): 54.2 vs 51.7 MB physical footprint, 0.017 vs
+0.016 s of CPU over 30 s idle. A run of the same setup gave 45 MB with
+the overlay on: footprints swing by several MB between launches.
 
 ## Release
 

@@ -85,10 +85,10 @@ changes everything.
   taskbar (on Mac: the menu bar or the Dock), enabled with one click
 - 🗂️ **A tidy taskbar** (Windows): one click puts the Dofus windows in the
   order of your accounts
-- 👥 **Character overlay** (Windows): a small bar above the game with each
-  character's head, the current one highlighted. Click a head to switch;
-  horizontal or vertical, class heads or initials, at the size and place
-  you want
+- 👥 **Character overlay** (Windows and Mac): a small bar above the game
+  with each character's head, the current one highlighted. Click a head to
+  switch; horizontal or vertical, class heads or initials, at the size and
+  place you want
 - ⚙️ **Set up your way**: shortcuts in Dofus only, window always on top or
   not, position remembered from one launch to the next
 
