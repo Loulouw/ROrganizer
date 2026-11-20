@@ -82,7 +82,7 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
     {
         let pos = overlay::place(window, st.saved_pos, physical(size, ppp));
         st.window = Some(window);
-        st.sent_size = Some(size);
+        st.sent_size = Some((size, ppp));
         st.events.push(Event::Moved(pos));
         // App shows the bar now that it sits where it belongs.
         ctx.request_repaint_of(ViewportId::ROOT);
@@ -92,13 +92,17 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
     }
     let Some(window) = st.window else { return };
 
-    if st.sent_size != Some(size) {
-        ctx.send_viewport_cmd(ViewportCommand::InnerSize(size));
+    // A new size, or a new scale: the move by `place` can land the window
+    // on a screen of another DPI, which resizes it in pixels.
+    if st.sent_size != Some((size, ppp)) {
+        if st.sent_size.is_none_or(|(sent, _)| sent != size) {
+            ctx.send_viewport_cmd(ViewportCommand::InnerSize(size));
+        }
         if let Some(pos) = overlay::keep_on_screen(window, physical(size, ppp)) {
             st.events.push(Event::Moved(pos));
             ctx.request_repaint_of(ViewportId::ROOT);
         }
-        st.sent_size = Some(size);
+        st.sent_size = Some((size, ppp));
     }
 
     // The client in front; kept while ROrganizer itself is (menu, window).
@@ -371,10 +375,15 @@ fn update_tip(
             }
             ctx.send_viewport_cmd_to(tip_id, ViewportCommand::InnerSize(size));
             ctx.send_viewport_cmd_to(tip_id, ViewportCommand::Visible(true));
+            st.tip = wanted;
         }
-        _ => ctx.send_viewport_cmd_to(tip_id, ViewportCommand::Visible(false)),
+        // Not attached yet: `draw_bar` retries on a later frame.
+        (Some(_), None) => ctx.request_repaint_after(overlay::TIP_DELAY),
+        (None, _) => {
+            ctx.send_viewport_cmd_to(tip_id, ViewportCommand::Visible(false));
+            st.tip = None;
+        }
     }
-    st.tip = wanted;
     ctx.request_repaint_of(tip_id);
 }
 

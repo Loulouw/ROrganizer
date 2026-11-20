@@ -121,8 +121,8 @@ pub struct State {
     pub gesture: Option<Gesture>,
     pub hover: Option<(usize, Instant)>,
     pub tip: Option<Tip>,
-    /// Window size last sent, in points.
-    pub sent_size: Option<Vec2>,
+    /// Window size last sent, in points, and the scale it was fitted at.
+    pub sent_size: Option<(Vec2, f32)>,
 
     // Read and cleared by App.
     pub events: Vec<Event>,
@@ -414,8 +414,9 @@ pub fn initials<'a>(names: &[&'a str]) -> HashMap<&'a str, String> {
         }
     }
 
-    // Anything left: the first three-letter combination still free.
-    rest.sort_unstable();
+    // Anything left: the first three-letter combination still free, the
+    // shortest names first since they have the fewest to pick from.
+    rest.sort_unstable_by_key(|&i| (chars[i].len(), i));
     for i in rest {
         let cs = &chars[i];
         let free = (1..cs.len())
@@ -552,6 +553,16 @@ mod tests {
         assert_eq!(l[1], "Do");
         assert_ne!(l[2], "Du");
         assert_ne!(l[2], "Do");
+    }
+
+    #[test]
+    fn short_names_pick_their_three_letters_first() {
+        // Dow has a single three-letter label; Dowoup, also left over, must
+        // not take it.
+        let l = labels(&["Duke", "Dowoop", "Dowoup", "Dow"]);
+        assert_eq!(l[3], "Dow");
+        let unique: HashSet<&String> = l.iter().collect();
+        assert_eq!(unique.len(), l.len(), "{l:?}");
     }
 
     #[test]
