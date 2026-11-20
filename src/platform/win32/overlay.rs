@@ -2,6 +2,7 @@
 //! overlay viewports, stripped of their frame, made non-activating (bar,
 //! tooltip) and placed in physical pixels.
 
+use eframe::egui;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{
     DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE, DWMWA_WINDOW_CORNER_PREFERENCE,
@@ -22,8 +23,17 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WS_THICKFRAME,
 };
 
-use crate::overlay::ScreenRect;
+use crate::overlay::{ScreenRect, Shared};
 use crate::platform::OverlayWindow;
+
+/// Never called: the overlay is drawn by egui here (`OVERLAY_IS_EGUI`).
+pub fn show(_shared: &Shared, _ctx: &egui::Context) {}
+
+/// Never called, as `show`.
+pub fn hide(_shared: &Shared) {}
+
+/// Never called, as `show`.
+pub fn close(_shared: &Shared) {}
 
 /// The caption winit keeps on undecorated windows (for Aero Snap): DWM
 /// draws its top edge and a ghost close button across a transparent one.

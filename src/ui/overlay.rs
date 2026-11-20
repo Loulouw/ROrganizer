@@ -1,7 +1,8 @@
-//! The character overlay drawn with egui: three deferred viewports, the
-//! bar, its tooltip and its right-click menu, registered by `App` on every
-//! root pass while the overlay is on. Model, geometry and rules are in
-//! `crate::overlay`; the window plumbing in `platform::overlay`.
+//! The character overlay drawn with egui (`platform::OVERLAY_IS_EGUI`):
+//! three deferred viewports, the bar, its tooltip and its right-click menu,
+//! registered by `App` on every root pass while the overlay is on. Model,
+//! geometry, palette and gestures are in `crate::overlay`; the window
+//! plumbing in `platform::overlay`.
 //!
 //! The bar runs its own gestures with the global cursor and native moves:
 //! `ViewportCommand::StartDrag` hands the move to the OS, which never moves
@@ -17,23 +18,14 @@ use eframe::egui::{
 };
 
 use crate::overlay::{
-    self, Display, Event, Geometry, Gesture, Hit, Layout, Menu, MenuAction, MenuEntry, ScreenRect,
-    Shared, State, Tip,
+    self, physical, Display, Event, Geometry, Gesture, Hit, Menu, MenuAction, MenuEntry, Shared,
+    State, Tip, DIM_ALPHA, PILL_PAD, TIP_PAD,
 };
 use crate::platform::{self, overlay as native};
 use crate::theme::{self, Theme};
 
-/// Distance between the bar and its tooltip, in points.
-const TIP_GAP: f32 = 6.0;
-const TIP_PAD: Vec2 = Vec2::new(8.0, 5.0);
-/// Opacity of the heads that aren't in front.
-const DIM_ALPHA: u8 = 115;
-
 pub fn register(ctx: &egui::Context, shared: &Shared) {
-    let size = {
-        let st = overlay::lock(shared);
-        geometry(&st).size()
-    };
+    let size = overlay::lock(shared).geometry().size();
     let bar = base_builder(overlay::OVERLAY_TITLE).with_inner_size(size);
     let s = shared.clone();
     ctx.show_viewport_deferred(overlay::overlay_viewport(), bar, move |ui, _| draw_bar(ui, &s));
@@ -71,24 +63,12 @@ fn base_builder(title: &str) -> ViewportBuilder {
         .with_visible(false)
 }
 
-fn geometry(st: &State) -> Geometry {
-    Geometry {
-        layout: st.layout,
-        head: st.head,
-        count: st.slots.len().max(1),
-    }
-}
-
-fn physical(v: Vec2, ppp: f32) -> (i32, i32) {
-    ((v.x * ppp).round() as i32, (v.y * ppp).round() as i32)
-}
-
 fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
     let ctx = ui.ctx().clone();
     let ppp = ctx.pixels_per_point();
     let mut st = overlay::lock(shared);
-    let theme = st.theme.unwrap_or(Theme::Dark);
-    let g = geometry(&st);
+    let theme = st.theme();
+    let g = st.geometry();
     let size = g.size();
 
     if st.window.is_none()
@@ -122,7 +102,9 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
         st.sent_size = Some((size, ppp));
     }
 
-    update_front(&ctx, &mut st);
+    if let Some(again) = overlay::update_front(&mut st) {
+        ctx.request_repaint_after(again);
+    }
 
     let (hover, pressed, down, released, menu) = ctx.input(|i| {
         let p = &i.pointer;
@@ -135,12 +117,18 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
         )
     });
     let hit = hover.map(|p| g.hit(p));
-    handle_gesture(&ctx, &mut st, window, hit, pressed, down, released, ppp);
+    if pressed {
+        overlay::start_gesture(&mut st, window, hit);
+    }
+    if down {
+        overlay::follow_gesture(&mut st, window, ppp);
+    }
+    if released || (!down && st.gesture.is_some() && !pressed) {
+        overlay::end_gesture(&mut st, window, hit, ppp);
+        ctx.request_repaint();
+    }
 
-    let hovered_slot = match hit {
-        Some(Hit::Slot(i)) if st.gesture.is_none() && i < st.slots.len() => Some(i),
-        _ => None,
-    };
+    let hovered_slot = overlay::hovered_slot(&st, hit);
     ctx.set_cursor_icon(match (st.gesture, hit) {
         (Some(Gesture::Move { .. }), _) => egui::CursorIcon::Grabbing,
         (Some(Gesture::Resize { .. }), _) | (None, Some(Hit::Resize)) => {
@@ -163,108 +151,6 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
     }
 }
 
-/// The client in front, kept while ROrganizer itself is (menu, window).
-/// A head just clicked stays highlighted until its client is actually in
-/// front, or `FOCUS_GRACE` runs out: the switch takes a few frames, and
-/// reading the foreground meanwhile would flash the previous head.
-fn update_front(ctx: &egui::Context, st: &mut State) {
-    let front = platform::foreground_window();
-    if let Some((target, at)) = st.pending_front {
-        let waited = at.elapsed();
-        if front != Some(target) && waited < overlay::FOCUS_GRACE {
-            ctx.request_repaint_after(overlay::FOCUS_GRACE - waited);
-            return;
-        }
-        st.pending_front = None;
-    }
-    if let Some(front) = front
-        && let Some(slot) = st.slots.iter().find(|s| s.window == front)
-    {
-        st.front = Some(slot.key.clone());
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn handle_gesture(
-    ctx: &egui::Context,
-    st: &mut State,
-    window: platform::OverlayWindow,
-    hit: Option<Hit>,
-    pressed: bool,
-    down: bool,
-    released: bool,
-    ppp: f32,
-) {
-    if pressed {
-        let cursor = native::cursor_position();
-        st.gesture = match hit {
-            Some(Hit::Grip) => native::rect(window).map(|(l, t, _, _)| Gesture::Move {
-                cursor,
-                origin: (l, t),
-            }),
-            Some(Hit::Resize) => Some(Gesture::Resize { cursor, head: st.head }),
-            Some(Hit::Slot(i)) => Some(Gesture::Press(i)),
-            _ => None,
-        };
-    }
-
-    if down {
-        let (x, y) = native::cursor_position();
-        match st.gesture {
-            Some(Gesture::Move { cursor, origin }) => {
-                native::move_to(window, (origin.0 + x - cursor.0, origin.1 + y - cursor.1));
-            }
-            Some(Gesture::Resize { cursor, head }) => {
-                let delta = Vec2::new((x - cursor.0) as f32, (y - cursor.1) as f32) / ppp;
-                st.head = overlay::resized_head(st.layout, st.slots.len(), head, delta);
-            }
-            _ => {}
-        }
-    }
-
-    if released || (!down && st.gesture.is_some() && !pressed) {
-        let size = physical(geometry(st).size(), ppp);
-        match st.gesture.take() {
-            Some(Gesture::Move { .. }) => {
-                let pos = overlay::keep_on_screen(window, size)
-                    .or_else(|| native::rect(window).map(|(l, t, _, _)| (l, t)));
-                if let Some(pos) = pos {
-                    st.events.push(Event::Moved(pos));
-                }
-            }
-            Some(Gesture::Resize { .. }) => {
-                st.events.push(Event::Resized(st.head));
-            }
-            Some(Gesture::Press(i)) if hit == Some(Hit::Slot(i)) => {
-                if let Some(slot) = st.slots.get(i) {
-                    platform::focus_window(slot.window);
-                    st.front = Some(slot.key.clone());
-                    st.pending_front = Some((slot.window, Instant::now()));
-                    st.events.push(Event::Focused(slot.key.clone()));
-                }
-            }
-            _ => {}
-        }
-        ctx.request_repaint();
-    }
-}
-
-fn bar_colors(theme: Theme) -> (Color32, Color32) {
-    let [r, g, b, _] = theme::window_bg(theme).to_array();
-    let border = match theme {
-        Theme::Dark => Color32::from_white_alpha(36),
-        Theme::Light => Color32::from_black_alpha(46),
-    };
-    (Color32::from_rgba_unmultiplied(r, g, b, 235), border)
-}
-
-fn active_color(theme: Theme) -> Color32 {
-    match theme {
-        Theme::Dark => theme::ACTIVE_DARK,
-        Theme::Light => theme::ACTIVE_LIGHT,
-    }
-}
-
 fn paint_bar(
     ui: &egui::Ui,
     st: &State,
@@ -274,34 +160,27 @@ fn paint_bar(
     pointer_on_bar: bool,
 ) {
     let painter = ui.painter();
-    let (fill, border) = bar_colors(theme);
+    let (fill, border) = overlay::bar_colors(theme);
     let bar = Rect::from_min_size(Pos2::ZERO, g.size());
-    painter.rect(bar, CornerRadius::same(10), fill, Stroke::new(1.0, border), StrokeKind::Inside);
+    painter.rect(
+        bar,
+        CornerRadius::same(overlay::BAR_RADIUS),
+        fill,
+        Stroke::new(1.0, border),
+        StrokeKind::Inside,
+    );
 
-    // Grip: two rows of three dots along the bar.
-    let grip = g.grip();
     let dot = theme::text_tertiary(theme);
-    for k in -1..=1 {
-        for side in [-1.0, 1.0] {
-            let (dx, dy) = match g.layout {
-                Layout::Horizontal => (side * 2.5, k as f32 * 5.0),
-                Layout::Vertical => (k as f32 * 5.0, side * 2.5),
-            };
-            painter.circle_filled(grip.center() + Vec2::new(dx, dy), 1.4, dot);
-        }
+    for center in g.grip_dots() {
+        painter.circle_filled(center, 1.4, dot);
     }
 
-    let active = active_color(theme);
-    // The head under a press lights up right away, the switch happens on
-    // release.
-    let lit = match st.gesture {
-        Some(Gesture::Press(i)) => st.slots.get(i).map(|s| &s.key),
-        _ => st.front.as_ref(),
-    };
+    let active = overlay::active_color(theme);
+    let lit = st.lit();
     for (i, slot) in st.slots.iter().enumerate() {
         let rect = g.slot(i);
         let on = lit == Some(&slot.key);
-        let radius = CornerRadius::same((g.head * 0.18).round().clamp(4.0, 12.0) as u8);
+        let radius = CornerRadius::same(overlay::head_radius(g.head));
         if on {
             painter.rect(
                 rect,
@@ -325,10 +204,7 @@ fn paint_bar(
                 painter.image(icon.id(), rect.shrink(g.head * 0.07), uv, tint);
             }
             _ => {
-                let disc = match theme {
-                    Theme::Dark => Color32::from_rgb(0x3A, 0x3A, 0x33),
-                    Theme::Light => Color32::from_rgb(0xD9, 0xD6, 0xCE),
-                };
+                let disc = overlay::initials_disc(theme);
                 let text = theme::text_primary(theme);
                 let (disc, text) = if on || hovered == Some(i) {
                     (disc, text)
@@ -348,11 +224,9 @@ fn paint_bar(
     }
 
     if pointer_on_bar {
-        let handle = g.resize_handle();
         let stroke = Stroke::new(1.2, dot);
-        let corner = handle.max - Vec2::splat(3.0);
-        for len in [4.0, 7.5] {
-            painter.line_segment([corner - Vec2::new(len, 0.0), corner - Vec2::new(0.0, len)], stroke);
+        for segment in g.resize_marks() {
+            painter.line_segment(segment, stroke);
         }
     }
 }
@@ -368,25 +242,10 @@ fn update_tip(
     theme: Theme,
     ppp: f32,
 ) {
-    match (hovered, st.hover) {
-        (Some(i), Some((j, _))) if i == j => {}
-        (Some(i), _) => st.hover = Some((i, Instant::now())),
-        (None, _) => st.hover = None,
+    let (wanted, again) = overlay::wanted_tip(st, hovered);
+    if let Some(again) = again {
+        ctx.request_repaint_after(again);
     }
-    let wanted = st.hover.and_then(|(i, since)| {
-        let waited = since.elapsed();
-        if waited < overlay::TIP_DELAY {
-            ctx.request_repaint_after(overlay::TIP_DELAY - waited);
-            return None;
-        }
-        let slot = st.slots.get(i)?;
-        Some(Tip {
-            name: slot.key.clone(),
-            detail: slot.class.clone(),
-            binding: slot.binding.clone(),
-            slot: i,
-        })
-    });
     if wanted == st.tip {
         return;
     }
@@ -394,8 +253,10 @@ fn update_tip(
     match (&wanted, st.tip_window) {
         (Some(tip), Some(tip_window)) => {
             let size = tip_layout(ctx, tip, theme).size;
-            let pos = tip_position(window, g, tip.slot, size, ppp);
-            if let Some(pos) = pos {
+            let bar = native::rect(window);
+            let work = native::work_area(window);
+            if let (Some(bar), Some(work)) = (bar, work) {
+                let pos = overlay::tip_position(bar, work, g, tip.slot, physical(size, ppp), ppp);
                 native::move_to(tip_window, pos);
             }
             ctx.send_viewport_cmd_to(tip_id, ViewportCommand::InnerSize(size));
@@ -412,43 +273,12 @@ fn update_tip(
     ctx.request_repaint_of(tip_id);
 }
 
-/// Next to the hovered head: below a horizontal bar (above when the screen
-/// ends), right of a vertical one (left when the screen ends).
-fn tip_position(
-    window: platform::OverlayWindow,
-    g: &Geometry,
-    slot: usize,
-    size: Vec2,
-    ppp: f32,
-) -> Option<(i32, i32)> {
-    let (bl, bt, br, bb) = native::rect(window)?;
-    let work: ScreenRect = native::work_area(window)?;
-    let (w, h) = physical(size, ppp);
-    let gap = (TIP_GAP * ppp).round() as i32;
-    let center = g.slot(slot).center();
-    let cx = bl + (center.x * ppp).round() as i32;
-    let cy = bt + (center.y * ppp).round() as i32;
-    let pos = match g.layout {
-        Layout::Horizontal => {
-            let y = if bb + gap + h <= work.3 { bb + gap } else { bt - gap - h };
-            (cx - w / 2, y)
-        }
-        Layout::Vertical => {
-            let x = if br + gap + w <= work.2 { br + gap } else { bl - gap - w };
-            (x, cy - h / 2)
-        }
-    };
-    Some(overlay::fit_into(work, pos, (w, h)))
-}
-
 struct TipLayout {
     size: Vec2,
     name: Arc<Galley>,
     detail: Option<Arc<Galley>>,
     binding: Option<Arc<Galley>>,
 }
-
-const PILL_PAD: Vec2 = Vec2::new(6.0, 2.0);
 
 fn tip_layout(ctx: &egui::Context, tip: &Tip, theme: Theme) -> TipLayout {
     ctx.fonts_mut(|f| {
@@ -488,14 +318,20 @@ fn draw_tip(ui: &mut egui::Ui, shared: &Shared) {
         st.tip_window = native::attach(overlay::TIP_TITLE, false);
     }
     let Some(tip) = st.tip.clone() else { return };
-    let theme = st.theme.unwrap_or(Theme::Dark);
+    let theme = st.theme();
     drop(st);
 
     let layout = tip_layout(&ctx, &tip, theme);
     let painter = ui.painter();
     let rect = Rect::from_min_size(Pos2::ZERO, layout.size);
-    let (fill, border) = bar_colors(theme);
-    painter.rect(rect, CornerRadius::same(6), fill, Stroke::new(1.0, border), StrokeKind::Inside);
+    let (fill, border) = overlay::bar_colors(theme);
+    painter.rect(
+        rect,
+        CornerRadius::same(overlay::TIP_RADIUS),
+        fill,
+        Stroke::new(1.0, border),
+        StrokeKind::Inside,
+    );
 
     let mid = rect.center().y;
     let mut x = TIP_PAD.x;
@@ -517,9 +353,9 @@ fn draw_tip(ui: &mut egui::Ui, shared: &Shared) {
         );
         painter.rect(
             pill,
-            CornerRadius::same(4),
+            CornerRadius::same(overlay::PILL_RADIUS),
             theme::window_bg(theme),
-            Stroke::new(1.0, bar_colors(theme).1),
+            Stroke::new(1.0, border),
             StrokeKind::Inside,
         );
         let mut px = x + PILL_PAD.x;
@@ -631,9 +467,7 @@ fn open_menu(
 fn close_menu(ctx: &egui::Context, st: &mut State, give_back: Option<platform::WindowId>) {
     st.menu = None;
     ctx.send_viewport_cmd(ViewportCommand::Visible(false));
-    if let Some(window) = give_back.filter(|&w| !platform::is_own_window(w)) {
-        platform::focus_window(window);
-    }
+    overlay::give_back(give_back);
     ctx.request_repaint_of(ViewportId::ROOT);
     ctx.request_repaint_of(overlay::overlay_viewport());
 }
@@ -645,7 +479,7 @@ fn draw_menu(ui: &mut egui::Ui, shared: &Shared) {
         st.menu_window = native::attach(overlay::MENU_TITLE, true);
     }
     let (Some(menu), Some(menu_window)) = (st.menu.clone(), st.menu_window) else { return };
-    let theme = st.theme.unwrap_or(Theme::Dark);
+    let theme = st.theme();
 
     // Focused, a click elsewhere takes the focus away and closes it, as a
     // native menu does. ROrganizer is in front meanwhile, like with one.
@@ -707,7 +541,7 @@ fn draw_menu(ui: &mut egui::Ui, shared: &Shared) {
                 }
                 if *checked {
                     let dot = Pos2::new(row.rect.min.x + 13.0, mid);
-                    painter.circle_filled(dot, 3.2, active_color(theme));
+                    painter.circle_filled(dot, 3.2, overlay::active_color(theme));
                 }
                 let pos = Pos2::new(row.rect.min.x + MENU_LABEL_X - MENU_PAD, mid - galley.size().y / 2.0);
                 painter.galley(pos, galley, Color32::PLACEHOLDER);
@@ -717,15 +551,7 @@ fn draw_menu(ui: &mut egui::Ui, shared: &Shared) {
     }
 
     if let Some(action) = picked {
-        match action {
-            MenuAction::Layout(l) => st.layout = l,
-            MenuAction::Display(d) => st.display = d,
-            MenuAction::Visibility(v) => st.visibility = v,
-            MenuAction::OpenMain | MenuAction::Disable => {}
-        }
-        st.events.push(Event::Menu(action));
-        // "Open ROrganizer" brings the main window in front instead.
-        let give_back = (action != MenuAction::OpenMain).then_some(menu.previous).flatten();
+        let give_back = overlay::pick(&mut st, action, menu.previous);
         close_menu(&ctx, &mut st, give_back);
     }
 }

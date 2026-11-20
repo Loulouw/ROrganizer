@@ -61,28 +61,46 @@
 //!   Send + 'static)` calls back each time another launch asks to be shown.
 //! - `detect_system_lang() -> Lang`, `open_folder(&Path)`.
 //! - Character overlay: `HAS_OVERLAY: bool`; the option and the overlay
-//!   viewports exist only when true, but `overlay::*` must exist either way.
-//!   [`OverlayWindow`] is a window egui created for an overlay viewport.
-//!   Coordinates are screen coordinates (Windows: physical pixels).
-//!   - `overlay::attach(&str, bool) -> Option<OverlayWindow>`, called from
-//!     an overlay viewport's ui callback: finds the window titled so on the
-//!     UI thread, strips its frame and keeps it out of the taskbar; unless
-//!     the flag says it activates (the menu), a click never activates it,
-//!     for good (winit rewrites the window styles on every change of its
-//!     own). A click that activated ROrganizer would blind the global input
-//!     hooks until Dofus is back in front.
-//!   - `overlay::activate(OverlayWindow)`: brings the menu in front, right
-//!     after the click that opened it.
+//!   exist only when true, but `overlay::*` must exist either way.
+//!   `OVERLAY_IS_EGUI: bool` picks who draws it; either way the model, the
+//!   gestures and the rules are `crate::overlay`'s, and App owns whether
+//!   the bar shows (`ShowGate`) and persists the `Event`s it queues.
+//!   [`OverlayWindow`] is one of the overlay's windows. Coordinates are
+//!   screen coordinates, y downwards (Windows: physical pixels, macOS:
+//!   points from the top of the primary screen, as `placement`). A click
+//!   on the overlay never activates ROrganizer: that would blind the
+//!   global input hooks until Dofus is back in front.
+//!   - `OVERLAY_IS_EGUI` true (Windows): `ui::overlay` draws three egui
+//!     viewports. `overlay::attach(&str, bool) -> Option<OverlayWindow>`,
+//!     called from an overlay viewport's ui callback, finds the window
+//!     titled so on the UI thread, strips its frame and keeps it out of
+//!     the taskbar; unless the flag says it activates (the menu), a click
+//!     never activates it, for good (winit rewrites the window styles on
+//!     every change of its own). `overlay::activate(OverlayWindow)` brings
+//!     the menu in front, right after the click that opened it: it takes
+//!     the focus so that a click elsewhere closes it, then gives the
+//!     foreground back. `show`, `hide`, `close` are never called.
+//!   - `OVERLAY_IS_EGUI` false (macOS): the backend draws the overlay
+//!     natively, from `crate::overlay::State` and its helpers. From
+//!     `App::logic`, on the UI thread, also while the main window is
+//!     hidden: `overlay::show(&Shared, &egui::Context)` on every pass while
+//!     the bar should show (the first one creates and places it, every one
+//!     refreshes it from the state), `overlay::hide(&Shared)` once it
+//!     shouldn't (with its tooltip and menu), `overlay::close(&Shared)`
+//!     when the overlay goes off or ROrganizer inactive (the next `show`
+//!     places it anew). The backend handles the input itself, queues
+//!     `crate::overlay::Event`s and wakes App through the context. Its
+//!     menu follows the app's theme and gives the foreground back after a
+//!     pick. `attach` and `activate` are never called.
 //!   - `overlay::rect(OverlayWindow) -> Option<ScreenRect>`,
 //!     `overlay::move_to(OverlayWindow, (i32, i32))` (never activates),
 //!     `overlay::cursor_position() -> (i32, i32)`.
-//!   - Work areas (screen minus taskbar/Dock): `overlay::work_area(
-//!     OverlayWindow)` of its screen, `overlay::work_area_of(ScreenRect)`
-//!     of the screen showing that rectangle (None when none does),
-//!     `overlay::main_work_area()`; all `-> Option<ScreenRect>`.
-//!     `crate::overlay::{place, keep_on_screen}` build on them.
-//!   - The right-click menu is egui too (`ui::overlay`): it takes the focus
-//!     so that a click elsewhere closes it, then gives the foreground back.
+//!   - Work areas (screen minus taskbar/Dock/menu bar):
+//!     `overlay::work_area(OverlayWindow)` of its screen,
+//!     `overlay::work_area_of(ScreenRect)` of the screen showing most of
+//!     that rectangle (None when none does), `overlay::main_work_area()`;
+//!     all `-> Option<ScreenRect>`. `crate::overlay::{place,
+//!     keep_on_screen}` and the gestures build on them.
 
 #[cfg(windows)]
 mod win32;
@@ -114,6 +132,7 @@ impl WindowId {
 #[derive(Clone, Copy, Debug)]
 pub struct MainWindow(RawMainWindow);
 
-/// A window egui created for an overlay viewport (`crate::overlay`).
+/// One of the overlay's windows (`crate::overlay`): an egui viewport's on
+/// Windows, a native panel on macOS.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct OverlayWindow(RawOverlayWindow);

@@ -119,6 +119,7 @@ fn observe_workspace(_mtm: MainThreadMarker, ctx: egui::Context) {
             let front = NSWorkspace::sharedWorkspace().frontmostApplication();
             FRONT_PID.store(front.map_or(0, |a| a.processIdentifier()), Ordering::Relaxed);
             crate::overlay::foreground_changed(&ctx);
+            super::overlay::foreground_changed();
         }),
     );
 }

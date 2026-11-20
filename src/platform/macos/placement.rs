@@ -13,17 +13,18 @@ use crate::platform::MainWindow;
 /// the window can still be dragged by its title bar.
 const TITLE_STRIP: i32 = 36;
 
-/// Screen area, y downwards.
+/// Screen area in points, y downwards from the top of the primary screen.
+/// `overlay` works in the same coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Rect {
-    left: i32,
-    top: i32,
-    right: i32,
-    bottom: i32,
+pub(super) struct Rect {
+    pub(super) left: i32,
+    pub(super) top: i32,
+    pub(super) right: i32,
+    pub(super) bottom: i32,
 }
 
 impl Rect {
-    fn from_appkit(r: NSRect, primary_height: f64) -> Self {
+    pub(super) fn from_appkit(r: NSRect, primary_height: f64) -> Self {
         let top = primary_height - (r.origin.y + r.size.height);
         Self {
             left: r.origin.x.round() as i32,
@@ -62,25 +63,31 @@ pub fn restore(window: MainWindow, pos: (i32, i32)) {
     let Some(primary_height) = primary_height(mtm) else { return };
     let width = ns_window.frame().size.width.round() as i32;
     let strip = Rect { left: pos.0, top: pos.1, right: pos.0 + width, bottom: pos.1 + TITLE_STRIP };
-    let screens = NSScreen::screens(mtm);
-    let Some(work) = screens
-        .iter()
-        .map(|s| (Rect::from_appkit(s.frame(), primary_height), s.visibleFrame()))
-        .map(|(frame, visible)| (frame.overlap(strip), visible))
-        .filter(|(overlap, _)| *overlap > 0)
-        .max_by_key(|(overlap, _)| *overlap)
-        .map(|(_, visible)| Rect::from_appkit(visible, primary_height))
-    else {
-        return;
-    };
+    let Some(work) = visible_area_showing(mtm, strip, primary_height) else { return };
     let (x, y) = clamp_into(work, pos, width);
     let top_left = NSPoint::new(f64::from(x), primary_height - f64::from(y));
     ns_window.setFrameTopLeftPoint(top_left);
 }
 
+/// Visible area (menu bar and Dock excluded) of the screen showing most of
+/// `rect`; None when no screen shows any of it.
+pub(super) fn visible_area_showing(
+    mtm: MainThreadMarker,
+    rect: Rect,
+    primary_height: f64,
+) -> Option<Rect> {
+    NSScreen::screens(mtm)
+        .iter()
+        .map(|s| (Rect::from_appkit(s.frame(), primary_height), s.visibleFrame()))
+        .map(|(frame, visible)| (frame.overlap(rect), visible))
+        .filter(|(overlap, _)| *overlap > 0)
+        .max_by_key(|(overlap, _)| *overlap)
+        .map(|(_, visible)| Rect::from_appkit(visible, primary_height))
+}
+
 /// Height of the screen holding the menu bar, origin of both coordinate
 /// systems.
-fn primary_height(mtm: MainThreadMarker) -> Option<f64> {
+pub(super) fn primary_height(mtm: MainThreadMarker) -> Option<f64> {
     NSScreen::screens(mtm).firstObject().map(|s| s.frame().size.height)
 }
 

@@ -31,6 +31,8 @@ pub use watcher::{is_dofus_window, spawn_watcher};
 pub const HAS_TASKBAR_SORT: bool = true;
 pub const TRAY_IS_MENU_BAR: bool = false;
 pub const HAS_OVERLAY: bool = true;
+/// The overlay is three egui viewports (`ui::overlay`).
+pub const OVERLAY_IS_EGUI: bool = true;
 pub const WINDOW_ICON_PNG: &[u8] = crate::assets::ICON_PNG;
 pub const WINDOW_ICON_SIZE: u32 = 64;
 

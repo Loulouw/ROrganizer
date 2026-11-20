@@ -179,10 +179,12 @@ pub struct App {
     overlay_head: f32,
     /// Top-left corner of the overlay, in `platform::overlay` coordinates.
     overlay_pos: Option<(i32, i32)>,
-    /// State shared with the overlay viewports (`ui::overlay`).
+    /// State shared with the overlay renderer: the egui viewports
+    /// (`ui::overlay`) or the backend's native bar (`platform::overlay`).
     overlay: overlay::Shared,
     overlay_gate: overlay::ShowGate,
-    /// Whether the overlay viewports were registered on the last pass.
+    /// Whether the overlay exists: its viewports were registered on the
+    /// last pass (egui), or the native bar was driven.
     overlay_registered: bool,
     /// Visibility last sent to the bar.
     overlay_shown: bool,
@@ -190,6 +192,7 @@ pub struct App {
     /// the running ones in order. Rebuilt only when it changes.
     overlay_slots_from: (Vec<SlotKey>, Vec<OverlaySlotSource>),
     /// Full-size class heads, decoded on first use (`decode_overlay_icon`).
+    /// egui renderer only: a native one draws `assets::CLASS_PNGS` itself.
     overlay_icons: HashMap<&'static str, egui::TextureHandle>,
 }
 
@@ -804,14 +807,20 @@ impl App {
             }
         }
 
+        let egui_drawn = platform::OVERLAY_IS_EGUI;
         let bar = overlay::overlay_viewport();
         if !self.overlay_wanted() {
             if self.overlay_registered {
-                // egui closes the windows at the end of the next root pass
-                // that doesn't register them; they come back as new windows.
-                ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(false));
+                if egui_drawn {
+                    // egui closes the windows at the end of the next root
+                    // pass that doesn't register them; they come back as new
+                    // windows.
+                    ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(false));
+                    ui::overlay::close_popups(ctx, &mut overlay::lock(&self.overlay));
+                } else {
+                    platform::overlay::close(&self.overlay);
+                }
                 let mut st = overlay::lock(&self.overlay);
-                ui::overlay::close_popups(ctx, &mut st);
                 st.window = None;
                 st.tip_window = None;
                 st.menu_window = None;
@@ -849,14 +858,20 @@ impl App {
             st.saved_pos = self.overlay_pos;
             st.window.is_some()
         };
-        // Registered by `ui`, so the viewport only exists from the second pass.
-        if !self.overlay_registered {
-            return;
-        }
-        if !attached {
-            // Created hidden, and a hidden viewport isn't painted: its first
-            // pass, which attaches and places the window, has to be asked for.
-            ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::RequestPaintWhileHidden);
+        if egui_drawn {
+            // Registered by `ui`, so the viewport only exists from the second
+            // pass.
+            if !self.overlay_registered {
+                return;
+            }
+            if !attached {
+                // Created hidden, and a hidden viewport isn't painted: its
+                // first pass, which attaches and places the window, has to be
+                // asked for.
+                ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::RequestPaintWhileHidden);
+            }
+        } else {
+            self.overlay_registered = true;
         }
 
         let front = match platform::foreground_window() {
@@ -871,6 +886,16 @@ impl App {
             self.overlay_gate.decide(Instant::now(), eligible, front, self.overlay_shown);
         if let Some(delay) = again {
             ctx.request_repaint_after(delay);
+        }
+        if !egui_drawn {
+            // Created, placed and refreshed by `show` itself, on every pass.
+            if show {
+                platform::overlay::show(&self.overlay, ctx);
+            } else if self.overlay_shown {
+                platform::overlay::hide(&self.overlay);
+            }
+            self.overlay_shown = show;
+            return;
         }
         let show = show && attached;
         if show != self.overlay_shown {
@@ -916,7 +941,8 @@ impl App {
         for name in from.1.iter().filter_map(|(_, _, class, _)| {
             class.as_deref().and_then(crate::class_icon::class_filename)
         }) {
-            if !self.overlay_icons.contains_key(name)
+            if platform::OVERLAY_IS_EGUI
+                && !self.overlay_icons.contains_key(name)
                 && let Some(icon) = decode_overlay_icon(ctx, name)
             {
                 self.overlay_icons.insert(name, icon);
@@ -1157,7 +1183,7 @@ impl eframe::App for App {
         ui::capture::draw(ctx, self);
         ui::settings::draw(ctx, self);
 
-        if self.overlay_wanted() {
+        if self.overlay_wanted() && platform::OVERLAY_IS_EGUI {
             ui::overlay::register(ctx, &self.overlay);
             if !self.overlay_registered {
                 // Next pass: `logic` asks the new, hidden bar to attach.

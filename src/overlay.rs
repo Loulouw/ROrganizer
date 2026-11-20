@@ -3,21 +3,22 @@
 //! forward; the grip moves the bar, its corner resizes it, a right-click
 //! opens a menu.
 //!
-//! This module is OS-agnostic: the state shared with the overlay viewport,
-//! the geometry, the initials rule, the visibility rule and the menu model.
-//! The egui drawing lives in `ui::overlay`, the window plumbing (no
-//! activation, placement, native menu) in `platform::overlay`.
+//! This module is OS-agnostic: the state shared with the overlay windows,
+//! the geometry, the palette, the gestures, the initials rule, the
+//! visibility rule and the menu model. Two renderers draw from it: egui
+//! viewports (`ui::overlay`, when `platform::OVERLAY_IS_EGUI`) or the
+//! backend's native windows (`platform::overlay`).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use eframe::egui::{self, Pos2, Rect, Vec2, ViewportId};
+use eframe::egui::{self, Color32, Pos2, Rect, Vec2, ViewportId};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::platform::{overlay as native, OverlayWindow, WindowId};
-use crate::theme::Theme;
+use crate::theme::{self, Theme};
 use crate::triggers::SlotKey;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -180,6 +181,74 @@ pub fn lock(shared: &Shared) -> std::sync::MutexGuard<'_, State> {
     shared.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+impl State {
+    pub fn geometry(&self) -> Geometry {
+        Geometry {
+            layout: self.layout,
+            head: self.head,
+            count: self.slots.len().max(1),
+        }
+    }
+
+    pub fn theme(&self) -> Theme {
+        self.theme.unwrap_or(Theme::Dark)
+    }
+
+    /// The head drawn lit: the one under a press lights up right away (the
+    /// switch happens on release), otherwise the client in front.
+    pub fn lit(&self) -> Option<&SlotKey> {
+        match self.gesture {
+            Some(Gesture::Press(i)) => self.slots.get(i).map(|s| &s.key),
+            _ => self.front.as_ref(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Palette, in points, shared by both renderers.
+
+/// Distance between the bar and its tooltip.
+pub const TIP_GAP: f32 = 6.0;
+pub const TIP_PAD: Vec2 = Vec2::new(8.0, 5.0);
+/// Padding of the shortcut pill in the tooltip.
+pub const PILL_PAD: Vec2 = Vec2::new(6.0, 2.0);
+/// Opacity of the heads that aren't lit.
+pub const DIM_ALPHA: u8 = 115;
+pub const BAR_RADIUS: u8 = 10;
+pub const TIP_RADIUS: u8 = 6;
+pub const PILL_RADIUS: u8 = 4;
+
+/// `(fill, border)` of the bar and the tooltip.
+pub fn bar_colors(theme: Theme) -> (Color32, Color32) {
+    let [r, g, b, _] = theme::window_bg(theme).to_array();
+    let border = match theme {
+        Theme::Dark => Color32::from_white_alpha(36),
+        Theme::Light => Color32::from_black_alpha(46),
+    };
+    (Color32::from_rgba_unmultiplied(r, g, b, 235), border)
+}
+
+/// Outline of the lit head, check mark of the menu.
+pub fn active_color(theme: Theme) -> Color32 {
+    match theme {
+        Theme::Dark => theme::ACTIVE_DARK,
+        Theme::Light => theme::ACTIVE_LIGHT,
+    }
+}
+
+/// Disc behind the initials.
+pub fn initials_disc(theme: Theme) -> Color32 {
+    match theme {
+        Theme::Dark => Color32::from_rgb(0x3A, 0x3A, 0x33),
+        Theme::Light => Color32::from_rgb(0xD9, 0xD6, 0xCE),
+    }
+}
+
+/// Corner radius of a head's highlight.
+pub fn head_radius(head: f32) -> u8 {
+    (head * 0.18).round().clamp(4.0, 12.0) as u8
+}
+
 // ---------------------------------------------------------------------------
 // Geometry, in points, origin at the bar's top-left corner.
 
@@ -249,6 +318,26 @@ impl Geometry {
             .find(|&i| self.slot(i).contains(p))
             .map_or(Hit::Bar, Hit::Slot)
     }
+
+    /// Centres of the grip's six dots: two rows of three along the bar.
+    pub fn grip_dots(&self) -> impl Iterator<Item = Pos2> {
+        let (layout, center) = (self.layout, self.grip().center());
+        (-1..=1).flat_map(move |k| {
+            [-1.0, 1.0].map(|side| {
+                let (dx, dy) = match layout {
+                    Layout::Horizontal => (side * 2.5, k as f32 * 5.0),
+                    Layout::Vertical => (k as f32 * 5.0, side * 2.5),
+                };
+                center + Vec2::new(dx, dy)
+            })
+        })
+    }
+
+    /// The two strokes marking the resize corner.
+    pub fn resize_marks(&self) -> [[Pos2; 2]; 2] {
+        let corner = self.resize_handle().max - Vec2::splat(3.0);
+        [4.0, 7.5].map(|len| [corner - Vec2::new(len, 0.0), corner - Vec2::new(0.0, len)])
+    }
 }
 
 /// Head size while the corner is dragged by `delta` points: the corner
@@ -307,6 +396,176 @@ pub fn keep_on_screen(window: OverlayWindow, size: (i32, i32)) -> Option<(i32, i
         native::move_to(window, fitted);
         fitted
     })
+}
+
+/// `v` points in whole screen units at `ppp` units per point.
+pub fn physical(v: Vec2, ppp: f32) -> (i32, i32) {
+    ((v.x * ppp).round() as i32, (v.y * ppp).round() as i32)
+}
+
+// ---------------------------------------------------------------------------
+// Behaviour shared by both renderers. `ppp`: screen units per point
+// (`platform::overlay` coordinates).
+
+/// Follows the client in front, kept while ROrganizer itself is (menu,
+/// window). A head just clicked stays highlighted until its client is
+/// actually in front, or `FOCUS_GRACE` runs out: the switch takes a few
+/// frames, and reading the foreground meanwhile would flash the previous
+/// head. Some(delay) while waiting: look again then.
+pub fn update_front(st: &mut State) -> Option<Duration> {
+    let front = crate::platform::foreground_window();
+    if let Some((target, at)) = st.pending_front {
+        let waited = at.elapsed();
+        if front != Some(target) && waited < FOCUS_GRACE {
+            return Some(FOCUS_GRACE - waited);
+        }
+        st.pending_front = None;
+    }
+    if let Some(front) = front
+        && let Some(slot) = st.slots.iter().find(|s| s.window == front)
+    {
+        st.front = Some(slot.key.clone());
+    }
+    None
+}
+
+/// Primary button pressed on `hit`.
+pub fn start_gesture(st: &mut State, window: OverlayWindow, hit: Option<Hit>) {
+    let cursor = native::cursor_position();
+    st.gesture = match hit {
+        Some(Hit::Grip) => native::rect(window).map(|(l, t, _, _)| Gesture::Move {
+            cursor,
+            origin: (l, t),
+        }),
+        Some(Hit::Resize) => Some(Gesture::Resize { cursor, head: st.head }),
+        Some(Hit::Slot(i)) => Some(Gesture::Press(i)),
+        _ => None,
+    };
+}
+
+/// Button still down: moves the window, or sets the head size it should
+/// take (the renderer resizes it).
+pub fn follow_gesture(st: &mut State, window: OverlayWindow, ppp: f32) {
+    let (x, y) = native::cursor_position();
+    match st.gesture {
+        Some(Gesture::Move { cursor, origin }) => {
+            native::move_to(window, (origin.0 + x - cursor.0, origin.1 + y - cursor.1));
+        }
+        Some(Gesture::Resize { cursor, head }) => {
+            let delta = Vec2::new((x - cursor.0) as f32, (y - cursor.1) as f32) / ppp;
+            st.head = resized_head(st.layout, st.slots.len(), head, delta);
+        }
+        _ => {}
+    }
+}
+
+/// Button released over `hit`: records the move or the size, or brings
+/// the clicked client forward.
+pub fn end_gesture(st: &mut State, window: OverlayWindow, hit: Option<Hit>, ppp: f32) {
+    let size = physical(st.geometry().size(), ppp);
+    match st.gesture.take() {
+        Some(Gesture::Move { .. }) => {
+            let pos = keep_on_screen(window, size)
+                .or_else(|| native::rect(window).map(|(l, t, _, _)| (l, t)));
+            if let Some(pos) = pos {
+                st.events.push(Event::Moved(pos));
+            }
+        }
+        Some(Gesture::Resize { .. }) => {
+            st.events.push(Event::Resized(st.head));
+        }
+        Some(Gesture::Press(i)) if hit == Some(Hit::Slot(i)) => {
+            if let Some(slot) = st.slots.get(i) {
+                crate::platform::focus_window(slot.window);
+                st.front = Some(slot.key.clone());
+                st.pending_front = Some((slot.window, Instant::now()));
+                st.events.push(Event::Focused(slot.key.clone()));
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The head the pointer rests on, outside any gesture.
+pub fn hovered_slot(st: &State, hit: Option<Hit>) -> Option<usize> {
+    match hit {
+        Some(Hit::Slot(i)) if st.gesture.is_none() && i < st.slots.len() => Some(i),
+        _ => None,
+    }
+}
+
+/// Tracks the hovered head and returns the tooltip it should show now.
+/// Some(delay) while the hover is younger than `TIP_DELAY`: look again then.
+pub fn wanted_tip(st: &mut State, hovered: Option<usize>) -> (Option<Tip>, Option<Duration>) {
+    match (hovered, st.hover) {
+        (Some(i), Some((j, _))) if i == j => {}
+        (Some(i), _) => st.hover = Some((i, Instant::now())),
+        (None, _) => st.hover = None,
+    }
+    let Some((i, since)) = st.hover else { return (None, None) };
+    let waited = since.elapsed();
+    if waited < TIP_DELAY {
+        return (None, Some(TIP_DELAY - waited));
+    }
+    let tip = st.slots.get(i).map(|slot| Tip {
+        name: slot.key.clone(),
+        detail: slot.class.clone(),
+        binding: slot.binding.clone(),
+        slot: i,
+    });
+    (tip, None)
+}
+
+/// Top-left corner of a `size` tooltip next to head `slot` of the bar at
+/// `bar`: below a horizontal bar (above when the screen ends), right of a
+/// vertical one (left when the screen ends), kept inside `work`.
+pub fn tip_position(
+    bar: ScreenRect,
+    work: ScreenRect,
+    g: &Geometry,
+    slot: usize,
+    size: (i32, i32),
+    ppp: f32,
+) -> (i32, i32) {
+    let (bl, bt, br, bb) = bar;
+    let (w, h) = size;
+    let gap = (TIP_GAP * ppp).round() as i32;
+    let center = g.slot(slot).center();
+    let cx = bl + (center.x * ppp).round() as i32;
+    let cy = bt + (center.y * ppp).round() as i32;
+    let pos = match g.layout {
+        Layout::Horizontal => {
+            let y = if bb + gap + h <= work.3 { bb + gap } else { bt - gap - h };
+            (cx - w / 2, y)
+        }
+        Layout::Vertical => {
+            let x = if br + gap + w <= work.2 { br + gap } else { bl - gap - w };
+            (x, cy - h / 2)
+        }
+    };
+    fit_into(work, pos, (w, h))
+}
+
+/// Applies a menu pick and queues it for App. Returns the window to give
+/// the foreground back to: the one in front when the menu opened, except
+/// for "Open ROrganizer", which brings the main window in front instead.
+pub fn pick(st: &mut State, action: MenuAction, previous: Option<WindowId>) -> Option<WindowId> {
+    match action {
+        MenuAction::Layout(l) => st.layout = l,
+        MenuAction::Display(d) => st.display = d,
+        MenuAction::Visibility(v) => st.visibility = v,
+        MenuAction::OpenMain | MenuAction::Disable => {}
+    }
+    st.events.push(Event::Menu(action));
+    (action != MenuAction::OpenMain).then_some(previous).flatten()
+}
+
+/// Hands the foreground back to `window` once the menu is gone, unless it
+/// is ROrganizer's own.
+pub fn give_back(window: Option<WindowId>) {
+    if let Some(window) = window.filter(|&w| !crate::platform::is_own_window(w)) {
+        crate::platform::focus_window(window);
+    }
 }
 
 // ---------------------------------------------------------------------------
