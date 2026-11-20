@@ -12,6 +12,7 @@ Sitio web: [rorganizer.loulouw-labs.fr](https://rorganizer.loulouw-labs.fr/es/)
 
 [![Site](https://img.shields.io/badge/site-rorganizer.loulouw--labs.fr-97c459?labelColor=1c1c1a)](https://rorganizer.loulouw-labs.fr/es/)
 [![Version](https://img.shields.io/github/v/release/Loulouw/ROrganizer?display_name=tag&label=version&color=97c459)](https://github.com/Loulouw/ROrganizer/releases)
+[![Descargas](https://img.shields.io/github/downloads/Loulouw/ROrganizer/total?label=descargas&color=97c459)](https://github.com/Loulouw/ROrganizer/releases)
 [![License](https://img.shields.io/badge/licencia-MIT%20OR%20Apache--2.0-blue)](#licencia)
 [![Platform](https://img.shields.io/badge/plataforma-Windows%2010%2B%20%C2%B7%20macOS%2011%2B-0078D6)](https://github.com/Loulouw/ROrganizer/releases)
 [![Rust](https://img.shields.io/badge/rust-stable-orange?logo=rust)](https://www.rust-lang.org/)
