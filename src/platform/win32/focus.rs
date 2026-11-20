@@ -1,4 +1,4 @@
-use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentProcessId, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::SetFocus;
 use windows::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic,
@@ -11,6 +11,13 @@ use crate::platform::WindowId;
 pub fn foreground_window() -> Option<WindowId> {
     let hwnd = unsafe { GetForegroundWindow() };
     (!hwnd.0.is_null()).then_some(WindowId::from_hwnd(hwnd))
+}
+
+/// Whether `id` belongs to ROrganizer itself.
+pub fn is_own_window(id: WindowId) -> bool {
+    let mut pid = 0u32;
+    unsafe { GetWindowThreadProcessId(id.hwnd(), Some(&mut pid)) };
+    pid != 0 && pid == unsafe { GetCurrentProcessId() }
 }
 
 /// Bring the Win32 window `id` to the foreground.

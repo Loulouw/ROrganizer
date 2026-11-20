@@ -9,6 +9,7 @@ mod keys;
 mod locale;
 mod main_window;
 mod permission;
+pub mod overlay;
 pub mod placement;
 mod shell;
 pub mod single_instance;
@@ -30,6 +31,8 @@ pub use watcher::{is_dofus_window, spawn_watcher};
 /// The Dock has one button per app, not per window: nothing to sort.
 pub const HAS_TASKBAR_SORT: bool = false;
 pub const TRAY_IS_MENU_BAR: bool = true;
+/// Not built yet on macOS (see `overlay`).
+pub const HAS_OVERLAY: bool = false;
 
 /// eframe hands the window icon to the Dock while the app runs
 /// (`setApplicationIconImage`), over the bundle's: it must be the
@@ -42,3 +45,10 @@ pub const WINDOW_ICON_SIZE: u32 = 256;
 pub(super) type RawWindowId = i32;
 /// Address of the `NSView` winit hosts the main window in.
 pub(super) type RawMainWindow = usize;
+/// Unused until the macOS overlay exists.
+pub(super) type RawOverlayWindow = usize;
+
+/// Whether `id` is ROrganizer itself: a `WindowId` is a process id.
+pub fn is_own_window(id: super::WindowId) -> bool {
+    id.0 == std::process::id() as i32
+}

@@ -35,8 +35,20 @@
     "minimize_to_dock_hint": "« – » et « Activer » réduisent la fenêtre dans le Dock au lieu de la barre des menus.",
     "always_on_top": "Toujours au premier plan",
     "always_on_top_hint": "La fenêtre reste au-dessus de Dofus et des autres fenêtres.",
+    "overlay": "Overlay des personnages",
+    "overlay_hint": "Une petite barre reste au-dessus de Dofus et surligne le personnage actif. Clic sur une tête pour changer de personnage, clic droit pour ces options.",
     "close": "Fermer",
     "esc_hint": "Échap pour fermer"
+  },
+  "overlay": {
+    "layout": "Disposition",
+    "horizontal": "Horizontale",
+    "vertical": "Verticale",
+    "display": "Affichage",
+    "class_head": "Tête de classe",
+    "initials": "Initiales",
+    "open_main": "Ouvrir ROrganizer",
+    "disable": "Désactiver l'overlay"
   },
   "about": {
     "credit": "Développé par Loulouw avec l'aide de Claude",

@@ -3,10 +3,13 @@
 //! Subscribes to `SetWinEventHook` for window create / destroy / namechange.
 //! A burst of events is coalesced into a single rescan after a short
 //! debounce so opening one Dofus client doesn't trigger 30 enumerations.
+//! Foreground changes are hooked on a thread of their own, which blocks in
+//! `GetMessageW`: the overlay highlight follows Alt-Tab without the
+//! coalescing delay.
 
 use std::collections::HashSet;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::Duration;
 
 use arc_swap::ArcSwap;
@@ -16,9 +19,9 @@ use regex::Regex;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
 use windows::Win32::UI::WindowsAndMessaging::{
-    DispatchMessageW, GetWindowThreadProcessId, PeekMessageW, TranslateMessage,
-    EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, EVENT_OBJECT_NAMECHANGE, MSG, PM_REMOVE,
-    WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
+    DispatchMessageW, GetMessageW, GetWindowThreadProcessId, PeekMessageW, TranslateMessage,
+    EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, EVENT_OBJECT_NAMECHANGE, EVENT_SYSTEM_FOREGROUND,
+    MSG, PM_REMOVE, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
 };
 
 use super::enumerate::enumerate_dofus_windows;
@@ -79,8 +82,52 @@ pub fn spawn_watcher(
 
     std::thread::Builder::new()
         .name("rorg-watcher".into())
-        .spawn(move || run(snapshot, ctx, regex, refresh_rx))
+        .spawn({
+            let ctx = ctx.clone();
+            move || run(snapshot, ctx, regex, refresh_rx)
+        })
         .expect("failed to spawn watcher thread");
+
+    let _ = FOREGROUND_CTX.set(ctx);
+    std::thread::Builder::new()
+        .name("rorg-foreground".into())
+        .spawn(watch_foreground)
+        .expect("failed to spawn foreground thread");
+}
+
+/// Woken by every foreground change, ROrganizer's own windows included.
+static FOREGROUND_CTX: OnceLock<egui::Context> = OnceLock::new();
+
+unsafe extern "system" fn foreground_proc(
+    _hook: HWINEVENTHOOK,
+    _event: u32,
+    _hwnd: HWND,
+    _id_object: i32,
+    _id_child: i32,
+    _id_event_thread: u32,
+    _dwms_event_time: u32,
+) {
+    if let Some(ctx) = FOREGROUND_CTX.get() {
+        crate::overlay::foreground_changed(ctx);
+    }
+}
+
+fn watch_foreground() {
+    unsafe {
+        let _hook = SetWinEventHook(
+            EVENT_SYSTEM_FOREGROUND,
+            EVENT_SYSTEM_FOREGROUND,
+            None,
+            Some(foreground_proc),
+            0,
+            0,
+            WINEVENT_OUTOFCONTEXT,
+        );
+        let mut msg = MSG::default();
+        while GetMessageW(&mut msg, None, 0, 0).into() {
+            DispatchMessageW(&msg);
+        }
+    }
 }
 
 fn run(snapshot: WindowsSnapshot, ctx: egui::Context, regex: Regex, refresh_rx: Receiver<()>) {

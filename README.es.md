@@ -87,6 +87,10 @@ ventanas Dofus, eso lo cambia todo.
   un clic
 - 🗂️ **Barra de tareas ordenada** (Windows): un clic ordena las ventanas
   de Dofus según el orden de tus cuentas
+- 👥 **Overlay de personajes** (Windows): una pequeña barra encima del
+  juego con la cabeza de cada personaje, el actual resaltado. Un clic en
+  una cabeza y cambias; horizontal o vertical, cabeza de clase o
+  iniciales, del tamaño y en el lugar que quieras
 - ⚙️ **A tu manera**: atajos solo en Dofus, ventana siempre visible o no,
   posición recordada de un inicio a otro
 

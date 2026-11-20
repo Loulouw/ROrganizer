@@ -86,7 +86,10 @@ pub fn spawn_watcher(
     refresh_rx: Receiver<()>,
 ) {
     let regex = Regex::new(&regex_src).unwrap_or_else(|e| panic!("title_regex invalid: {e}"));
-    observe_workspace(MainThreadMarker::new().expect("spawn_watcher runs on the main thread"));
+    observe_workspace(
+        MainThreadMarker::new().expect("spawn_watcher runs on the main thread"),
+        ctx.clone(),
+    );
 
     std::thread::Builder::new()
         .name("rorg-watcher".into())
@@ -94,7 +97,7 @@ pub fn spawn_watcher(
         .expect("failed to spawn watcher thread");
 }
 
-fn observe_workspace(_mtm: MainThreadMarker) {
+fn observe_workspace(_mtm: MainThreadMarker, ctx: egui::Context) {
     let workspace = NSWorkspace::sharedWorkspace();
     if let Some(app) = workspace.frontmostApplication() {
         FRONT_PID.store(app.processIdentifier(), Ordering::Relaxed);
@@ -112,9 +115,10 @@ fn observe_workspace(_mtm: MainThreadMarker) {
     observe(unsafe { NSWorkspaceDidTerminateApplicationNotification }, changed());
     observe(
         unsafe { NSWorkspaceDidActivateApplicationNotification },
-        RcBlock::new(|_| {
+        RcBlock::new(move |_| {
             let front = NSWorkspace::sharedWorkspace().frontmostApplication();
             FRONT_PID.store(front.map_or(0, |a| a.processIdentifier()), Ordering::Relaxed);
+            crate::overlay::foreground_changed(&ctx);
         }),
     );
 }

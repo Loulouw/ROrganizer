@@ -11,6 +11,7 @@ use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2
 use rust_i18n::t;
 
 use crate::app::App;
+use crate::overlay::{Display, Layout};
 use crate::platform;
 use crate::theme::{self, Theme};
 
@@ -237,6 +238,80 @@ fn draw_options(ui: &mut egui::Ui, ctx: &egui::Context, theme: Theme, app: &mut 
     ) {
         app.set_always_on_top(ctx, on_top);
     }
+    if platform::HAS_OVERLAY {
+        ui.add_space(12.0);
+        draw_overlay_options(ui, theme, app);
+    }
+}
+
+fn draw_overlay_options(ui: &mut egui::Ui, theme: Theme, app: &mut App) {
+    let mut on = app.overlay_enabled();
+    if option_row(ui, theme, &mut on, &t!("settings.overlay"), &t!("settings.overlay_hint")) {
+        app.set_overlay_enabled(on);
+    }
+    ui.add_space(4.0);
+    ui.add_enabled_ui(on, |ui| {
+        let layout = choice_row(
+            ui,
+            theme,
+            &t!("overlay.layout"),
+            app.overlay_layout(),
+            [
+                (Layout::Horizontal, t!("overlay.horizontal")),
+                (Layout::Vertical, t!("overlay.vertical")),
+            ],
+        );
+        app.set_overlay_layout(layout);
+        let display = choice_row(
+            ui,
+            theme,
+            &t!("overlay.display"),
+            app.overlay_display(),
+            [
+                (Display::ClassHead, t!("overlay.class_head")),
+                (Display::Initials, t!("overlay.initials")),
+            ],
+        );
+        app.set_overlay_display(display);
+    });
+}
+
+/// Label then radio buttons, indented under the checkbox above. Returns the
+/// value picked, `current` if none was clicked.
+fn choice_row<T: PartialEq + Copy, const N: usize>(
+    ui: &mut egui::Ui,
+    theme: Theme,
+    label: &str,
+    current: T,
+    choices: [(T, std::borrow::Cow<'_, str>); N],
+) -> T {
+    let mut value = current;
+    let indent = ui.spacing().icon_width + ui.spacing().icon_spacing;
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.allocate_ui_with_layout(
+            egui::vec2(72.0, 18.0),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.set_min_width(72.0);
+                ui.label(
+                    egui::RichText::new(label)
+                        .size(11.0)
+                        .color(theme::text_tertiary(theme)),
+                );
+            },
+        );
+        for (choice, text) in choices {
+            ui.radio_value(
+                &mut value,
+                choice,
+                egui::RichText::new(text)
+                    .size(11.5)
+                    .color(theme::text_secondary(theme)),
+            );
+        }
+    });
+    value
 }
 
 /// Checkbox + its explanation, indented under the label. Returns true when

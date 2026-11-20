@@ -129,10 +129,13 @@ By hand, on the lockfile diff:
 
 ### eframe parks its loop while the viewport is hidden
 
-With `Visible(false)`, `request_repaint()` does not wake `App::ui`,
-viewport commands pile up unprocessed, and channels drained in `App::ui`
-are never drained. Tray handlers (run on the main thread) must therefore
-act through the backend on the registered main window
+With `Visible(false)`, `request_repaint()` does not wake `App::ui`, and
+channels drained in `App::ui` are never drained. It does run `App::logic`
+(egui 0.37), at most one pass per 100 ms, and viewport commands sent from
+there are processed: the overlay and the debounced config save live in
+`logic` for that reason. `App::ui` also runs, unpainted, while a child
+viewport (the overlay) is visible. Tray handlers (run on the main thread)
+still act through the backend on the registered main window
 (`platform/*/main_window.rs`). Windows:
 
 - show: `ShowWindow(SW_SHOW)`, or `SW_RESTORE` when minimized to the
@@ -145,6 +148,39 @@ never re-reads the minimized state there (deadlock workaround, egui#3494).
 After `ViewportCommand::Minimized(true)`, a restore from the Dock leaves egui
 believing the window is minimized and `App::ui` stops running for good.
 Common code minimizes only through `platform::minimize_main_window`.
+
+### The character overlay is two egui viewports on Windows
+
+`ui::overlay` registers two deferred viewports (bar, tooltip) on every
+root `ui` pass while the overlay is on and ROrganizer active; `App::logic`
+owns the bar's visibility through `ViewportCommand`s. Measured traps:
+
+- winit rewrites the whole window style and extended style on every
+  change of its own flags (`window_state.rs`), dropping
+  `WS_EX_NOACTIVATE`: after one hide/show the bar activated on click and
+  blinded the hooks. `platform::overlay::attach` subclasses the window and
+  forces the bits in `WM_STYLECHANGING`, answers `MA_NOACTIVATE`, strips
+  the caption (DWM drew its top edge and a ghost close button through the
+  transparency) and handles `WM_NCCALCSIZE` (winit shifts an undecorated
+  window's client area 1 px down for its shadow).
+- `ViewportCommand::StartDrag` never moves a window that can't be
+  activated: moves and resizes follow the global cursor and move the
+  window natively.
+- A hidden deferred viewport is never painted, so its callback can't
+  attach itself: `logic` sends `RequestPaintWhileHidden` until it has.
+- Commands queued for any viewport are processed at the end of the next
+  pass of any viewport (egui `end_pass`): the bar drives the tooltip that
+  way.
+- Transparent pixels still catch clicks, and egui popups can't leave
+  their window: the bar window is exactly the bar, the tooltip is its own
+  viewport.
+
+macOS can't use this (spike, 2026-11): a click on any winit window
+activates the app (only an `NSPanel` with `NonactivatingPanel` doesn't),
+it never shows over another app's fullscreen Space, and `Visible(true)`
+from another thread never reaches a hidden viewport. `HAS_OVERLAY` is
+false there until the `NSPanel` version, driven by the same
+`crate::overlay::State`.
 
 ### LL hooks don't fire while our own window is foreground
 
@@ -240,6 +276,14 @@ Programmatic end-to-end checks on Windows:
   and screenshot the thumbnail flyout: its titles give the order.
 - Screenshot diffs: try several vertical offsets. An egui bump can shift
   everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
+- Overlay: windows titled `ROrganizer overlay` and `ROrganizer overlay
+  tooltip`; its right-click menu is a `#32768` window of our PID, read as
+  above. A Dofus client comes to the front through its own shortcut
+  (`mouse_event` XBUTTON for Mb4), not `SetForegroundWindow` from the test
+  process, which the foreground lock refuses.
+- Main window shown again from the tray or a second launch: the first
+  synthetic click on it is lost (on `main` too). Hover ~0.4 s before
+  pressing.
 
 Programmatic end-to-end checks on macOS:
 
@@ -259,7 +303,7 @@ Programmatic end-to-end checks on macOS:
 
 | Metric | Stable value |
 |---|---|
-| Release binary | ~8.2 MiB |
+| Release binary | ~8.5 MiB |
 | RAM working set, idle | ~73 MB |
 | RAM private, idle | ~66-67 MB |
 | CPU, idle | 0 % (over 40 s) |
@@ -269,6 +313,8 @@ Measured 2026-11 with 4 Unity clients open: ~82 MB working set, ~74 MB
 private, and 0.4-0.7 s of CPU over 40 s idle (window shown or hidden),
 identical on egui 0.36 and 0.37. The client count moves these numbers:
 compare two builds under the same setup rather than against the table.
+The overlay, shown, adds ~4 MB private and no measurable CPU (same 4
+clients, overlay on vs off in the same binary).
 
 Measure RAM at least 15 s after launch: earlier, the font atlas and
 textures aren't realized yet (~60 MB), which looks like a regression at the

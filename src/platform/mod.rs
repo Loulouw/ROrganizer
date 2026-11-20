@@ -15,11 +15,14 @@
 //! - `WINDOW_ICON_PNG: &[u8]`, `WINDOW_ICON_SIZE: u32`: the window icon,
 //!   decoded and scaled to that side at startup.
 //! - Detection: `spawn_watcher(WindowsSnapshot, egui::Context, String,
-//!   Receiver<()>)` publishes the windows matching the title regex;
+//!   Receiver<()>)` publishes the windows matching the title regex, and
+//!   calls `crate::overlay::foreground_changed` each time another app or
+//!   window comes to the front;
 //!   `is_dofus_window(WindowId) -> bool` also accepts a client that is not
 //!   logged in yet.
 //! - Focus: `focus_window(WindowId)`, `foreground_window() ->
-//!   Option<WindowId>`.
+//!   Option<WindowId>`, `is_own_window(WindowId) -> bool` (a window of
+//!   ROrganizer itself: main window, overlay, menus).
 //! - Global input: `spawn_hooks()` starts the system-wide keyboard and
 //!   mouse listeners. They stay inert while `hooks::is_enabled()` is false,
 //!   and ask `hooks::focus_target(Trigger)` which window to bring forward.
@@ -57,6 +60,28 @@
 //!   then `single_instance::spawn_waiter(SingleInstanceGuard, impl Fn() +
 //!   Send + 'static)` calls back each time another launch asks to be shown.
 //! - `detect_system_lang() -> Lang`, `open_folder(&Path)`.
+//! - Character overlay: `HAS_OVERLAY: bool`; the option and the overlay
+//!   viewports exist only when true, but `overlay::*` must exist either way.
+//!   [`OverlayWindow`] is a window egui created for an overlay viewport.
+//!   Coordinates are screen coordinates (Windows: physical pixels).
+//!   - `overlay::attach(&str) -> Option<OverlayWindow>`, called from the
+//!     viewport's own ui callback: finds the window titled so on the UI
+//!     thread and makes it a tool window that a click never activates, for
+//!     good (winit rewrites the window styles on every change of its own).
+//!     A click that activated ROrganizer would blind the global input
+//!     hooks until Dofus is back in front.
+//!   - `overlay::rect(OverlayWindow) -> Option<ScreenRect>`,
+//!     `overlay::move_to(OverlayWindow, (i32, i32))` (never activates),
+//!     `overlay::cursor_position() -> (i32, i32)`.
+//!   - Work areas (screen minus taskbar/Dock): `overlay::work_area(
+//!     OverlayWindow)` of its screen, `overlay::work_area_of(ScreenRect)`
+//!     of the screen showing that rectangle (None when none does),
+//!     `overlay::main_work_area()`; all `-> Option<ScreenRect>`.
+//!     `crate::overlay::{place, keep_on_screen}` build on them.
+//!   - `overlay::show_menu(OverlayWindow, &[MenuEntry]) -> Option<usize>`:
+//!     native context menu at the cursor, blocking until closed; returns
+//!     the picked entry and gives the foreground back to the window that
+//!     had it.
 
 #[cfg(windows)]
 mod win32;
@@ -87,3 +112,7 @@ impl WindowId {
 /// The ROrganizer window, as opposed to the Dofus windows it manages.
 #[derive(Clone, Copy, Debug)]
 pub struct MainWindow(RawMainWindow);
+
+/// A window egui created for an overlay viewport (`crate::overlay`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OverlayWindow(RawOverlayWindow);

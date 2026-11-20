@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::i18n::Lang;
+use crate::overlay;
 use crate::theme::Theme;
 use crate::triggers::{BindingTarget, Trigger};
 
@@ -38,10 +39,28 @@ pub struct StoredConfig {
     /// `platform::placement` (Windows: physical pixels, macOS: points).
     #[serde(default)]
     pub window_pos: Option<(i32, i32)>,
+    /// Character overlay shown while ROrganizer is active. On when missing.
+    #[serde(default = "default_true")]
+    pub overlay_enabled: bool,
+    #[serde(default)]
+    pub overlay_layout: overlay::Layout,
+    #[serde(default)]
+    pub overlay_display: overlay::Display,
+    /// Side of one head, in points.
+    #[serde(default = "default_head_size")]
+    pub overlay_head_size: f32,
+    /// Top-left corner of the overlay, in the screen coordinates of
+    /// `platform::overlay`.
+    #[serde(default)]
+    pub overlay_pos: Option<(i32, i32)>,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_head_size() -> f32 {
+    overlay::HEAD_DEFAULT
 }
 
 /// `%APPDATA%\rorganizer\config.json` on Windows,
@@ -124,6 +143,11 @@ mod tests {
             minimize_to_taskbar: true,
             always_on_top: false,
             window_pos: Some((-1200, 340)),
+            overlay_enabled: false,
+            overlay_layout: overlay::Layout::Vertical,
+            overlay_display: overlay::Display::Initials,
+            overlay_head_size: 56.0,
+            overlay_pos: Some((-900, 12)),
         }
     }
 
@@ -169,8 +193,16 @@ mod tests {
         assert_eq!(cfg.window_pos, Some((1124, 450)));
 
         save_atomic(&path, &cfg).unwrap();
-        let saved: serde_json::Value =
+        let mut saved: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        // Every 1.4.0 value is written back as is; the overlay keys are added
+        // with their defaults.
+        let obj = saved.as_object_mut().unwrap();
+        assert_eq!(obj.remove("overlay_enabled"), Some(serde_json::json!(true)));
+        assert_eq!(obj.remove("overlay_layout"), Some(serde_json::json!("Horizontal")));
+        assert_eq!(obj.remove("overlay_display"), Some(serde_json::json!("ClassHead")));
+        assert_eq!(obj.remove("overlay_head_size"), Some(serde_json::json!(40.0)));
+        assert_eq!(obj.remove("overlay_pos"), Some(serde_json::Value::Null));
         let original: serde_json::Value = serde_json::from_str(CONFIG_1_4_0).unwrap();
         assert_eq!(saved, original);
     }
@@ -181,7 +213,17 @@ mod tests {
         let path = dir.path().join("config.json");
         let mut json = serde_json::to_value(sample_config()).unwrap();
         let obj = json.as_object_mut().unwrap();
-        for key in ["shortcuts_only_in_dofus", "minimize_to_taskbar", "always_on_top", "window_pos"] {
+        for key in [
+            "shortcuts_only_in_dofus",
+            "minimize_to_taskbar",
+            "always_on_top",
+            "window_pos",
+            "overlay_enabled",
+            "overlay_layout",
+            "overlay_display",
+            "overlay_head_size",
+            "overlay_pos",
+        ] {
             obj.remove(key);
         }
         std::fs::write(&path, json.to_string()).unwrap();
@@ -190,6 +232,11 @@ mod tests {
         assert!(!cfg.minimize_to_taskbar);
         assert!(cfg.always_on_top);
         assert_eq!(cfg.window_pos, None);
+        assert!(cfg.overlay_enabled);
+        assert_eq!(cfg.overlay_layout, overlay::Layout::Horizontal);
+        assert_eq!(cfg.overlay_display, overlay::Display::ClassHead);
+        assert_eq!(cfg.overlay_head_size, overlay::HEAD_DEFAULT);
+        assert_eq!(cfg.overlay_pos, None);
     }
 
     #[test]
@@ -208,6 +255,11 @@ mod tests {
         assert_eq!(loaded.minimize_to_taskbar, cfg.minimize_to_taskbar);
         assert_eq!(loaded.always_on_top, cfg.always_on_top);
         assert_eq!(loaded.window_pos, cfg.window_pos);
+        assert_eq!(loaded.overlay_enabled, cfg.overlay_enabled);
+        assert_eq!(loaded.overlay_layout, cfg.overlay_layout);
+        assert_eq!(loaded.overlay_display, cfg.overlay_display);
+        assert_eq!(loaded.overlay_head_size, cfg.overlay_head_size);
+        assert_eq!(loaded.overlay_pos, cfg.overlay_pos);
     }
 
     #[test]

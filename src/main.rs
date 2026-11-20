@@ -9,6 +9,7 @@ mod config;
 mod dofus;
 mod hooks;
 mod i18n;
+mod overlay;
 mod platform;
 mod theme;
 mod tray;

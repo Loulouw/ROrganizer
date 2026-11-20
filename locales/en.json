@@ -35,8 +35,20 @@
     "minimize_to_dock_hint": "“–” and “Activate” minimize the window to the Dock instead of the menu bar.",
     "always_on_top": "Always on top",
     "always_on_top_hint": "The window stays above Dofus and every other window.",
+    "overlay": "Character overlay",
+    "overlay_hint": "A small bar stays above Dofus and highlights the active character. Click a head to switch character, right-click for these options.",
     "close": "Close",
     "esc_hint": "Esc to close"
+  },
+  "overlay": {
+    "layout": "Layout",
+    "horizontal": "Horizontal",
+    "vertical": "Vertical",
+    "display": "Show",
+    "class_head": "Class head",
+    "initials": "Initials",
+    "open_main": "Open ROrganizer",
+    "disable": "Disable overlay"
   },
   "about": {
     "credit": "Built by Loulouw with the help of Claude",

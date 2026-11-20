@@ -6,6 +6,7 @@ mod keys;
 mod locale;
 mod main_window;
 pub mod placement;
+pub mod overlay;
 mod process;
 mod shell;
 pub mod single_instance;
@@ -16,7 +17,7 @@ use windows::Win32::Foundation::HWND;
 
 use super::WindowId;
 
-pub use focus::{focus_window, foreground_window};
+pub use focus::{focus_window, foreground_window, is_own_window};
 pub use hooks::spawn_hooks;
 pub use keys::{key_from_event, key_label};
 pub use locale::detect_system_lang;
@@ -29,6 +30,7 @@ pub use watcher::{is_dofus_window, spawn_watcher};
 
 pub const HAS_TASKBAR_SORT: bool = true;
 pub const TRAY_IS_MENU_BAR: bool = false;
+pub const HAS_OVERLAY: bool = true;
 pub const WINDOW_ICON_PNG: &[u8] = crate::assets::ICON_PNG;
 pub const WINDOW_ICON_SIZE: u32 = 64;
 
@@ -44,6 +46,8 @@ pub fn request_input_permission() {}
 pub(super) type RawWindowId = isize;
 /// HWND, as an integer.
 pub(super) type RawMainWindow = isize;
+/// HWND, as an integer.
+pub(super) type RawOverlayWindow = isize;
 
 impl WindowId {
     fn from_hwnd(hwnd: HWND) -> Self {

@@ -12,6 +12,7 @@ use crate::config::{self, StoredConfig};
 use crate::dofus::{WindowsSnapshot, DEFAULT_TITLE_REGEX};
 use crate::hooks::{BindingAction, HookHandle};
 use crate::i18n::{self, Lang};
+use crate::overlay::{self, Display, Layout};
 use crate::platform::{self, single_instance, MainWindow, WindowId};
 use crate::theme::{self, Theme};
 use crate::tray::{self, TrayController, TrayEvent};
@@ -104,6 +105,21 @@ fn decode_class_icons(
     map
 }
 
+/// Class head for the overlay, which shows it up to 96 points: kept at its
+/// full 128 px, with mipmaps for the small sizes. Decoded the first time a
+/// client of that class shows in the overlay.
+fn decode_overlay_icon(ctx: &egui::Context, name: &str) -> Option<egui::TextureHandle> {
+    let (_, bytes) = crate::assets::CLASS_PNGS.iter().find(|(n, _)| *n == name)?;
+    let rgba = image::load_from_memory(bytes).ok()?.to_rgba8();
+    let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+    let color_image = egui::ColorImage::from_rgba_unmultiplied([w, h], rgba.as_raw());
+    let options = egui::TextureOptions {
+        mipmap_mode: Some(egui::TextureFilter::Linear),
+        ..egui::TextureOptions::LINEAR
+    };
+    Some(ctx.load_texture(format!("overlay-class-{name}"), color_image, options))
+}
+
 pub struct App {
     theme: Theme,
     lang: Lang,
@@ -155,7 +171,29 @@ pub struct App {
     /// (`"iop"`, `"feca"`, …). Decoded once at boot from `assets::CLASS_PNGS`.
     /// Looked up via `class_icon::class_filename(raw_class)`.
     class_icons: HashMap<&'static str, egui::TextureHandle>,
+    overlay_enabled: bool,
+    overlay_layout: Layout,
+    overlay_display: Display,
+    /// Side of one head, in points.
+    overlay_head: f32,
+    /// Top-left corner of the overlay, in `platform::overlay` coordinates.
+    overlay_pos: Option<(i32, i32)>,
+    /// State shared with the overlay viewports (`ui::overlay`).
+    overlay: overlay::Shared,
+    overlay_gate: overlay::ShowGate,
+    /// Whether the overlay viewports were registered on the last pass.
+    overlay_registered: bool,
+    /// Visibility last sent to the bar.
+    overlay_shown: bool,
+    /// What the slots were last built from: every known character, then
+    /// the running ones in order. Rebuilt only when it changes.
+    overlay_slots_from: (Vec<SlotKey>, Vec<OverlaySlotSource>),
+    /// Full-size class heads, decoded on first use (`decode_overlay_icon`).
+    overlay_icons: HashMap<&'static str, egui::TextureHandle>,
 }
+
+/// What an overlay slot is built from: account, window, class, shortcut.
+type OverlaySlotSource = (SlotKey, WindowId, Option<String>, Option<Trigger>);
 
 #[derive(Default, PartialEq, Eq)]
 struct SyncSnapshot {
@@ -199,6 +237,13 @@ impl App {
         let minimize_to_taskbar = stored.as_ref().is_some_and(|c| c.minimize_to_taskbar);
         let always_on_top = stored.as_ref().is_none_or(|c| c.always_on_top);
         let window_pos = stored.as_ref().and_then(|c| c.window_pos);
+        let overlay_enabled = stored.as_ref().is_none_or(|c| c.overlay_enabled);
+        let overlay_layout = stored.as_ref().map_or_else(Layout::default, |c| c.overlay_layout);
+        let overlay_display = stored.as_ref().map_or_else(Display::default, |c| c.overlay_display);
+        let overlay_head = stored.as_ref().map_or(overlay::HEAD_DEFAULT, |c| {
+            c.overlay_head_size.clamp(overlay::HEAD_MIN, overlay::HEAD_MAX)
+        });
+        let overlay_pos = stored.as_ref().and_then(|c| c.overlay_pos);
         if always_on_top {
             cc.egui_ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
                 egui::WindowLevel::AlwaysOnTop,
@@ -283,6 +328,17 @@ impl App {
             window_pos,
             about_icon,
             class_icons,
+            overlay_enabled,
+            overlay_layout,
+            overlay_display,
+            overlay_head,
+            overlay_pos,
+            overlay: overlay::Shared::default(),
+            overlay_gate: overlay::ShowGate::default(),
+            overlay_registered: false,
+            overlay_shown: false,
+            overlay_slots_from: Default::default(),
+            overlay_icons: HashMap::new(),
         }
     }
 
@@ -407,6 +463,39 @@ impl App {
 
     pub fn about_icon(&self) -> Option<&egui::TextureHandle> {
         self.about_icon.as_ref()
+    }
+
+    pub fn overlay_enabled(&self) -> bool {
+        self.overlay_enabled
+    }
+
+    pub fn set_overlay_enabled(&mut self, on: bool) {
+        if self.overlay_enabled != on {
+            self.overlay_enabled = on;
+            self.mark_dirty();
+        }
+    }
+
+    pub fn overlay_layout(&self) -> Layout {
+        self.overlay_layout
+    }
+
+    pub fn set_overlay_layout(&mut self, layout: Layout) {
+        if self.overlay_layout != layout {
+            self.overlay_layout = layout;
+            self.mark_dirty();
+        }
+    }
+
+    pub fn overlay_display(&self) -> Display {
+        self.overlay_display
+    }
+
+    pub fn set_overlay_display(&mut self, display: Display) {
+        if self.overlay_display != display {
+            self.overlay_display = display;
+            self.mark_dirty();
+        }
     }
 
     pub fn request_activate(&mut self, ctx: &egui::Context) {
@@ -644,13 +733,195 @@ impl App {
         self.last_dirty_at = Some(Instant::now());
     }
 
-    fn flush_if_due(&mut self) {
+    /// Saves once the state has been still for `SAVE_DEBOUNCE`. Runs from
+    /// `logic`, which also runs while the window is hidden (the overlay
+    /// moves then), and asks for the pass that will save.
+    fn flush_if_due(&mut self, ctx: &egui::Context) {
         let Some(when) = self.last_dirty_at else { return };
-        if when.elapsed() < SAVE_DEBOUNCE {
+        let waited = when.elapsed();
+        if waited < SAVE_DEBOUNCE {
+            ctx.request_repaint_after(SAVE_DEBOUNCE - waited);
             return;
         }
         self.persist_config();
         self.last_dirty_at = None;
+    }
+
+    /// The overlay viewports exist while the overlay is on and ROrganizer
+    /// active; whether the bar shows is `overlay_gate`'s call.
+    fn overlay_wanted(&self) -> bool {
+        platform::HAS_OVERLAY && self.overlay_enabled && self.is_active
+    }
+
+    /// Runs from `logic`, so also while the main window is hidden: applies
+    /// what the overlay did, hands it the current state and decides whether
+    /// the bar shows.
+    fn update_overlay(&mut self, ctx: &egui::Context) {
+        let events = std::mem::take(&mut overlay::lock(&self.overlay).events);
+        for event in events {
+            match event {
+                overlay::Event::Moved(pos) => {
+                    if self.overlay_pos != Some(pos) {
+                        self.overlay_pos = Some(pos);
+                        self.mark_dirty();
+                    }
+                }
+                overlay::Event::Resized(head) => {
+                    if self.overlay_head != head {
+                        self.overlay_head = head;
+                        self.mark_dirty();
+                    }
+                }
+                overlay::Event::Menu(overlay::MenuAction::Layout(l)) => self.set_overlay_layout(l),
+                overlay::Event::Menu(overlay::MenuAction::Display(d)) => self.set_overlay_display(d),
+                overlay::Event::Menu(overlay::MenuAction::OpenMain) => {
+                    // The main window may be hidden, with the eframe loop
+                    // only running `logic`: show it natively, as the tray does.
+                    platform::main_window_restored();
+                    platform::show_main_window();
+                    Self::bring_back(ctx);
+                }
+                overlay::Event::Menu(overlay::MenuAction::Disable) => self.set_overlay_enabled(false),
+                overlay::Event::Focused(slot) => self.set_cycle_current(slot),
+            }
+        }
+
+        let bar = overlay::overlay_viewport();
+        if !self.overlay_wanted() {
+            if self.overlay_registered {
+                // egui closes both windows at the end of the next root pass
+                // that doesn't register them; they come back as new windows.
+                ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(false));
+                ctx.send_viewport_cmd_to(overlay::tip_viewport(), egui::ViewportCommand::Visible(false));
+                let mut st = overlay::lock(&self.overlay);
+                st.window = None;
+                st.tip_window = None;
+                st.sent_size = None;
+                st.tip = None;
+                st.hover = None;
+                st.gesture = None;
+                self.overlay_registered = false;
+                self.overlay_shown = false;
+            }
+            return;
+        }
+
+        self.refresh_overlay_slots(ctx);
+        let live = self.overlay_slots_from.1.len();
+        let attached = {
+            let mut st = overlay::lock(&self.overlay);
+            let theme = Some(self.theme);
+            // During a resize the bar owns the size; `Resized` hands it over
+            // on release.
+            let resizing = matches!(st.gesture, Some(overlay::Gesture::Resize { .. }));
+            let head = if resizing { st.head } else { self.overlay_head };
+            if st.layout != self.overlay_layout
+                || st.display != self.overlay_display
+                || st.head != head
+                || st.theme != theme
+            {
+                st.layout = self.overlay_layout;
+                st.display = self.overlay_display;
+                st.head = head;
+                st.theme = theme;
+                ctx.request_repaint_of(bar);
+            }
+            st.saved_pos = self.overlay_pos;
+            st.window.is_some()
+        };
+        // Registered by `ui`, so the viewport only exists from the second pass.
+        if !self.overlay_registered {
+            return;
+        }
+        if !attached {
+            // Created hidden, and a hidden viewport isn't painted: its first
+            // pass, which attaches and places the window, has to be asked for.
+            ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::RequestPaintWhileHidden);
+        }
+
+        let front = match platform::foreground_window() {
+            Some(w) if platform::is_own_window(w) => overlay::Front::Own,
+            Some(w) if platform::is_dofus_window(w) => overlay::Front::Dofus,
+            _ => overlay::Front::Other,
+        };
+        let eligible = live > 0 && platform::input_permission_granted();
+        let (show, again) =
+            self.overlay_gate.decide(Instant::now(), eligible, front, self.overlay_shown);
+        if let Some(delay) = again {
+            ctx.request_repaint_after(delay);
+        }
+        let show = show && attached;
+        if show != self.overlay_shown {
+            ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(show));
+            if !show {
+                let mut st = overlay::lock(&self.overlay);
+                st.tip = None;
+                st.hover = None;
+                ctx.send_viewport_cmd_to(overlay::tip_viewport(), egui::ViewportCommand::Visible(false));
+            }
+            self.overlay_shown = show;
+        }
+    }
+
+    /// Rebuilds the overlay slots when the running clients, their order,
+    /// their shortcuts or the set of known characters changed.
+    fn refresh_overlay_slots(&mut self, ctx: &egui::Context) {
+        let snap = self.windows.load();
+        let mut known = self.cycle_order.clone();
+        // Detected this pass, not yet appended by `ensure_cycle_order_covers_snapshot`.
+        known.extend(
+            snap.iter()
+                .filter(|w| !self.cycle_order.contains(&w.slot_key))
+                .map(|w| w.slot_key.clone()),
+        );
+        let running: Vec<_> = known
+            .iter()
+            .filter_map(|slot| snap.iter().find(|w| &w.slot_key == slot))
+            .map(|w| {
+                (
+                    w.slot_key.clone(),
+                    w.hwnd,
+                    w.class.clone(),
+                    self.binding_for_account(&w.slot_key),
+                )
+            })
+            .collect();
+        drop(snap);
+        let from = (known, running);
+        if from == self.overlay_slots_from {
+            return;
+        }
+
+        let names: Vec<&str> = from.0.iter().map(String::as_str).collect();
+        let initials = overlay::initials(&names);
+        for name in from.1.iter().filter_map(|(_, _, class, _)| {
+            class.as_deref().and_then(crate::class_icon::class_filename)
+        }) {
+            if !self.overlay_icons.contains_key(name)
+                && let Some(icon) = decode_overlay_icon(ctx, name)
+            {
+                self.overlay_icons.insert(name, icon);
+            }
+        }
+        let icons = &self.overlay_icons;
+        let slots = from
+            .1
+            .iter()
+            .map(|(key, window, class, trigger)| overlay::Slot {
+                key: key.clone(),
+                window: *window,
+                icon: class
+                    .as_deref()
+                    .and_then(crate::class_icon::class_filename)
+                    .and_then(|name| icons.get(name).cloned()),
+                initials: initials.get(key.as_str()).cloned().unwrap_or_default(),
+                class: class.clone(),
+                binding: trigger.map(|t| t.display_label()),
+            })
+            .collect();
+        overlay::lock(&self.overlay).slots = slots;
+        self.overlay_slots_from = from;
+        ctx.request_repaint_of(overlay::overlay_viewport());
     }
 
     fn persist_config(&self) {
@@ -674,6 +945,11 @@ impl App {
             minimize_to_taskbar: self.minimize_to_taskbar,
             always_on_top: self.always_on_top,
             window_pos: self.window_pos,
+            overlay_enabled: self.overlay_enabled,
+            overlay_layout: self.overlay_layout,
+            overlay_display: self.overlay_display,
+            overlay_head_size: self.overlay_head,
+            overlay_pos: self.overlay_pos,
         };
         let _ = config::save_atomic(path, &cfg);
     }
@@ -802,6 +1078,18 @@ impl App {
 }
 
 impl eframe::App for App {
+    /// Also runs while the main window is hidden, when `ui` doesn't.
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.update_overlay(ctx);
+        self.flush_if_due(ctx);
+    }
+
+    /// Shared by every viewport: the overlay ones are transparent windows
+    /// and must clear to nothing. The main window paints its whole surface.
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        [0.0; 4]
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         let ctx = &ctx;
@@ -849,7 +1137,14 @@ impl eframe::App for App {
         ui::capture::draw(ctx, self);
         ui::settings::draw(ctx, self);
 
-        self.flush_if_due();
+        if self.overlay_wanted() {
+            ui::overlay::register(ctx, &self.overlay);
+            if !self.overlay_registered {
+                // Next pass: `logic` asks the new, hidden bar to attach.
+                ctx.request_repaint();
+            }
+            self.overlay_registered = true;
+        }
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
