@@ -24,11 +24,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -50,5 +47,15 @@ jobs:
         with:
           path: site
 
+  # Job séparé, comme dans le modèle officiel : déployer dans le job qui vient
+  # d'envoyer l'artefact échouait (2026-11-20, trois fois de suite, statut
+  # GitHub vert) : « Found 0 artifact(s) », l'artefact pas encore listé.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
