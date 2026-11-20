@@ -50,6 +50,11 @@ fn with_view(f: impl FnOnce(&BarView)) {
     }
 }
 
+/// Whether `view` is the open bar's, not one App closed since.
+fn is_current(view: &BarView) -> bool {
+    BAR.with_borrow(|bar| bar.as_ref().is_some_and(|b| std::ptr::eq(&*b.view, view)))
+}
+
 pub fn show(shared: &Shared, ctx: &egui::Context) {
     let Some(mtm) = MainThreadMarker::new() else { return };
     let view = BAR.with_borrow_mut(|bar| {

@@ -6,12 +6,37 @@
 use eframe::egui::{Color32, Pos2, Rect};
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
+use objc2::AllocAnyThread;
 use objc2_app_kit::{
     NSBezierPath, NSColor, NSCompositingOperation, NSFont, NSFontAttributeName,
     NSForegroundColorAttributeName, NSFontWeightRegular, NSImage, NSLineCapStyle,
     NSStringDrawing,
 };
-use objc2_foundation::{NSAttributedStringKey, NSDictionary, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{
+    NSAttributedString, NSAttributedStringKey, NSDictionary, NSPoint, NSRect, NSSize, NSString,
+};
+
+type Attributes = NSDictionary<NSAttributedStringKey, AnyObject>;
+
+fn attributes(font: &NSFont, c: Color32) -> Retained<Attributes> {
+    let c = color(c);
+    let keys: [&NSAttributedStringKey; 2] =
+        unsafe { [NSFontAttributeName, NSForegroundColorAttributeName] };
+    let values: [&AnyObject; 2] = [font, &c];
+    NSDictionary::from_slices(&keys, &values)
+}
+
+/// `text` in `font` and color `c`, for an AppKit control (menu item).
+pub(super) fn attributed(text: &str, font: &NSFont, c: Color32) -> Retained<NSAttributedString> {
+    let attributes = attributes(font, c);
+    unsafe {
+        NSAttributedString::initWithString_attributes(
+            NSAttributedString::alloc(),
+            &NSString::from_str(text),
+            Some(&attributes),
+        )
+    }
+}
 
 pub(super) fn color(c: Color32) -> Retained<NSColor> {
     let [r, g, b, a] = c.to_srgba_unmultiplied().map(|v| f64::from(v) / 255.0);
@@ -77,7 +102,7 @@ pub(super) fn image(image: &NSImage, r: Rect, opacity: f32) {
 /// One line of text in one font and color.
 pub(super) struct Text {
     string: Retained<NSString>,
-    attributes: Retained<NSDictionary<NSAttributedStringKey, AnyObject>>,
+    attributes: Retained<Attributes>,
     pub(super) size: NSSize,
 }
 
@@ -96,11 +121,7 @@ impl Text {
                 })
             }
         };
-        let c = color(c);
-        let keys: [&NSAttributedStringKey; 2] =
-            unsafe { [NSFontAttributeName, NSForegroundColorAttributeName] };
-        let values: [&AnyObject; 2] = [&font, &c];
-        let attributes = NSDictionary::from_slices(&keys, &values);
+        let attributes = attributes(&font, c);
         let string = NSString::from_str(text);
         let size = unsafe { string.sizeWithAttributes(Some(&attributes)) };
         Self { string, attributes, size }

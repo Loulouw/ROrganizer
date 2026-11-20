@@ -24,12 +24,12 @@ use objc2::{
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     NSControlStateValueOn, NSEvent, NSGraphicsContext, NSImage, NSImageInterpolation, NSMenu,
-    NSMenuItem, NSPanel, NSTrackingArea, NSTrackingAreaOptions, NSView, NSWindow,
+    NSMenuItem, NSFont, NSPanel, NSTrackingArea, NSTrackingAreaOptions, NSView, NSWindow,
 };
 use objc2_foundation::{NSData, NSPoint, NSRect, NSString};
 
 use super::tip::{self, TipView};
-use crate::overlay::{self, Display, Menu, MenuEntry, Shared, State, Tip};
+use crate::overlay::{self, Display, Menu, MenuAction, MenuEntry, Shared, State, Tip};
 use crate::platform::OverlayWindow;
 use crate::theme::{self, Theme};
 
@@ -195,6 +195,12 @@ impl BarView {
     /// its first showing, resized, the lit head following the foreground.
     /// `order_front`: also shows it.
     pub(super) fn refresh(&self, order_front: bool) {
+        // A view whose bar App closed meanwhile (during the menu's run loop)
+        // must not put its panel back into `State::window`: App cleared it,
+        // and the panel goes away with the last reference.
+        if !super::is_current(self) {
+            return;
+        }
         let iv = self.ivars();
         let Some(panel) = self.panel() else { return };
         let window = super::overlay_window(&panel);
@@ -305,6 +311,10 @@ impl BarView {
     /// `NSCursor::set` from an inactive app (measured), and Dofus is in
     /// front whenever the bar is used.
     fn update_hover(&self) {
+        // A closed bar would order its closed tooltip back in.
+        if !super::is_current(self) {
+            return;
+        }
         let iv = self.ivars();
         let pointer = iv.pointer.get();
         let mut st = lock(&iv.shared);
@@ -554,7 +564,7 @@ fn build_menu(
         Theme::Light => unsafe { NSAppearanceNameAqua },
     };
     menu.setAppearance(NSAppearance::appearanceNamed(appearance).as_deref());
-    for (i, (entry, _)) in items.iter().enumerate() {
+    for (i, (entry, action)) in items.iter().enumerate() {
         let item = match entry {
             MenuEntry::Separator => NSMenuItem::separatorItem(mtm),
             // Greyed-out, as the egui menu's headers.
@@ -572,6 +582,12 @@ fn build_menu(
                 item.setTag(i as isize);
                 if *checked {
                     item.setState(NSControlStateValueOn);
+                }
+                // In the conflict red, as the egui menu.
+                if *action == Some(MenuAction::Disable) {
+                    let font = NSFont::menuFontOfSize(0.0);
+                    let red = theme::conflict_palette(theme).3;
+                    item.setAttributedTitle(Some(&super::draw::attributed(label, &font, red)));
                 }
                 item
             }
