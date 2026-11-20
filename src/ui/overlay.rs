@@ -1,11 +1,12 @@
-//! The character overlay drawn with egui: two deferred viewports, the bar
-//! and its tooltip, registered by `App` on every root pass while the
-//! overlay is on. Model, geometry and rules are in `crate::overlay`; the
-//! window plumbing in `platform::overlay`.
+//! The character overlay drawn with egui: three deferred viewports, the
+//! bar, its tooltip and its right-click menu, registered by `App` on every
+//! root pass while the overlay is on. Model, geometry and rules are in
+//! `crate::overlay`; the window plumbing in `platform::overlay`.
 //!
 //! The bar runs its own gestures with the global cursor and native moves:
 //! `ViewportCommand::StartDrag` hands the move to the OS, which never moves
-//! a window that can't be activated.
+//! a window that can't be activated. The menu is drawn here rather than
+//! native so that it follows the app's theme.
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -16,8 +17,8 @@ use eframe::egui::{
 };
 
 use crate::overlay::{
-    self, Display, Event, Geometry, Gesture, Hit, Layout, MenuEntry, ScreenRect, Shared, State,
-    Tip,
+    self, Display, Event, Geometry, Gesture, Hit, Layout, Menu, MenuAction, MenuEntry, ScreenRect,
+    Shared, State, Tip,
 };
 use crate::platform::{self, overlay as native};
 use crate::theme::{self, Theme};
@@ -40,11 +41,24 @@ pub fn register(ctx: &egui::Context, shared: &Shared) {
     let tip = base_builder(overlay::TIP_TITLE).with_inner_size([10.0, 10.0]);
     let s = shared.clone();
     ctx.show_viewport_deferred(overlay::tip_viewport(), tip, move |ui, _| draw_tip(ui, &s));
+
+    let menu = base_builder(overlay::MENU_TITLE).with_inner_size([10.0, 10.0]);
+    let s = shared.clone();
+    ctx.show_viewport_deferred(overlay::menu_viewport(), menu, move |ui, _| draw_menu(ui, &s));
+}
+
+/// Hides the tooltip and the menu: the bar went away under them.
+pub fn close_popups(ctx: &egui::Context, st: &mut State) {
+    st.tip = None;
+    st.hover = None;
+    st.menu = None;
+    ctx.send_viewport_cmd_to(overlay::tip_viewport(), ViewportCommand::Visible(false));
+    ctx.send_viewport_cmd_to(overlay::menu_viewport(), ViewportCommand::Visible(false));
 }
 
 /// Created hidden: `App` shows the bar once it has been placed, the bar
-/// shows its tooltip. The visibility here never changes, so egui never
-/// re-sends it over those.
+/// shows its tooltip and its menu. The visibility here never changes, so
+/// egui never re-sends it over those.
 fn base_builder(title: &str) -> ViewportBuilder {
     ViewportBuilder::default()
         .with_title(title)
@@ -78,7 +92,7 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
     let size = g.size();
 
     if st.window.is_none()
-        && let Some(window) = native::attach(overlay::OVERLAY_TITLE)
+        && let Some(window) = native::attach(overlay::OVERLAY_TITLE, false)
     {
         let pos = overlay::place(window, st.saved_pos, physical(size, ppp));
         st.window = Some(window);
@@ -88,7 +102,10 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
         ctx.request_repaint_of(ViewportId::ROOT);
     }
     if st.tip_window.is_none() {
-        st.tip_window = native::attach(overlay::TIP_TITLE);
+        st.tip_window = native::attach(overlay::TIP_TITLE, false);
+    }
+    if st.menu_window.is_none() {
+        st.menu_window = native::attach(overlay::MENU_TITLE, true);
     }
     let Some(window) = st.window else { return };
 
@@ -105,12 +122,7 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
         st.sent_size = Some((size, ppp));
     }
 
-    // The client in front; kept while ROrganizer itself is (menu, window).
-    if let Some(front) = platform::foreground_window()
-        && let Some(slot) = st.slots.iter().find(|s| s.window == front)
-    {
-        st.front = Some(slot.key.clone());
-    }
+    update_front(&ctx, &mut st);
 
     let (hover, pressed, down, released, menu) = ctx.input(|i| {
         let p = &i.pointer;
@@ -139,30 +151,36 @@ fn draw_bar(ui: &mut egui::Ui, shared: &Shared) {
         _ => egui::CursorIcon::Default,
     });
 
+    if menu {
+        open_menu(&ctx, &mut st, window, theme, ppp);
+    }
     paint_bar(ui, &st, &g, theme, hovered_slot, hover.is_some() || st.gesture.is_some());
-    update_tip(&ctx, &mut st, hovered_slot.filter(|_| !menu), window, &g, theme, ppp);
+    let hovered_slot = hovered_slot.filter(|_| st.menu.is_none());
+    update_tip(&ctx, &mut st, hovered_slot, window, &g, theme, ppp);
 
     if !st.events.is_empty() {
         ctx.request_repaint_of(ViewportId::ROOT);
     }
+}
 
-    if menu {
-        let items = overlay::menu(st.layout, st.display);
-        // The menu blocks until closed: release the state first.
-        drop(st);
-        let entries: Vec<MenuEntry> = items.iter().map(|(e, _)| e.clone()).collect();
-        let picked = native::show_menu(window, &entries).and_then(|i| items[i].1);
-        if let Some(action) = picked {
-            let mut st = overlay::lock(shared);
-            match action {
-                overlay::MenuAction::Layout(l) => st.layout = l,
-                overlay::MenuAction::Display(d) => st.display = d,
-                _ => {}
-            }
-            st.events.push(Event::Menu(action));
+/// The client in front, kept while ROrganizer itself is (menu, window).
+/// A head just clicked stays highlighted until its client is actually in
+/// front, or `FOCUS_GRACE` runs out: the switch takes a few frames, and
+/// reading the foreground meanwhile would flash the previous head.
+fn update_front(ctx: &egui::Context, st: &mut State) {
+    let front = platform::foreground_window();
+    if let Some((target, at)) = st.pending_front {
+        let waited = at.elapsed();
+        if front != Some(target) && waited < overlay::FOCUS_GRACE {
+            ctx.request_repaint_after(overlay::FOCUS_GRACE - waited);
+            return;
         }
-        ctx.request_repaint_of(ViewportId::ROOT);
-        ctx.request_repaint();
+        st.pending_front = None;
+    }
+    if let Some(front) = front
+        && let Some(slot) = st.slots.iter().find(|s| s.window == front)
+    {
+        st.front = Some(slot.key.clone());
     }
 }
 
@@ -221,6 +239,7 @@ fn handle_gesture(
                 if let Some(slot) = st.slots.get(i) {
                     platform::focus_window(slot.window);
                     st.front = Some(slot.key.clone());
+                    st.pending_front = Some((slot.window, Instant::now()));
                     st.events.push(Event::Focused(slot.key.clone()));
                 }
             }
@@ -273,9 +292,15 @@ fn paint_bar(
     }
 
     let active = active_color(theme);
+    // The head under a press lights up right away, the switch happens on
+    // release.
+    let lit = match st.gesture {
+        Some(Gesture::Press(i)) => st.slots.get(i).map(|s| &s.key),
+        _ => st.front.as_ref(),
+    };
     for (i, slot) in st.slots.iter().enumerate() {
         let rect = g.slot(i);
-        let on = st.front.as_ref() == Some(&slot.key);
+        let on = lit == Some(&slot.key);
         let radius = CornerRadius::same((g.head * 0.18).round().clamp(4.0, 12.0) as u8);
         if on {
             painter.rect(
@@ -460,7 +485,7 @@ fn draw_tip(ui: &mut egui::Ui, shared: &Shared) {
     let ctx = ui.ctx().clone();
     let mut st = overlay::lock(shared);
     if st.tip_window.is_none() {
-        st.tip_window = native::attach(overlay::TIP_TITLE);
+        st.tip_window = native::attach(overlay::TIP_TITLE, false);
     }
     let Some(tip) = st.tip.clone() else { return };
     let theme = st.theme.unwrap_or(Theme::Dark);
@@ -499,5 +524,208 @@ fn draw_tip(ui: &mut egui::Ui, shared: &Shared) {
         );
         let mut px = x + PILL_PAD.x;
         put(binding, &mut px);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Right-click menu.
+
+const MENU_PAD: f32 = 5.0;
+const MENU_ROW: f32 = 26.0;
+const MENU_HEADER: f32 = 22.0;
+const MENU_SEPARATOR: f32 = 9.0;
+/// Left of the item labels, after the column of the check dots.
+const MENU_LABEL_X: f32 = 26.0;
+/// Closes a menu that never got the focus, which only a click elsewhere
+/// could otherwise close.
+const MENU_FOCUS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
+
+struct MenuRow {
+    rect: Rect,
+    galley: Option<Arc<Galley>>,
+}
+
+fn menu_layout(
+    ctx: &egui::Context,
+    items: &[(MenuEntry, Option<MenuAction>)],
+    theme: Theme,
+) -> (Vec2, Vec<MenuRow>) {
+    ctx.fonts_mut(|f| {
+        let mut y = MENU_PAD;
+        let mut widest: f32 = 0.0;
+        let mut rows = Vec::with_capacity(items.len());
+        for (entry, action) in items {
+            let (height, galley) = match entry {
+                MenuEntry::Header(label) => {
+                    let font = FontId::proportional(10.5);
+                    (MENU_HEADER, Some(f.layout_no_wrap(label.clone(), font, theme::text_tertiary(theme))))
+                }
+                MenuEntry::Item { label, .. } => {
+                    let color = if *action == Some(MenuAction::Disable) {
+                        theme::conflict_palette(theme).3
+                    } else {
+                        theme::text_primary(theme)
+                    };
+                    (MENU_ROW, Some(f.layout_no_wrap(label.clone(), FontId::proportional(12.5), color)))
+                }
+                MenuEntry::Separator => (MENU_SEPARATOR, None),
+            };
+            if let Some(g) = &galley {
+                widest = widest.max(g.size().x);
+            }
+            rows.push(MenuRow {
+                rect: Rect::from_min_size(Pos2::new(MENU_PAD, y), Vec2::new(0.0, height)),
+                galley,
+            });
+            y += height;
+        }
+        let width = (MENU_LABEL_X + widest + 18.0 + MENU_PAD * 2.0).max(170.0).ceil();
+        for row in &mut rows {
+            row.rect.set_width(width - MENU_PAD * 2.0);
+        }
+        (Vec2::new(width, (y + MENU_PAD).ceil()), rows)
+    })
+}
+
+/// At the cursor, flipped left or up where the screen ends. The menu takes
+/// the focus on its first frame (`draw_menu`).
+fn open_menu(
+    ctx: &egui::Context,
+    st: &mut State,
+    bar: platform::OverlayWindow,
+    theme: Theme,
+    ppp: f32,
+) {
+    let Some(menu_window) = st.menu_window else { return };
+    let items = overlay::menu(st.layout, st.display, st.visibility);
+    let (size, _) = menu_layout(ctx, &items, theme);
+    let (w, h) = physical(size, ppp);
+    let (cx, cy) = native::cursor_position();
+    if let Some(work) = native::work_area(bar) {
+        let x = if cx + w <= work.2 { cx } else { cx - w };
+        let y = if cy + h <= work.3 { cy } else { cy - h };
+        native::move_to(menu_window, overlay::fit_into(work, (x, y), (w, h)));
+    }
+    let id = overlay::menu_viewport();
+    ctx.send_viewport_cmd_to(id, ViewportCommand::InnerSize(size));
+    ctx.send_viewport_cmd_to(id, ViewportCommand::Visible(true));
+    // Opened again over itself: the window to give back is still the one
+    // from before the first.
+    let previous = st
+        .menu
+        .as_ref()
+        .and_then(|m| m.previous)
+        .or_else(platform::foreground_window);
+    st.menu = Some(Menu {
+        items,
+        previous,
+        opened: Instant::now(),
+        activated: false,
+        focused: false,
+    });
+    ctx.request_repaint_of(id);
+}
+
+/// Hides the menu; `give_back` gets the foreground (a pick, Escape), unless
+/// a click elsewhere already moved it.
+fn close_menu(ctx: &egui::Context, st: &mut State, give_back: Option<platform::WindowId>) {
+    st.menu = None;
+    ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+    if let Some(window) = give_back.filter(|&w| !platform::is_own_window(w)) {
+        platform::focus_window(window);
+    }
+    ctx.request_repaint_of(ViewportId::ROOT);
+    ctx.request_repaint_of(overlay::overlay_viewport());
+}
+
+fn draw_menu(ui: &mut egui::Ui, shared: &Shared) {
+    let ctx = ui.ctx().clone();
+    let mut st = overlay::lock(shared);
+    if st.menu_window.is_none() {
+        st.menu_window = native::attach(overlay::MENU_TITLE, true);
+    }
+    let (Some(menu), Some(menu_window)) = (st.menu.clone(), st.menu_window) else { return };
+    let theme = st.theme.unwrap_or(Theme::Dark);
+
+    // Focused, a click elsewhere takes the focus away and closes it, as a
+    // native menu does. ROrganizer is in front meanwhile, like with one.
+    if !menu.activated {
+        native::activate(menu_window);
+    }
+    let focused = ctx.input(|i| i.viewport().focused) == Some(true);
+    if !focused && (menu.focused || menu.opened.elapsed() >= MENU_FOCUS_TIMEOUT) {
+        close_menu(&ctx, &mut st, None);
+        return;
+    }
+    if !focused {
+        ctx.request_repaint_after(MENU_FOCUS_TIMEOUT);
+    }
+    if let Some(m) = st.menu.as_mut() {
+        m.activated = true;
+        m.focused |= focused;
+    }
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        close_menu(&ctx, &mut st, menu.previous);
+        return;
+    }
+
+    let (size, rows) = menu_layout(&ctx, &menu.items, theme);
+    let painter = ui.painter();
+    let (fill, border) = match theme {
+        Theme::Dark => (theme::BG_ROW_DARK, theme::BORDER_STRONG_DARK),
+        Theme::Light => (theme::BG_ROW_LIGHT, theme::BORDER_STRONG_LIGHT),
+    };
+    painter.rect(
+        Rect::from_min_size(Pos2::ZERO, size),
+        CornerRadius::same(8),
+        fill,
+        Stroke::new(1.0, border),
+        StrokeKind::Inside,
+    );
+
+    let (hover, clicked) = ctx.input(|i| (i.pointer.hover_pos(), i.pointer.primary_clicked()));
+    let mut picked = None;
+    for ((entry, action), row) in menu.items.iter().zip(rows) {
+        let mid = row.rect.center().y;
+        match (entry, row.galley) {
+            (MenuEntry::Separator, _) => {
+                let x = row.rect.x_range();
+                painter.hline((x.min + 4.0)..=(x.max - 4.0), mid, Stroke::new(1.0, border));
+            }
+            (MenuEntry::Header(_), Some(galley)) => {
+                let pos = Pos2::new(row.rect.min.x + 10.0, mid - galley.size().y / 2.0);
+                painter.galley(pos, galley, Color32::PLACEHOLDER);
+            }
+            (MenuEntry::Item { checked, .. }, Some(galley)) => {
+                let hovered = hover.is_some_and(|p| row.rect.contains(p));
+                if hovered {
+                    painter.rect_filled(row.rect, CornerRadius::same(5), theme::hover_bg(theme));
+                    ctx.set_cursor_icon(egui::CursorIcon::PointingHand);
+                    if clicked {
+                        picked = *action;
+                    }
+                }
+                if *checked {
+                    let dot = Pos2::new(row.rect.min.x + 13.0, mid);
+                    painter.circle_filled(dot, 3.2, active_color(theme));
+                }
+                let pos = Pos2::new(row.rect.min.x + MENU_LABEL_X - MENU_PAD, mid - galley.size().y / 2.0);
+                painter.galley(pos, galley, Color32::PLACEHOLDER);
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(action) = picked {
+        match action {
+            MenuAction::Layout(l) => st.layout = l,
+            MenuAction::Display(d) => st.display = d,
+            MenuAction::Visibility(v) => st.visibility = v,
+            MenuAction::OpenMain | MenuAction::Disable => {}
+        }
+        st.events.push(Event::Menu(action));
+        // "Open ROrganizer" brings the main window in front instead.
+        let give_back = (action != MenuAction::OpenMain).then_some(menu.previous).flatten();
+        close_menu(&ctx, &mut st, give_back);
     }
 }

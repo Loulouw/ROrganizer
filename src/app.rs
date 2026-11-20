@@ -174,6 +174,7 @@ pub struct App {
     overlay_enabled: bool,
     overlay_layout: Layout,
     overlay_display: Display,
+    overlay_visibility: overlay::Visibility,
     /// Side of one head, in points.
     overlay_head: f32,
     /// Top-left corner of the overlay, in `platform::overlay` coordinates.
@@ -240,6 +241,8 @@ impl App {
         let overlay_enabled = stored.as_ref().is_none_or(|c| c.overlay_enabled);
         let overlay_layout = stored.as_ref().map_or_else(Layout::default, |c| c.overlay_layout);
         let overlay_display = stored.as_ref().map_or_else(Display::default, |c| c.overlay_display);
+        let overlay_visibility =
+            stored.as_ref().map_or_else(overlay::Visibility::default, |c| c.overlay_visibility);
         let overlay_head = stored.as_ref().map_or(overlay::HEAD_DEFAULT, |c| {
             c.overlay_head_size.clamp(overlay::HEAD_MIN, overlay::HEAD_MAX)
         });
@@ -331,6 +334,7 @@ impl App {
             overlay_enabled,
             overlay_layout,
             overlay_display,
+            overlay_visibility,
             overlay_head,
             overlay_pos,
             overlay: overlay::Shared::default(),
@@ -494,6 +498,17 @@ impl App {
     pub fn set_overlay_display(&mut self, display: Display) {
         if self.overlay_display != display {
             self.overlay_display = display;
+            self.mark_dirty();
+        }
+    }
+
+    pub fn overlay_visibility(&self) -> overlay::Visibility {
+        self.overlay_visibility
+    }
+
+    pub fn set_overlay_visibility(&mut self, visibility: overlay::Visibility) {
+        if self.overlay_visibility != visibility {
+            self.overlay_visibility = visibility;
             self.mark_dirty();
         }
     }
@@ -774,6 +789,9 @@ impl App {
                 }
                 overlay::Event::Menu(overlay::MenuAction::Layout(l)) => self.set_overlay_layout(l),
                 overlay::Event::Menu(overlay::MenuAction::Display(d)) => self.set_overlay_display(d),
+                overlay::Event::Menu(overlay::MenuAction::Visibility(v)) => {
+                    self.set_overlay_visibility(v);
+                }
                 overlay::Event::Menu(overlay::MenuAction::OpenMain) => {
                     // The main window may be hidden, with the eframe loop
                     // only running `logic`: show it natively, as the tray does.
@@ -789,17 +807,17 @@ impl App {
         let bar = overlay::overlay_viewport();
         if !self.overlay_wanted() {
             if self.overlay_registered {
-                // egui closes both windows at the end of the next root pass
+                // egui closes the windows at the end of the next root pass
                 // that doesn't register them; they come back as new windows.
                 ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(false));
-                ctx.send_viewport_cmd_to(overlay::tip_viewport(), egui::ViewportCommand::Visible(false));
                 let mut st = overlay::lock(&self.overlay);
+                ui::overlay::close_popups(ctx, &mut st);
                 st.window = None;
                 st.tip_window = None;
+                st.menu_window = None;
                 st.sent_size = None;
-                st.tip = None;
-                st.hover = None;
                 st.gesture = None;
+                st.pending_front = None;
                 self.overlay_registered = false;
                 self.overlay_shown = false;
             }
@@ -817,11 +835,13 @@ impl App {
             let head = if resizing { st.head } else { self.overlay_head };
             if st.layout != self.overlay_layout
                 || st.display != self.overlay_display
+                || st.visibility != self.overlay_visibility
                 || st.head != head
                 || st.theme != theme
             {
                 st.layout = self.overlay_layout;
                 st.display = self.overlay_display;
+                st.visibility = self.overlay_visibility;
                 st.head = head;
                 st.theme = theme;
                 ctx.request_repaint_of(bar);
@@ -842,6 +862,8 @@ impl App {
         let front = match platform::foreground_window() {
             Some(w) if platform::is_own_window(w) => overlay::Front::Own,
             Some(w) if platform::is_dofus_window(w) => overlay::Front::Dofus,
+            // `Always`: whoever is in front, the bar stays.
+            _ if self.overlay_visibility == overlay::Visibility::Always => overlay::Front::Dofus,
             _ => overlay::Front::Other,
         };
         let eligible = live > 0 && platform::input_permission_granted();
@@ -854,10 +876,7 @@ impl App {
         if show != self.overlay_shown {
             ctx.send_viewport_cmd_to(bar, egui::ViewportCommand::Visible(show));
             if !show {
-                let mut st = overlay::lock(&self.overlay);
-                st.tip = None;
-                st.hover = None;
-                ctx.send_viewport_cmd_to(overlay::tip_viewport(), egui::ViewportCommand::Visible(false));
+                ui::overlay::close_popups(ctx, &mut overlay::lock(&self.overlay));
             }
             self.overlay_shown = show;
         }
@@ -948,6 +967,7 @@ impl App {
             overlay_enabled: self.overlay_enabled,
             overlay_layout: self.overlay_layout,
             overlay_display: self.overlay_display,
+            overlay_visibility: self.overlay_visibility,
             overlay_head_size: self.overlay_head,
             overlay_pos: self.overlay_pos,
         };

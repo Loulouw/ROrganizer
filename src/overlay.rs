@@ -36,15 +36,25 @@ pub enum Display {
     Initials,
 }
 
+/// When the bar shows while ROrganizer is active.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Visibility {
+    /// Only while Dofus (or ROrganizer itself) is in front.
+    #[default]
+    WithDofus,
+    Always,
+}
+
 /// Side of one head, in points.
 pub const HEAD_MIN: f32 = 24.0;
 pub const HEAD_MAX: f32 = 96.0;
 pub const HEAD_DEFAULT: f32 = 40.0;
 
 /// Window titles: how `platform::overlay::attach` finds the windows egui
-/// created for the two viewports.
+/// created for the viewports.
 pub const OVERLAY_TITLE: &str = "ROrganizer overlay";
 pub const TIP_TITLE: &str = "ROrganizer overlay tooltip";
+pub const MENU_TITLE: &str = "ROrganizer overlay menu";
 
 /// How long the bar stays up once neither Dofus nor ROrganizer is in front.
 /// Alt-Tab, or a click on the taskbar, briefly puts another window in front:
@@ -54,12 +64,21 @@ pub const HIDE_DELAY: Duration = Duration::from_millis(150);
 /// Hover time before a head shows its tooltip.
 pub const TIP_DELAY: Duration = Duration::from_millis(350);
 
+/// How long a clicked head stays highlighted while its client comes to
+/// the front. The foreground switch isn't instant: reading it back right
+/// away would flash the previous head.
+pub const FOCUS_GRACE: Duration = Duration::from_millis(800);
+
 pub fn overlay_viewport() -> ViewportId {
     ViewportId::from_hash_of("rorganizer-overlay")
 }
 
 pub fn tip_viewport() -> ViewportId {
     ViewportId::from_hash_of("rorganizer-overlay-tooltip")
+}
+
+pub fn menu_viewport() -> ViewportId {
+    ViewportId::from_hash_of("rorganizer-overlay-menu")
 }
 
 /// Called by the platform watcher whenever another window comes to the
@@ -110,17 +129,22 @@ pub struct State {
     pub display: Display,
     pub head: f32,
     pub theme: Option<Theme>,
+    pub visibility: Visibility,
     /// Where the bar was left last time; used once, when the window appears.
     pub saved_pos: Option<(i32, i32)>,
 
     // Owned by the viewports.
     pub window: Option<OverlayWindow>,
     pub tip_window: Option<OverlayWindow>,
+    pub menu_window: Option<OverlayWindow>,
     /// Client in front, kept while ROrganizer itself is (menu, main window).
     pub front: Option<SlotKey>,
+    /// Client just clicked, still on its way to the front.
+    pub pending_front: Option<(WindowId, Instant)>,
     pub gesture: Option<Gesture>,
     pub hover: Option<(usize, Instant)>,
     pub tip: Option<Tip>,
+    pub menu: Option<Menu>,
     /// Window size last sent, in points, and the scale it was fitted at.
     pub sent_size: Option<(Vec2, f32)>,
 
@@ -135,6 +159,19 @@ pub struct Tip {
     pub detail: Option<String>,
     pub binding: Option<String>,
     pub slot: usize,
+}
+
+/// The right-click menu while it is open.
+#[derive(Clone, Debug)]
+pub struct Menu {
+    pub items: Vec<(MenuEntry, Option<MenuAction>)>,
+    /// Window in front when it opened, given the foreground back on a pick.
+    pub previous: Option<WindowId>,
+    pub opened: Instant,
+    /// `platform::overlay::activate` was called on its first frame.
+    pub activated: bool,
+    /// The menu window got the focus: losing it now means a click elsewhere.
+    pub focused: bool,
 }
 
 pub type Shared = Arc<Mutex<State>>;
@@ -337,25 +374,40 @@ pub enum MenuEntry {
 pub enum MenuAction {
     Layout(Layout),
     Display(Display),
+    Visibility(Visibility),
     OpenMain,
     Disable,
 }
 
-pub fn menu(layout: Layout, display: Display) -> Vec<(MenuEntry, Option<MenuAction>)> {
+pub fn menu(
+    layout: Layout,
+    display: Display,
+    visibility: Visibility,
+) -> Vec<(MenuEntry, Option<MenuAction>)> {
+    use MenuAction as A;
+    let header = |label: std::borrow::Cow<'_, str>| (MenuEntry::Header(label.into_owned()), None);
     let item = |label: std::borrow::Cow<'_, str>, checked: bool, action: MenuAction| {
         (MenuEntry::Item { label: label.into_owned(), checked }, Some(action))
     };
     vec![
-        (MenuEntry::Header(t!("overlay.layout").into_owned()), None),
-        item(t!("overlay.horizontal"), layout == Layout::Horizontal, MenuAction::Layout(Layout::Horizontal)),
-        item(t!("overlay.vertical"), layout == Layout::Vertical, MenuAction::Layout(Layout::Vertical)),
+        header(t!("overlay.layout")),
+        item(t!("overlay.horizontal"), layout == Layout::Horizontal, A::Layout(Layout::Horizontal)),
+        item(t!("overlay.vertical"), layout == Layout::Vertical, A::Layout(Layout::Vertical)),
         (MenuEntry::Separator, None),
-        (MenuEntry::Header(t!("overlay.display").into_owned()), None),
-        item(t!("overlay.class_head"), display == Display::ClassHead, MenuAction::Display(Display::ClassHead)),
-        item(t!("overlay.initials"), display == Display::Initials, MenuAction::Display(Display::Initials)),
+        header(t!("overlay.display")),
+        item(t!("overlay.class_head"), display == Display::ClassHead, A::Display(Display::ClassHead)),
+        item(t!("overlay.initials"), display == Display::Initials, A::Display(Display::Initials)),
         (MenuEntry::Separator, None),
-        item(t!("overlay.open_main"), false, MenuAction::OpenMain),
-        item(t!("overlay.disable"), false, MenuAction::Disable),
+        header(t!("overlay.visibility")),
+        item(
+            t!("overlay.with_dofus"),
+            visibility == Visibility::WithDofus,
+            A::Visibility(Visibility::WithDofus),
+        ),
+        item(t!("overlay.always"), visibility == Visibility::Always, A::Visibility(Visibility::Always)),
+        (MenuEntry::Separator, None),
+        item(t!("overlay.open_main"), false, A::OpenMain),
+        item(t!("overlay.disable"), false, A::Disable),
     ]
 }
 

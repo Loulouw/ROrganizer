@@ -4,10 +4,10 @@
 //! activates the app on click and can't join a fullscreen Space), driven by
 //! the same `crate::overlay::State`.
 
-use crate::overlay::{MenuEntry, ScreenRect};
+use crate::overlay::ScreenRect;
 use crate::platform::OverlayWindow;
 
-pub fn attach(_title: &str) -> Option<OverlayWindow> {
+pub fn attach(_title: &str, _activates: bool) -> Option<OverlayWindow> {
     None
 }
 
@@ -33,6 +33,4 @@ pub fn cursor_position() -> (i32, i32) {
     (0, 0)
 }
 
-pub fn show_menu(_window: OverlayWindow, _entries: &[MenuEntry]) -> Option<usize> {
-    None
-}
+pub fn activate(_window: OverlayWindow) {}

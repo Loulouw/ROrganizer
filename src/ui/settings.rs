@@ -11,7 +11,7 @@ use egui::{Color32, CornerRadius, Frame, Margin, Sense, Stroke, StrokeKind, Vec2
 use rust_i18n::t;
 
 use crate::app::App;
-use crate::overlay::{Display, Layout};
+use crate::overlay::{Display, Layout, Visibility};
 use crate::platform;
 use crate::theme::{self, Theme};
 
@@ -273,6 +273,17 @@ fn draw_overlay_options(ui: &mut egui::Ui, theme: Theme, app: &mut App) {
             ],
         );
         app.set_overlay_display(display);
+        let visibility = choice_row(
+            ui,
+            theme,
+            &t!("overlay.visibility"),
+            app.overlay_visibility(),
+            [
+                (Visibility::WithDofus, t!("overlay.with_dofus")),
+                (Visibility::Always, t!("overlay.always")),
+            ],
+        );
+        app.set_overlay_visibility(visibility);
     });
 }
 

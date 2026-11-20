@@ -64,12 +64,15 @@
 //!   viewports exist only when true, but `overlay::*` must exist either way.
 //!   [`OverlayWindow`] is a window egui created for an overlay viewport.
 //!   Coordinates are screen coordinates (Windows: physical pixels).
-//!   - `overlay::attach(&str) -> Option<OverlayWindow>`, called from the
-//!     viewport's own ui callback: finds the window titled so on the UI
-//!     thread and makes it a tool window that a click never activates, for
-//!     good (winit rewrites the window styles on every change of its own).
-//!     A click that activated ROrganizer would blind the global input
+//!   - `overlay::attach(&str, bool) -> Option<OverlayWindow>`, called from
+//!     an overlay viewport's ui callback: finds the window titled so on the
+//!     UI thread, strips its frame and keeps it out of the taskbar; unless
+//!     the flag says it activates (the menu), a click never activates it,
+//!     for good (winit rewrites the window styles on every change of its
+//!     own). A click that activated ROrganizer would blind the global input
 //!     hooks until Dofus is back in front.
+//!   - `overlay::activate(OverlayWindow)`: brings the menu in front, right
+//!     after the click that opened it.
 //!   - `overlay::rect(OverlayWindow) -> Option<ScreenRect>`,
 //!     `overlay::move_to(OverlayWindow, (i32, i32))` (never activates),
 //!     `overlay::cursor_position() -> (i32, i32)`.
@@ -78,10 +81,8 @@
 //!     of the screen showing that rectangle (None when none does),
 //!     `overlay::main_work_area()`; all `-> Option<ScreenRect>`.
 //!     `crate::overlay::{place, keep_on_screen}` build on them.
-//!   - `overlay::show_menu(OverlayWindow, &[MenuEntry]) -> Option<usize>`:
-//!     native context menu at the cursor, blocking until closed; returns
-//!     the picked entry and gives the foreground back to the window that
-//!     had it.
+//!   - The right-click menu is egui too (`ui::overlay`): it takes the focus
+//!     so that a click elsewhere closes it, then gives the foreground back.
 
 #[cfg(windows)]
 mod win32;

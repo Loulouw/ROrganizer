@@ -1,8 +1,7 @@
 //! Windows side of the character overlay: the windows egui creates for the
-//! overlay viewports, made non-activating, placed in physical pixels, and
-//! the native context menu.
+//! overlay viewports, stripped of their frame, made non-activating (bar,
+//! tooltip) and placed in physical pixels.
 
-use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{
     DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE, DWMWA_WINDOW_CORNER_PREFERENCE,
@@ -15,22 +14,17 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CheckMenuRadioItem, CreatePopupMenu, DestroyMenu, EnumThreadWindows,
-    GetCursorPos, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextW,
-    PostMessageW, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, TrackPopupMenu,
-    GWL_EXSTYLE, GWL_STYLE, MF_BYCOMMAND, MF_GRAYED, MF_SEPARATOR, MF_STRING, STYLESTRUCT,
-    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, TPM_NONOTIFY,
-    TPM_RETURNCMD, TPM_RIGHTBUTTON, WM_MOUSEACTIVATE, WM_NCCALCSIZE, WM_NCDESTROY, WM_NULL,
-    WM_STYLECHANGING,
-    WS_CAPTION, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP,
-    WS_SYSMENU, WS_THICKFRAME,
+    EnumThreadWindows, GetCursorPos, GetWindowLongPtrW, GetWindowRect, GetWindowTextW,
+    SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, GWL_STYLE, STYLESTRUCT,
+    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WM_MOUSEACTIVATE,
+    WM_NCACTIVATE, WM_NCCALCSIZE, WM_NCDESTROY, WM_NCPAINT, WM_STYLECHANGING, WS_CAPTION,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
+    WS_THICKFRAME,
 };
 
-use crate::overlay::{MenuEntry, ScreenRect};
-use crate::platform::{OverlayWindow, WindowId};
+use crate::overlay::ScreenRect;
+use crate::platform::OverlayWindow;
 
-/// Never activated by a click, out of the taskbar and Alt-Tab.
-const STYLE: u32 = WS_EX_NOACTIVATE.0 | WS_EX_TOOLWINDOW.0;
 /// The caption winit keeps on undecorated windows (for Aero Snap): DWM
 /// draws its top edge and a ghost close button across a transparent one.
 const FRAME: u32 =
@@ -44,11 +38,18 @@ impl OverlayWindow {
     }
 }
 
-pub fn attach(title: &str) -> Option<OverlayWindow> {
+pub fn attach(title: &str, activates: bool) -> Option<OverlayWindow> {
     let hwnd = find_thread_window(title)?;
+    // Out of the taskbar and Alt-Tab; never activated by a click unless
+    // `activates`.
+    let ex_style = if activates {
+        WS_EX_TOOLWINDOW.0
+    } else {
+        WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0
+    };
     unsafe {
         let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | STYLE as isize);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | ex_style as isize);
         let style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
         SetWindowLongPtrW(hwnd, GWL_STYLE, ((style & !FRAME) | WS_POPUP.0) as isize);
         let _ = SetWindowPos(
@@ -63,7 +64,7 @@ pub fn attach(title: &str) -> Option<OverlayWindow> {
         // winit writes the whole styles back on every change of its own
         // flags (visibility, level…), dropping ours: a hidden then shown bar
         // would activate on the next click. Keep them at the source.
-        let _ = SetWindowSubclass(hwnd, Some(subclass_proc), SUBCLASS_ID, 0);
+        let _ = SetWindowSubclass(hwnd, Some(subclass_proc), SUBCLASS_ID, ex_style as usize);
         // Windows 11 draws a 1 px border and rounds the corners of every
         // top-level window; the bar draws its own. Fails harmlessly on 10.
         let none = DWMWA_COLOR_NONE;
@@ -84,29 +85,37 @@ pub fn attach(title: &str) -> Option<OverlayWindow> {
     Some(OverlayWindow(hwnd.0 as isize))
 }
 
+/// `ex_style`: the extended style bits to keep (`attach`).
 unsafe extern "system" fn subclass_proc(
     hwnd: HWND,
     msg: u32,
     wparam: WPARAM,
     lparam: LPARAM,
     _id: usize,
-    _data: usize,
+    ex_style: usize,
 ) -> LRESULT {
+    let ex_style = ex_style as u32;
     unsafe {
         match msg {
             WM_STYLECHANGING if wparam.0 as i32 == GWL_EXSTYLE.0 => {
                 let change = &mut *(lparam.0 as *mut STYLESTRUCT);
-                change.styleNew |= STYLE;
+                change.styleNew |= ex_style;
             }
             WM_STYLECHANGING if wparam.0 as i32 == GWL_STYLE.0 => {
                 let change = &mut *(lparam.0 as *mut STYLESTRUCT);
                 change.styleNew = (change.styleNew & !FRAME) | WS_POPUP.0;
             }
-            WM_MOUSEACTIVATE => return LRESULT(MA_NOACTIVATE),
+            WM_MOUSEACTIVATE if ex_style & WS_EX_NOACTIVATE.0 != 0 => {
+                return LRESULT(MA_NOACTIVATE);
+            }
             // Client area = whole window. winit shifts an undecorated
             // window's client area 1 px down for its drop shadow, leaving a
             // line across the top of a transparent one.
             WM_NCCALCSIZE if wparam.0 != 0 => return LRESULT(0),
+            // No frame to paint. On activation the default handler still
+            // drew a classic caption, with the window title, over the bar.
+            WM_NCPAINT => return LRESULT(0),
+            WM_NCACTIVATE => return DefSubclassProc(hwnd, msg, wparam, LPARAM(-1)),
             WM_NCDESTROY => {
                 let _ = RemoveWindowSubclass(hwnd, Some(subclass_proc), SUBCLASS_ID);
             }
@@ -205,48 +214,10 @@ pub fn cursor_position() -> (i32, i32) {
     (p.x, p.y)
 }
 
-pub fn show_menu(window: OverlayWindow, entries: &[MenuEntry]) -> Option<usize> {
-    let hwnd = window.hwnd();
+/// Our process just got the click that opens the menu, so the foreground
+/// lock lets it through.
+pub fn activate(window: OverlayWindow) {
     unsafe {
-        let menu = CreatePopupMenu().ok()?;
-        // Keeps the UTF-16 labels alive until the menu is built.
-        let mut labels: Vec<Vec<u16>> = Vec::with_capacity(entries.len());
-        for (i, entry) in entries.iter().enumerate() {
-            let id = i + 1;
-            let mut text = |s: &str| {
-                labels.push(s.encode_utf16().chain(Some(0)).collect());
-                PCWSTR(labels.last().map_or(std::ptr::null(), |l| l.as_ptr()))
-            };
-            let _ = match entry {
-                MenuEntry::Header(label) => AppendMenuW(menu, MF_STRING | MF_GRAYED, id, text(label)),
-                MenuEntry::Item { label, .. } => AppendMenuW(menu, MF_STRING, id, text(label)),
-                MenuEntry::Separator => AppendMenuW(menu, MF_SEPARATOR, id, PCWSTR::null()),
-            };
-            if let MenuEntry::Item { checked: true, .. } = entry {
-                let _ = CheckMenuRadioItem(menu, id as u32, id as u32, id as u32, MF_BYCOMMAND.0);
-            }
-        }
-
-        // A popup menu only closes on an outside click if its owner is in
-        // front (TrackPopupMenu documentation); the window that was is
-        // given the foreground back afterwards.
-        let previous = GetForegroundWindow();
-        let _ = SetForegroundWindow(hwnd);
-        let (x, y) = cursor_position();
-        let picked = TrackPopupMenu(
-            menu,
-            TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
-            x,
-            y,
-            None,
-            hwnd,
-            None,
-        );
-        let _ = PostMessageW(Some(hwnd), WM_NULL, WPARAM(0), LPARAM(0));
-        let _ = DestroyMenu(menu);
-        if !previous.0.is_null() && previous != hwnd {
-            super::focus_window(WindowId::from_hwnd(previous));
-        }
-        (picked.0 > 0).then(|| picked.0 as usize - 1)
+        let _ = SetForegroundWindow(window.hwnd());
     }
 }

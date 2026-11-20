@@ -46,6 +46,8 @@ pub struct StoredConfig {
     pub overlay_layout: overlay::Layout,
     #[serde(default)]
     pub overlay_display: overlay::Display,
+    #[serde(default)]
+    pub overlay_visibility: overlay::Visibility,
     /// Side of one head, in points.
     #[serde(default = "default_head_size")]
     pub overlay_head_size: f32,
@@ -146,6 +148,7 @@ mod tests {
             overlay_enabled: false,
             overlay_layout: overlay::Layout::Vertical,
             overlay_display: overlay::Display::Initials,
+            overlay_visibility: overlay::Visibility::Always,
             overlay_head_size: 56.0,
             overlay_pos: Some((-900, 12)),
         }
@@ -201,6 +204,7 @@ mod tests {
         assert_eq!(obj.remove("overlay_enabled"), Some(serde_json::json!(true)));
         assert_eq!(obj.remove("overlay_layout"), Some(serde_json::json!("Horizontal")));
         assert_eq!(obj.remove("overlay_display"), Some(serde_json::json!("ClassHead")));
+        assert_eq!(obj.remove("overlay_visibility"), Some(serde_json::json!("WithDofus")));
         assert_eq!(obj.remove("overlay_head_size"), Some(serde_json::json!(40.0)));
         assert_eq!(obj.remove("overlay_pos"), Some(serde_json::Value::Null));
         let original: serde_json::Value = serde_json::from_str(CONFIG_1_4_0).unwrap();
@@ -221,6 +225,7 @@ mod tests {
             "overlay_enabled",
             "overlay_layout",
             "overlay_display",
+            "overlay_visibility",
             "overlay_head_size",
             "overlay_pos",
         ] {
@@ -235,6 +240,7 @@ mod tests {
         assert!(cfg.overlay_enabled);
         assert_eq!(cfg.overlay_layout, overlay::Layout::Horizontal);
         assert_eq!(cfg.overlay_display, overlay::Display::ClassHead);
+        assert_eq!(cfg.overlay_visibility, overlay::Visibility::WithDofus);
         assert_eq!(cfg.overlay_head_size, overlay::HEAD_DEFAULT);
         assert_eq!(cfg.overlay_pos, None);
     }
@@ -258,6 +264,7 @@ mod tests {
         assert_eq!(loaded.overlay_enabled, cfg.overlay_enabled);
         assert_eq!(loaded.overlay_layout, cfg.overlay_layout);
         assert_eq!(loaded.overlay_display, cfg.overlay_display);
+        assert_eq!(loaded.overlay_visibility, cfg.overlay_visibility);
         assert_eq!(loaded.overlay_head_size, cfg.overlay_head_size);
         assert_eq!(loaded.overlay_pos, cfg.overlay_pos);
     }

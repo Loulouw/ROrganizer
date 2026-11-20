@@ -149,11 +149,12 @@ After `ViewportCommand::Minimized(true)`, a restore from the Dock leaves egui
 believing the window is minimized and `App::ui` stops running for good.
 Common code minimizes only through `platform::minimize_main_window`.
 
-### The character overlay is two egui viewports on Windows
+### The character overlay is three egui viewports on Windows
 
-`ui::overlay` registers two deferred viewports (bar, tooltip) on every
-root `ui` pass while the overlay is on and ROrganizer active; `App::logic`
-owns the bar's visibility through `ViewportCommand`s. Measured traps:
+`ui::overlay` registers three deferred viewports (bar, tooltip,
+right-click menu) on every root `ui` pass while the overlay is on and
+ROrganizer active; `App::logic` owns the bar's visibility through
+`ViewportCommand`s. Measured traps:
 
 - winit rewrites the whole window style and extended style on every
   change of its own flags (`window_state.rs`), dropping
@@ -161,8 +162,10 @@ owns the bar's visibility through `ViewportCommand`s. Measured traps:
   blinded the hooks. `platform::overlay::attach` subclasses the window and
   forces the bits in `WM_STYLECHANGING`, answers `MA_NOACTIVATE`, strips
   the caption (DWM drew its top edge and a ghost close button through the
-  transparency) and handles `WM_NCCALCSIZE` (winit shifts an undecorated
-  window's client area 1 px down for its shadow).
+  transparency), handles `WM_NCCALCSIZE` (winit shifts an undecorated
+  window's client area 1 px down for its shadow) and skips the non-client
+  paint (once activated, a window drew a classic caption with its title
+  over the bar).
 - `ViewportCommand::StartDrag` never moves a window that can't be
   activated: moves and resizes follow the global cursor and move the
   window natively.
@@ -172,8 +175,15 @@ owns the bar's visibility through `ViewportCommand`s. Measured traps:
   pass of any viewport (egui `end_pass`): the bar drives the tooltip that
   way.
 - Transparent pixels still catch clicks, and egui popups can't leave
-  their window: the bar window is exactly the bar, the tooltip is its own
-  viewport.
+  their window: the bar window is exactly the bar, the tooltip and the
+  menu are viewports of their own.
+- The menu is egui, not `TrackPopupMenu`: a native popup ignores the
+  app's theme, and blocking in it froze the frame that hides the tooltip.
+  It takes the focus (`attach(_, true)` + `overlay::activate`) so that a
+  click elsewhere closes it, then gives the foreground back to Dofus.
+- A head lights up on press and stays lit until its client is really in
+  front (`FOCUS_GRACE`): the switch takes a few frames, and reading the
+  foreground meanwhile gives the previous client back.
 
 macOS can't use this (spike, 2026-11): a click on any winit window
 activates the app (only an `NSPanel` with `NonactivatingPanel` doesn't),
@@ -276,14 +286,16 @@ Programmatic end-to-end checks on Windows:
   and screenshot the thumbnail flyout: its titles give the order.
 - Screenshot diffs: try several vertical offsets. An egui bump can shift
   everything by 1 px (~11 % differing pixels, under 1 % at `dy=+1`).
-- Overlay: windows titled `ROrganizer overlay` and `ROrganizer overlay
-  tooltip`; its right-click menu is a `#32768` window of our PID, read as
-  above. A Dofus client comes to the front through its own shortcut
-  (`mouse_event` XBUTTON for Mb4), not `SetForegroundWindow` from the test
-  process, which the foreground lock refuses.
-- Main window shown again from the tray or a second launch: the first
-  synthetic click on it is lost (on `main` too). Hover ~0.4 s before
-  pressing.
+- Overlay: windows titled `ROrganizer overlay`, `ROrganizer overlay
+  tooltip` and `ROrganizer overlay menu`. A Dofus client comes to the
+  front through its own shortcut (`mouse_event` XBUTTON for Mb4), not
+  `SetForegroundWindow` from the test process, which the foreground lock
+  refuses. Never click blind on a Dofus window: a click in the game moves
+  the character or opens its menus.
+- A synthetic click at the exact pixel where the cursor last left a window
+  is lost: winit sends no `CursorMoved` for an unchanged position, so egui
+  has no pointer when the button comes. Move by a pixel, or hover ~0.4 s,
+  before pressing.
 
 Programmatic end-to-end checks on macOS:
 

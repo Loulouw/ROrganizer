@@ -47,6 +47,9 @@
     "display": "Affichage",
     "class_head": "Tête de classe",
     "initials": "Initiales",
+    "visibility": "Visibilité",
+    "with_dofus": "Avec Dofus",
+    "always": "Toujours",
     "open_main": "Ouvrir ROrganizer",
     "disable": "Désactiver l'overlay"
   },
