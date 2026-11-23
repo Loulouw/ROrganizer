@@ -59,6 +59,11 @@ Site name: Google reads `WebSite` JSON-LD from the home page. Here that is
 the `noindex` root, which sends Googlebot (no `Accept-Language`) to `/en/`,
 so both carry the same `WebSite` block. Keep them identical.
 
+`SoftwareApplication` JSON-LD on each language page: `description` repeats
+that page's `<meta name="description">` word for word, `screenshot` points
+at its `app-<lang>.png`. Change one, change the other. No `softwareVersion`:
+like `lastmod` in the sitemap, a hand-kept version goes stale.
+
 ## CSS
 
 - Grids: `minmax(0, 1fr)`, never bare `1fr`. Grid children keep
