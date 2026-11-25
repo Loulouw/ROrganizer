@@ -16,7 +16,7 @@ pub fn draw(ui: &mut egui::Ui, app: &mut App) {
     let ctx = ui.ctx().clone();
     let ctx = &ctx;
     let snapshot = app.windows_snapshot();
-    let snap_windows: Vec<DetectedWindow> = snapshot.load_full().as_ref().clone();
+    let snap_windows: Vec<DetectedWindow> = snapshot.load().accounts.clone();
 
     // Project cycle_order × snapshot into the visible ordered list.
     // `cycle_order` is the source of truth for ordering — App keeps it in

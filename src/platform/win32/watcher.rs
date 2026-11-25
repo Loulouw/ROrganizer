@@ -26,7 +26,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use super::enumerate::enumerate_dofus_windows;
 use super::process::ExeCache;
-use crate::dofus::{DetectedWindow, WindowsSnapshot};
+use crate::dofus::{Clients, WindowsSnapshot};
 use crate::platform::WindowId;
 
 /// Every Dofus process owning a visible window at the last rescan, logged
@@ -131,7 +131,7 @@ fn watch_foreground() {
 }
 
 fn run(snapshot: WindowsSnapshot, ctx: egui::Context, regex: Regex, refresh_rx: Receiver<()>) {
-    let mut buf: Vec<DetectedWindow> = Vec::with_capacity(8);
+    let mut buf = Clients::default();
     let mut exe_cache: ExeCache = ExeCache::with_capacity(256);
     let mut seen_pids: HashSet<u32> = HashSet::with_capacity(256);
 
@@ -207,7 +207,7 @@ fn rescan(
     snapshot: &WindowsSnapshot,
     ctx: &egui::Context,
     regex: &Regex,
-    buf: &mut Vec<DetectedWindow>,
+    buf: &mut Clients,
     exe_cache: &mut ExeCache,
     seen_pids: &mut HashSet<u32>,
 ) {

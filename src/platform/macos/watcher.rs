@@ -35,7 +35,7 @@ use regex::Regex;
 
 use super::ax::{Element, Observer};
 use super::permission::input_permission_granted;
-use crate::dofus::{DetectedWindow, WindowsSnapshot};
+use crate::dofus::{Clients, WindowsSnapshot};
 use crate::platform::WindowId;
 
 const DOFUS_BUNDLE_ID: &str = "com.Ankama.Dofus";
@@ -194,7 +194,7 @@ fn run(snapshot: WindowsSnapshot, ctx: egui::Context, regex: Regex, refresh_rx: 
 
 impl Watcher {
     fn rescan(&mut self) {
-        let mut found = Vec::new();
+        let mut found = Clients::default();
         let mut dofus_pids = Vec::new();
         let mut running = Vec::new();
         self.retry_at = None;
@@ -226,10 +226,8 @@ impl Watcher {
             };
             let Some(game_window) = game_window else { continue };
             dofus_pids.push(pid);
-            if let Some(title) = game_window.string("AXTitle")
-                && let Some(window) = DetectedWindow::from_title(&self.regex, &title, WindowId(pid))
-            {
-                found.push(window);
+            if let Some(title) = game_window.string("AXTitle") {
+                found.add(&self.regex, &title, WindowId(pid));
             }
             self.game_windows.insert(pid, game_window);
         }
@@ -237,7 +235,7 @@ impl Watcher {
         self.observers.retain(|pid, _| running.contains(pid));
         self.game_windows.retain(|pid, _| running.contains(pid));
         dofus_pids.sort_unstable();
-        found.sort_by_key(|w| w.hwnd.0);
+        found.accounts.sort_by_key(|w| w.hwnd.0);
         if **DOFUS_PIDS.load() != dofus_pids {
             DOFUS_PIDS.store(Arc::new(dofus_pids));
         }
