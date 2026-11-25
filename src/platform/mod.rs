@@ -15,9 +15,10 @@
 //! - `WINDOW_ICON_PNG: &[u8]`, `WINDOW_ICON_SIZE: u32`: the window icon,
 //!   decoded and scaled to that side at startup.
 //! - Detection: `spawn_watcher(WindowsSnapshot, egui::Context, String,
-//!   Receiver<()>)` publishes the windows matching the title regex, and
-//!   calls `crate::overlay::foreground_changed` each time another app or
-//!   window comes to the front;
+//!   Receiver<()>)` publishes the clients, filed by `Clients::add` from the
+//!   title of their game window (the title regex, or the login screen),
+//!   and calls `crate::overlay::foreground_changed` each time another app
+//!   or window comes to the front;
 //!   `is_dofus_window(WindowId) -> bool` also accepts a client that is not
 //!   logged in yet.
 //! - Focus: `focus_window(WindowId)`, `foreground_window() ->
@@ -116,8 +117,10 @@ pub use macos::*;
 compile_error!("plateforme non supportée");
 
 /// A Dofus client window. Opaque outside `platform`: the raw value only
-/// means something to the backend that produced it.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// means something to the backend that produced it. Its order means
+/// nothing either, it only keeps a list in the same order from one scan to
+/// the next.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct WindowId(RawWindowId);
 
 #[cfg(test)]

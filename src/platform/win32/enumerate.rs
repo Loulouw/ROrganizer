@@ -8,7 +8,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::process::{self, ExeCache};
-use crate::dofus::DetectedWindow;
+use crate::dofus::Clients;
 use crate::platform::WindowId;
 
 /// Retro ships as an Electron app whose executable is named with a space.
@@ -22,23 +22,23 @@ fn is_dofus_exe(name: &str) -> bool {
 
 struct EnumCtx<'a> {
     re: &'a Regex,
-    out: &'a mut Vec<DetectedWindow>,
+    out: &'a mut Clients,
     dofus_pids: &'a mut Vec<u32>,
     exe_cache: &'a mut ExeCache,
     seen_pids: &'a mut HashSet<u32>,
 }
 
-/// Fills `out` with the windows matching `re`, and `dofus_pids` with every
-/// Dofus process owning a visible window, matched or not (login screen,
-/// character selection).
+/// Fills `out` with the client windows (`Clients::add`), and `dofus_pids`
+/// with every Dofus process owning a visible window, filed or not.
 pub fn enumerate_dofus_windows(
     re: &Regex,
-    out: &mut Vec<DetectedWindow>,
+    out: &mut Clients,
     dofus_pids: &mut Vec<u32>,
     exe_cache: &mut ExeCache,
     seen_pids: &mut HashSet<u32>,
 ) {
-    out.clear();
+    out.accounts.clear();
+    out.logins.clear();
     dofus_pids.clear();
     seen_pids.clear();
     let mut ctx = EnumCtx {
@@ -92,9 +92,7 @@ unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL { unsafe
     }
     let title = String::from_utf16_lossy(&buf[..written as usize]);
 
-    if let Some(window) = DetectedWindow::from_title(ctx.re, &title, WindowId::from_hwnd(hwnd)) {
-        ctx.out.push(window);
-    }
+    ctx.out.add(ctx.re, &title, WindowId::from_hwnd(hwnd));
     BOOL(1)
 }}
 

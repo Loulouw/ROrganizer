@@ -9,7 +9,7 @@ use eframe::egui;
 use raw_window_handle::HasWindowHandle;
 
 use crate::config::{self, StoredConfig};
-use crate::dofus::{WindowsSnapshot, DEFAULT_TITLE_REGEX};
+use crate::dofus::{Clients, WindowsSnapshot, DEFAULT_TITLE_REGEX};
 use crate::hooks::{BindingAction, HookHandle};
 use crate::i18n::{self, Lang};
 use crate::overlay::{self, Display, Layout};
@@ -45,6 +45,18 @@ pub(crate) fn compute_conflicts(
         .into_iter()
         .filter(|(_, c)| *c > 1)
         .map(|(t, _)| t)
+        .collect()
+}
+
+/// The windows the cycle goes through: the accounts in the user's order,
+/// then the clients no character is selected on yet. A client that picks
+/// one leaves the tail for its account's place.
+fn cycle_windows(order: &[SlotKey], clients: &Clients) -> Vec<WindowId> {
+    order
+        .iter()
+        .filter_map(|slot| clients.accounts.iter().find(|w| &w.slot_key == slot))
+        .map(|w| w.hwnd)
+        .chain(clients.logins.iter().copied())
         .collect()
 }
 
@@ -293,7 +305,7 @@ impl App {
             waiter_ctx.request_repaint();
         });
 
-        let windows: WindowsSnapshot = Arc::new(ArcSwap::from_pointee(Vec::new()));
+        let windows: WindowsSnapshot = Arc::new(ArcSwap::from_pointee(Clients::default()));
         let regex_src = title_regex
             .clone()
             .unwrap_or_else(|| DEFAULT_TITLE_REGEX.to_string());
@@ -555,7 +567,7 @@ impl App {
     }
 
     fn update_tray_status(&mut self, force: bool) {
-        let count = self.windows.load().len();
+        let count = self.windows.load().accounts.len();
         if !force && count == self.last_status_count {
             return;
         }
@@ -604,7 +616,7 @@ impl App {
         let hwnds: Vec<WindowId> = self
             .cycle_order
             .iter()
-            .filter_map(|slot| snap.iter().find(|w| &w.slot_key == slot).map(|w| w.hwnd))
+            .filter_map(|slot| snap.accounts.iter().find(|w| &w.slot_key == slot).map(|w| w.hwnd))
             .collect();
         let ctx = ctx.clone();
         platform::taskbar::reorder(hwnds, move || ctx.request_repaint());
@@ -645,7 +657,7 @@ impl App {
     pub fn conflicting_triggers(&mut self) -> HashSet<Trigger> {
         if self.conflicts_cache.is_none() {
             let snap = self.windows.load();
-            let live: Vec<&str> = snap.iter().map(|w| w.slot_key.as_str()).collect();
+            let live: Vec<&str> = snap.accounts.iter().map(|w| w.slot_key.as_str()).collect();
             self.conflicts_cache = Some(compute_conflicts(&self.bindings, &live));
         }
         self.conflicts_cache.as_ref().unwrap().clone()
@@ -704,6 +716,7 @@ impl App {
         let accounts: Vec<SlotKey> = self
             .windows
             .load()
+            .accounts
             .iter()
             .map(|w| w.slot_key.clone())
             .collect();
@@ -728,13 +741,14 @@ impl App {
         // Fast path: every snapshot slot already in cycle_order → nothing
         // to add. Avoids a Vec clone per frame.
         let already_covered = snap
+            .accounts
             .iter()
             .all(|w| self.cycle_order.iter().any(|s| s == &w.slot_key));
         if already_covered {
             return;
         }
         let mut changed = false;
-        for w in snap.iter() {
+        for w in snap.accounts.iter() {
             if !self.cycle_order.iter().any(|s| s == &w.slot_key) {
                 self.cycle_order.push(w.slot_key.clone());
                 changed = true;
@@ -914,13 +928,14 @@ impl App {
         let mut known = self.cycle_order.clone();
         // Detected this pass, not yet appended by `ensure_cycle_order_covers_snapshot`.
         known.extend(
-            snap.iter()
+            snap.accounts
+                .iter()
                 .filter(|w| !self.cycle_order.contains(&w.slot_key))
                 .map(|w| w.slot_key.clone()),
         );
         let running: Vec<_> = known
             .iter()
-            .filter_map(|slot| snap.iter().find(|w| &w.slot_key == slot))
+            .filter_map(|slot| snap.accounts.iter().find(|w| &w.slot_key == slot))
             .map(|w| {
                 (
                     w.slot_key.clone(),
@@ -1005,18 +1020,14 @@ impl App {
     /// `cycle_index` — that lives independently. Skipped when nothing has
     /// changed unless `force` is true.
     fn sync_state_to_hooks(&mut self, force: bool) {
-        let accounts: Vec<(SlotKey, WindowId)> = self
-            .windows
-            .load()
+        let snap = self.windows.load();
+        let accounts: Vec<(SlotKey, WindowId)> = snap
+            .accounts
             .iter()
             .map(|w| (w.slot_key.clone(), w.hwnd))
             .collect();
-
-        let cycle_hwnds: Vec<WindowId> = self
-            .cycle_order
-            .iter()
-            .filter_map(|slot| accounts.iter().find(|(s, _)| s == slot).map(|(_, h)| *h))
-            .collect();
+        let cycle_hwnds = cycle_windows(&self.cycle_order, &snap);
+        drop(snap);
 
         let new_state = SyncSnapshot {
             accounts: accounts.clone(),
@@ -1082,7 +1093,7 @@ impl App {
         const TOGGLE_BUTTON: f32 = 46.0;
         const TOGGLE_HINT: f32 = 22.0;
 
-        let n_accounts = self.windows.load().len();
+        let n_accounts = self.windows.load().accounts.len();
         let list_h = if n_accounts == 0 { EMPTY_STATE } else { n_accounts as f32 * ROW };
         let n_conflicts = self.conflicting_triggers().len() as f32;
         let banner_h = if n_conflicts > 0.0 {
@@ -1387,5 +1398,24 @@ mod tests {
                 BindingTarget::Account("Charlie".into()),
             ]
         );
+    }
+
+    #[test]
+    fn a_client_takes_its_place_in_the_cycle_once_its_character_is_picked() {
+        let w = WindowId::test;
+        let on = |slot: &str, n| crate::dofus::DetectedWindow {
+            hwnd: w(n),
+            slot_key: slot.into(),
+            class: None,
+        };
+        let order: Vec<SlotKey> = vec!["Bob".into(), "Alice".into()];
+
+        // Bob's client (2) still on the character selection screen.
+        let logging_in = Clients { accounts: vec![on("Alice", 1)], logins: vec![w(2), w(3)] };
+        assert_eq!(cycle_windows(&order, &logging_in), [w(1), w(2), w(3)]);
+
+        // Bob picked: his client leaves the tail for his place, ahead of Alice.
+        let picked = Clients { accounts: vec![on("Alice", 1), on("Bob", 2)], logins: vec![w(3)] };
+        assert_eq!(cycle_windows(&order, &picked), [w(2), w(1), w(3)]);
     }
 }

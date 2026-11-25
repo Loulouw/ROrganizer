@@ -283,10 +283,16 @@ ROrganizer without granting it.
 The exe filter runs before the title regex: a new client family needs both.
 Rétro titles carry no class (`class: None`). Rétro is Electron, ~8
 processes per client, a single visible titled window; before character
-selection its title has no ` - `, so no ghost row. On macOS the login
-screen is titled `Dofus 3.7.14.18 - Release` (no ghost row either), titles
-are read through the Accessibility API, and Rétro was never observed: it is
-matched by its exe name `Dofus Retro` only.
+selection it is titled `Dofus Retro v1.48.21`. On macOS the login screen
+is titled `Dofus 3.7.14.18 - Release`, titles are read through the
+Accessibility API, and Rétro was never observed: it is matched by its exe
+name `Dofus Retro` only.
+
+A client with no character selected yet (title starting with the word
+`Dofus`, `Clients::logins`) gets no row, no overlay head and no shortcut,
+but the next / previous cycle visits it after the accounts: starting a
+session means going from window to window to log in. Once a character is
+picked, the same window takes its account's place in the cycle.
 
 macOS `AXWindows` only lists the windows of the Space in front: from the
 desktop, a client in its own fullscreen Space reads as windowless, and
